@@ -15,6 +15,7 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 - `linear-handoff` as the post-discovery bridge from review outputs into Project, PRD, Tech Spec, and Issue(s).
 - Full-copy consumer sync through `scripts/sync-consumer.mjs`.
 - Consumer install checks that reject stale generated skills, missing copied references/templates, unmanaged Linear skills, and redirect-stub patterns.
+- Consumer template-copy checks now require both `project.md` and `check-output.md` sentinels.
 - `upstreamVersion` and full upstream commit metadata in `.agents/linear-workflow.lock.json`.
 
 ### Changed
