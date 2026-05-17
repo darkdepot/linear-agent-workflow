@@ -7,6 +7,8 @@ description: Use when creating or updating a Linear PRD after discovery or an ex
 
 Create or update the PRD as product truth: WHAT the workflow should achieve and how the user should experience it.
 
+This is an atomic helper. The normal post-discovery user-facing workflow is `linear-handoff`, which may use this skill as one step.
+
 Read first:
 
 1. `AGENTS.md`
@@ -23,6 +25,7 @@ Rules:
 - Record user review acceptance as a Linear comment.
 - Do not create Issues.
 - Do not include implementation architecture that belongs in Tech Spec.
+- Do not start implementation.
 
 Before finishing:
 

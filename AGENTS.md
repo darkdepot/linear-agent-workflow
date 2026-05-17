@@ -18,6 +18,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Linear Tech Spec = HOW: architecture, contracts, failure modes, validation.
 - Linear Issue = one-PR execution contract with context snapshot.
 - GitHub = branch, PR, review, CI, and merge history only.
+- `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 
 ## Skill Design Rules
 
@@ -28,6 +29,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Do not copy long templates into every skill.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
+- Consumer `.agents/skills/linear-*` installs must be full generated skill bodies, not redirect adapters.
 
 ## Validation
 
