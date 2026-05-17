@@ -193,10 +193,25 @@ function plannedInstall(root, repo, consumerName, commit, dirty) {
   };
 }
 
+function removeOrphanedLinearSkillDirs(rootDir, expectedSkills) {
+  if (!fs.existsSync(rootDir)) return;
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    if (!entry.name.startsWith("linear-")) continue;
+    if (expectedSkills.has(entry.name)) continue;
+    fs.rmSync(path.join(rootDir, entry.name), { recursive: true, force: true });
+  }
+}
+
 function sync(root, repo, consumerName, commit, dirty, version) {
   const plan = plannedInstall(root, repo, consumerName, commit, dirty);
-  fs.mkdirSync(path.join(repo, ".agents", "skills"), { recursive: true });
-  fs.mkdirSync(path.join(repo, ".claude", "skills"), { recursive: true });
+  const agentsSkillsRoot = path.join(repo, ".agents", "skills");
+  const claudeSkillsRoot = path.join(repo, ".claude", "skills");
+  fs.mkdirSync(agentsSkillsRoot, { recursive: true });
+  fs.mkdirSync(claudeSkillsRoot, { recursive: true });
+  const expectedSkills = new Set(plan.skills);
+  removeOrphanedLinearSkillDirs(agentsSkillsRoot, expectedSkills);
+  removeOrphanedLinearSkillDirs(claudeSkillsRoot, expectedSkills);
 
   const installedAt = new Date().toISOString();
   const manifestSkills = [];
