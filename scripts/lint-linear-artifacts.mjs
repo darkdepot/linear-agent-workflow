@@ -7,12 +7,20 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
+const fileCache = new Map();
 
 function read(relativePath) {
+  if (fileCache.has(relativePath)) {
+    return fileCache.get(relativePath);
+  }
+
   try {
-    return fs.readFileSync(path.join(root, relativePath), "utf8");
+    const content = fs.readFileSync(path.join(root, relativePath), "utf8");
+    fileCache.set(relativePath, content);
+    return content;
   } catch {
     fail(`${relativePath} could not be read`);
+    fileCache.set(relativePath, "");
     return "";
   }
 }
