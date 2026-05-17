@@ -1,34 +1,35 @@
 # Project Template
 
-Use Russian for Linear Project body.
+Use the consumer config language for Linear Project body. Use Russian when no
+consumer config is present.
 
-Required sections:
+Required concerns:
+
+- What
+- Why
+- Target outcome
+- In scope
+- Out of scope
+
+Default Russian headings:
 
 ```markdown
 # Что
 
 # Зачем
 
-# Принципы workflow
-
-# Lifecycle
-
 # Образ результата
 
 # Что входит
 
 # Что не входит
-
-# Документы
-
-# План задач
-
-# Текущий статус
 ```
 
 Rules:
 
-- Keep Project overview-level. Do not inline full PRD or Tech Spec.
-- Use document and issue chips.
-- Keep only active docs and active issues in the visible plan.
+- Keep Project body as a concise product brief, not a workflow dashboard.
+- Do not inline full PRD or Tech Spec.
+- Do not include active docs, active issues, status bookkeeping, lifecycle notes, or workflow mechanics in the Project body.
+- Keep document and issue relationships in Linear metadata, resources, comments, or the handoff package.
 - Do not include PR chips before a real PR exists.
+- Do not include visible sections such as `Принципы workflow`, `Lifecycle`, `Документы`, `План задач`, or `Текущий статус`.

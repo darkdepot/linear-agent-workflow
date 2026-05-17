@@ -5,7 +5,7 @@ description: Use when creating or updating a Linear Project as the source of tru
 
 # Linear Project
 
-Create or update the Linear Project overview, lifecycle, status, and active artifact map.
+Create or update the Linear Project overview as a concise product brief.
 
 Read first:
 
@@ -18,17 +18,19 @@ Rules:
 
 - Keep Project body in the consumer config language; use Russian when no consumer config is present.
 - Keep Project overview-level; do not inline the PRD or Tech Spec.
-- Use Linear chips for documents and issues.
+- Keep Project body to five product-brief concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
+- Do not include active docs, active issues, status bookkeeping, lifecycle notes, or workflow mechanics in the Project body.
+- Use Linear metadata, resources, comments, and the handoff package for document and issue relationships.
 - Keep active Project documents to PRD and Tech Spec for this MVP.
-- Keep active Project plan to one Issue by default.
 - Do not include PR chips before a real PR exists.
 - Do not leave obsolete/closed PR chips or raw PR URLs in durable body.
 
 Status policy:
 
 - Idea: strengthened brief only; no PRD, Tech Spec, or Issue.
-- Discovery: Project plus discovery outputs; durable PRD/Tech Spec are normally created by `linear-handoff`.
-- Delivery: Project plus PRD plus Tech Spec or explicit no-spec exception plus approved Issue plan.
+- Discovery: Project plus discovery outputs; durable PRD/Tech Spec may exist and are normally created by `linear-handoff`.
+- Handoff readiness: Project remains in Discovery or an equivalent configured pre-delivery status while PRD, Tech Spec, and proposed or approved Issue slicing are current. Record readiness in comments or check output, not in the Project body.
+- Delivery: Project plus PRD plus Tech Spec or explicit no-spec exception plus approved execution Issue(s), and implementation is ready to begin from those Issue(s).
 - Ship: Issue and PR state are synced by `linear-ship`, not by Project Updates.
 
 Before finishing:

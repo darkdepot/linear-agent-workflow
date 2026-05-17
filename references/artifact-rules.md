@@ -23,15 +23,25 @@ Source-of-truth policy:
 Document policy:
 
 - Active Project document types for this MVP are PRD and Tech Spec.
+- Project body is a concise product brief with only five concerns: what, why, target outcome, in scope, and out of scope. Render headings in the consumer config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
+- Do not put active docs, active issues, lifecycle bookkeeping, status tracking, or workflow mechanics in the Project body.
+- PRD is the WHAT artifact. It defines operator, problem, target workflow, requirements, acceptance examples, success criteria, and non-goals.
+- Tech Spec is the HOW artifact. It defines architecture, contracts, boundaries, risks, files/surfaces, validation, rollout, and rollback against the approved PRD.
+- Issue is the one-PR execution contract. It should be enough for a zero-context implementation agent without copying the whole PRD or Tech Spec.
+- Prefer content-shape correctness over exact heading policing. Headings help readers, but the hard contract is responsibility separation: Project = product brief, PRD = WHAT, Tech Spec = HOW, Issue = execution.
 - Attach PRD and Tech Spec to the Project, not to the Issue.
 - The Issue should contain chips and an implementation-critical snapshot, not attached docs.
+- Add PRD and Tech Spec as Issue resources/links when the connector supports it.
 - Use Linear chips/entity mentions where available.
 - Do not leave obsolete or closed PR chips in durable Project, PRD, Tech Spec, or Issue body.
 - Do not use raw PR/document URLs in durable body when Linear chips can represent the entity.
+- Keep workflow mechanics internal to skills, checks, and handoff summaries; do not leak `linear-check`, lifecycle gates, or agent instructions into Linear-facing Project, PRD, Tech Spec, or Issue bodies.
 
 Review policy:
 
 - User review acceptance is recorded as a Linear comment.
+- Package approval authorizes durable Project/PRD/Tech Spec updates and Issue creation from the previewed package. The approval comment should name the approved package, PRD/Tech Spec links or intended titles, approved Issue slice titles or ids, and whether implementation may start.
+- If approval is missing, rejected, changes are requested, or the approval comment cannot be recorded, do not create execution Issues, do not move the Project to Delivery, and return `BLOCKED` or `INCOMPLETE` with current links.
 - Project Updates are not a required gate.
 - `linear-check` reports drift; it does not silently fix it.
 - Raw discovery implementation plans must not be approved directly in this workflow; run `linear-handoff` first.

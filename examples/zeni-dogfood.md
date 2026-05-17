@@ -19,7 +19,8 @@ Dogfood order:
 3. Use `linear-idea` for raw idea intake.
 4. Use discovery/review skills in Plan Mode when helpful.
 5. Use `linear-handoff` before implementation.
-6. Keep Project, PRD, Tech Spec, and Issue current in Linear.
+6. Create approved execution Issue(s) through handoff.
+7. Start implementation from the approved Issue(s).
 
 ## Correct Raw Idea Intake
 
@@ -49,9 +50,38 @@ Expected behavior:
 
 1. User runs `/office-hours` or `/brainstorming` in Plan Mode.
 2. User optionally runs `/plan-design-review` and `/plan-eng-review`.
-3. When a discovery/review implementation plan appears, user runs `/linear-handoff` instead of approving direct implementation.
+3. When a discovery/review implementation plan appears, user runs `/linear-handoff` instead of `linear-prd -> linear-spec -> linear-issue` or direct implementation.
 4. `linear-handoff` produces a handoff exit-plan if still in Plan Mode.
-5. After approval, `linear-handoff` updates Project, PRD, and Tech Spec in Linear, asks package approval, creates Issue(s), and hands off to implementation from those Issues.
+5. `linear-handoff` previews the package for approval before durable writes; after approval, it updates Project, PRD, and Tech Spec in Linear, creates Issue(s), and only hands off to implementation after the delivery gate passes.
+6. PRD and Tech Spec creation keeps the Project in Discovery or an equivalent pre-delivery state.
+7. The Project moves to Delivery only after approved execution Issue(s) exist and implementation is ready to begin.
+
+## Correct Project Body Shape
+
+Expected Project description sections:
+
+```markdown
+# Что
+
+# Зачем
+
+# Образ результата
+
+# Что входит
+
+# Что не входит
+```
+
+The Project body is a product brief, not a workflow dashboard. It should not include active doc lists, active issue lists, lifecycle bookkeeping, or agent-only workflow mechanics.
+
+## Correct Issue Links
+
+Expected Issue relationship shape:
+
+- Body contains Linear chips/entity mentions for the Project, PRD, and Tech Spec.
+- PRD and Tech Spec are added as Linear resources/links when the connector supports it.
+- PRD and Tech Spec are not attached as Issue documents.
+- Raw PRD or Tech Spec URLs are avoided when chips can represent the documents.
 
 ## Anti-Example: Thin Adapter Install
 
@@ -86,6 +116,33 @@ Why this fails:
 - Discovery artifacts are inputs, not Linear source of truth.
 - Project, PRD, Tech Spec, and Issue(s) were not updated before implementation.
 - Implementation did not start from approved Linear Issue(s).
+
+## Anti-Example: Delivery Too Early
+
+FAIL:
+
+1. PRD is created.
+2. Tech Spec is created.
+3. Project is moved to Delivery.
+4. No approved execution Issue exists.
+
+Why this fails:
+
+- PRD and Tech Spec belong to Discovery or Handoff.
+- Delivery requires approved execution Issue(s).
+- `linear-check delivery` must report FAIL.
+
+## Anti-Example: Workflow Language In Linear Artifacts
+
+FAIL:
+
+1. Project body includes sections such as `Принципы workflow`, `Lifecycle`, `Документы`, `План задач`, or `Текущий статус`.
+2. Tech Spec includes sections such as `Skill contracts` or `linear-check design`.
+
+Why this fails:
+
+- Linear artifacts must be product and implementation truth, not visible workflow instructions.
+- Skills and examples should prevent this by construction; `scripts/lint-linear-artifacts.mjs` is only a lightweight smoke guard for this known regression class.
 
 ## Anti-Example: Dogfood Failure
 

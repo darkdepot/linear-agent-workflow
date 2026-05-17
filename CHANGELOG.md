@@ -6,6 +6,21 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-17
+
+### Changed
+
+- Pre-v1.0 workflow behavior change: make `linear-handoff` the primary post-discovery route and reposition atomic PRD/Spec/Issue skills as internal/advanced helpers.
+- Keep Projects in Discovery through PRD and Tech Spec creation; Delivery now requires approved execution Issue(s).
+- Define package approval, implementation-start approval, and delivery checks so handoff cannot silently become implementation.
+- Replace Project and Tech Spec templates that leaked workflow mechanics into Linear-facing artifacts.
+- Strengthen PRD/Tech Spec/Issue skill contracts with WHAT/HOW/execution separation, PRD requirement IDs, acceptance examples, and content-shape checks.
+- Reserve future install/update workflow changes for explicit versioned releases.
+
+### Added
+
+- Add a lightweight regression smoke script and a Profile Workbench example for the first Zeni dogfood failure mode.
+
 ## [0.3.0] - 2026-05-17
 
 ### Added
