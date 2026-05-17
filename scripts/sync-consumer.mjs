@@ -224,15 +224,17 @@ function sync(root, repo, consumerName, commit, dirty) {
 function check(root, repo, consumerName, commit, dirty) {
   const lockPath = path.join(repo, ".agents", "linear-workflow.lock.json");
   let lock = null;
+  let checkConsumerName = consumerName;
   let checkCommit = commit;
   let checkDirty = dirty;
   if (fs.existsSync(lockPath)) {
     lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    if (lock.consumerName) checkConsumerName = lock.consumerName;
     if (lock.upstreamCommit) checkCommit = lock.upstreamCommit;
     if (typeof lock.upstreamDirty === "boolean") checkDirty = lock.upstreamDirty;
   }
 
-  const plan = plannedInstall(root, repo, consumerName, checkCommit, checkDirty);
+  const plan = plannedInstall(root, repo, checkConsumerName, checkCommit, checkDirty);
   const failures = [];
   const expectedSkills = new Set(plan.skills);
 
