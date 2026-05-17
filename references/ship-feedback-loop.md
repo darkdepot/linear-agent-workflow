@@ -7,8 +7,8 @@
 - Fresh Linear Issue and Project context.
 - GitHub PR number and URL.
 - Latest PR head SHA.
-- `consumer.reviewFeedbackWorkflow`, when configured.
-- `consumer.landWorkflow`, when configured.
+- Review feedback workflow from the consumer config, when configured.
+- Land workflow from the consumer config, when configured.
 
 ## Loop
 

@@ -2,43 +2,75 @@
 
 ## Idea
 
-Capture a strengthened idea without premature delivery artifacts.
+Capture a strengthened idea without premature delivery artifacts. `linear-idea` is an intake gate, not a planning skill.
 
 Required:
 
 - Project in Idea.
 - Strengthened brief from raw idea plus AskQuestion answers.
-- Recommendation for `/brainstorming` or `/office-hours`.
+- Recommendation for `/office-hours` or `/brainstorming`.
 
 Forbidden:
 
 - PRD.
 - Tech Spec.
 - Issue.
+- ExecPlan.
+- Implementation plan.
+- Code changes.
 
 Gate: `linear-check idea`.
 
 ## Discovery
 
-Turn the idea into product truth.
+Use Plan Mode discovery and review skills to shape the idea.
 
 Required:
 
-- Project in Discovery.
-- PRD after `/brainstorming` or `/office-hours`, or PRD-lite after explicit skip.
-- User review handoff.
+- Project from `linear-idea`.
+- `/office-hours` or `/brainstorming` output when product shape is unclear.
+- `/plan-design-review` when UI or product surface needs design review.
+- `/plan-eng-review` when architecture is ready to review.
+- Handoff to `linear-handoff` instead of direct implementation approval.
 
-Gate: `linear-check discovery`.
+Forbidden:
 
-## Delivery
+- Treating discovery artifacts as durable Linear truth.
+- Approving a discovery implementation plan directly.
+- Starting implementation from a raw discovery or review plan.
 
-Prepare implementation truth.
+Gate: `linear-check discovery`, then `linear-handoff`.
+
+## Handoff
+
+Turn discovery into Linear-backed delivery.
 
 Required:
 
 - Project in Delivery.
 - Current PRD.
-- Tech Spec from engineering review or lightweight engineering pass, or explicit no-spec exception.
+- Current Tech Spec.
+- User approval recorded as a Linear comment.
+- Proposed Issue slicing.
+
+Forbidden:
+
+- Code changes during handoff.
+- PR creation during handoff.
+- Implementation before approved Issue(s) exist.
+
+Gate: `linear-check handoff`.
+
+## Delivery
+
+Prepare implementation from approved Linear Issue(s).
+
+Required:
+
+- Project in Delivery.
+- Current PRD.
+- Current Tech Spec or explicit no-spec exception.
+- Approved Issue plan.
 
 Gate: `linear-check delivery`.
 
@@ -51,6 +83,7 @@ Required:
 - Issue attached to the Project.
 - Context snapshot from Project, PRD, and Tech Spec or exception.
 - Concrete validation.
+- User approval of the handoff package.
 
 Gate: `linear-check issue`.
 

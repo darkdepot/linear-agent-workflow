@@ -1,140 +1,124 @@
 # Versioning And Adapter Contract
 
-This repository has one canonical workflow source and two generated wrapper modes.
+This repository has one canonical workflow source and one consumer install contract.
 
-Canonical workflow truth lives only in:
+Canonical workflow truth lives in:
 
 - `skills/linear-*/SKILL.md`
 - `references/*`
 - `templates/*`
+- `scripts/sync-consumer.mjs`
 
-Generated wrappers are discovery adapters. They are not workflow truth and should not be edited by hand.
+Generated consumer installs are reviewable local copies, not source-of-truth forks. They should not be edited by hand.
 
-## Modes
+## Consumer Install Contract
 
-### Self Mode
-
-Use self mode only inside `linear-agent-workflow` itself:
-
-```bash
-scripts/install.sh --mode self --target "$(pwd)"
-scripts/check.sh --mode self --target "$(pwd)"
-```
-
-Self mode generates:
-
-- `.agents/skills/linear-*/SKILL.md`
-- `.claude/skills/linear-*/SKILL.md`
-
-Each wrapper points repo-relatively to `skills/linear-*/SKILL.md`. No lockfile is required because self mode follows the current checkout.
-
-### Consumer Mode
-
-Use consumer mode for repos like Zeni:
+Use `scripts/sync-consumer.mjs` for both installs and updates:
 
 ```bash
-scripts/install.sh \
-  --mode consumer \
-  --target <path/to/consumer-repo> \
-  --version v0.1.0
+node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name Zeni
+node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
 
-Consumer mode generates:
+The install writes:
 
-- `.agents/linear-workflow.lock.json`
-- `.agents/skills/linear-*/SKILL.md`
-- `.claude/skills/linear-*/SKILL.md`
+- `.agents/skills/linear-*/SKILL.md` as full executable generated skill bodies;
+- `.agents/skills/linear-*/references/*` and `.agents/skills/linear-*/templates/*` beside each generated skill;
+- `.claude/skills/linear-*/SKILL.md` as tiny discovery wrappers pointing at `.agents`;
+- `.agents/linear-workflow.lock.json` with upstream identity, version, commit, paths, and hashes;
+- `.agents/linear-workflow.config.md` as preserved consumer policy.
 
-Consumer wrappers read `.agents/linear-workflow.lock.json` and resolve the pinned workflow source from the lockfile. They must not point to `main`, a sibling checkout, or a machine-specific absolute path.
-
-Generated consumer wrappers and lockfile skill entries are produced from the pinned commit, not from whatever happens to be checked out when the script runs.
+Consumer installs must not depend on an env var, sibling checkout, GitHub URL, or moving branch to execute the workflow. Opening the generated `.agents/skills/<name>/SKILL.md` in the consumer repo must be enough for the agent to follow the skill.
 
 ## Lockfile
 
 The lockfile pins:
 
-- workflow repository URL;
-- SemVer tag, for example `v0.1.0`;
-- immutable 40-character commit SHA;
-- adapter format version;
-- generator version;
-- generated wrapper file hashes;
-- consumer configuration such as ship workflow, optional review feedback workflow, optional land workflow, language, hosts, and skills.
+- upstream repository name;
+- upstream version from `VERSION`;
+- immutable 40-character upstream commit SHA;
+- whether the upstream checkout was dirty when generated;
+- install timestamp;
+- consumer name;
+- generated skill paths and hashes.
 
 Example shape:
 
 ```json
 {
   "schemaVersion": 1,
-  "workflow": {
-    "name": "linear-agent-workflow",
-    "repository": "https://github.com/darkdepot/linear-agent-workflow.git",
-    "version": "v0.1.0",
-    "commit": "0123456789abcdef0123456789abcdef01234567"
-  },
-  "adapter": {
-    "formatVersion": 1,
-    "generatorVersion": "0.1.0",
-    "hosts": ["codex", "claude"],
-    "skills": ["linear-check"],
-    "generatedFiles": [
-      {
-        "path": ".agents/skills/linear-check/SKILL.md",
-        "sha256": "..."
-      }
-    ]
-  },
-  "consumer": {
-    "name": "zeni",
-    "shipWorkflow": "gstack ship",
-    "reviewFeedbackWorkflow": "compound-engineering:ce-resolve-pr-feedback",
-    "landWorkflow": "gstack land-and-deploy",
-    "linearFacingLanguage": "ru",
-    "skillInstructionLanguage": "en"
-  }
+  "upstreamRepo": "darkdepot/linear-agent-workflow",
+  "upstreamVersion": "0.3.0",
+  "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
+  "upstreamDirty": false,
+  "installedAt": "2026-05-17T00:00:00.000Z",
+  "consumerName": "Zeni",
+  "installedSkills": [
+    {
+      "name": "linear-check",
+      "agentsPath": ".agents/skills/linear-check/SKILL.md",
+      "claudePath": ".claude/skills/linear-check/SKILL.md",
+      "sha256": "..."
+    }
+  ]
 }
 ```
 
-`reviewFeedbackWorkflow` and `landWorkflow` are optional. Older lockfiles that do not include them remain valid. When absent, `linear-ship` keeps the previous behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of silently inventing a resolver or merge path.
+`installedAt` changes on every sync. Consumers should review the generated diff and treat `upstreamCommit`, `upstreamVersion`, and `sha256` changes as the meaningful release metadata.
+
+## Consumer Config
+
+Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, not in generated skill bodies or lockfile metadata. The optional ship-phase fields are:
+
+- `Ship workflow`: creates the branch/PR through the consumer repo's normal ship command.
+- `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
+- `Land workflow`: merges and verifies/deploys the PR after the review loop is green.
+
+Example Zeni policy:
+
+```markdown
+- Ship workflow: gstack ship
+- Review feedback workflow: compound-engineering:ce-resolve-pr-feedback
+- Land workflow: gstack land-and-deploy
+```
+
+`Review feedback workflow` and `Land workflow` are optional. When absent, `linear-ship` keeps backward-compatible behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of inventing a resolver or merge path.
 
 ## Updates
 
-Consumer updates are explicit:
+Consumer updates are explicit and reviewable:
 
-```bash
-scripts/update.sh \
-  --mode consumer \
-  --target <path/to/consumer-repo> \
-  --version v0.2.0 \
-  --branch linear-workflow-v0.2.0
-```
+1. Start a normal branch in the consumer repo.
+2. Run `node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name <Name>` from the desired upstream checkout.
+3. Review generated `.agents`, `.claude`, and lockfile changes.
+4. Run `node scripts/sync-consumer.mjs --repo /path/to/consumer --check`.
+5. Land the consumer PR.
 
-The update script rewrites generated wrappers and lockfile metadata. The consumer repo should review those changes through a normal PR.
+The sync script rewrites generated workflow files only. Consumer product code and `.agents/linear-workflow.config.md` are preserved.
 
 ## Checks
 
-Self check verifies:
+`node scripts/sync-consumer.mjs --repo /path/to/consumer --check` verifies:
 
-- generated wrappers exist for Codex and Claude Code;
-- wrappers match the expected repo-relative self-mode content;
-- no `.agents/linear-workflow.lock.json` exists.
+- each expected `.agents/skills/linear-*` generated skill exists;
+- YAML frontmatter remains first;
+- generated upstream metadata is near the top;
+- installed skill contents match the upstream-generated body for the pinned lockfile commit and dirty flag;
+- installed skills are large enough to be executable;
+- copied `references/` and `templates/` exist beside each generated skill;
+- `.claude/skills/linear-*` wrappers match generated discovery wrappers;
+- lockfile entries have matching paths and SHA-256 hashes;
+- unmanaged `linear-*` skills or wrappers are reported;
+- redirect-stub patterns are rejected.
 
-Consumer check verifies:
+`linear-check` may report adapter status, but install, update, stale detection, and drift detection belong to `scripts/sync-consumer.mjs`.
 
-- lockfile exists and has supported schema and adapter versions;
-- pinned tag resolves to the pinned commit SHA;
-- generated wrapper hashes match the lockfile;
-- wrappers stay generated and thin;
-- consumer skill dirs do not contain copied `references/` or `templates/`.
-
-`linear-check` may report adapter status, but install, update, stale detection, and drift detection belong to these scripts.
-
-## Breaking-Change Policy
+## Release Policy
 
 Use SemVer tags for consumer releases.
 
-- Patch: documentation, wrapper text, or validation changes that do not alter workflow behavior.
-- Minor: new skills, new optional lockfile fields, new checks, or backward-compatible workflow additions.
+- Patch: documentation, generated text, or validation changes that do not alter workflow behavior.
+- Minor: new skills, new optional consumer config fields, new checks, or backward-compatible workflow additions.
 - Major: removed skills, incompatible lockfile schema, required consumer config changes, or workflow changes that alter required Linear artifact semantics.
 
 Before `v1.0.0`, breaking changes are allowed in minor releases only when the changelog and release notes call them out clearly. Consumers still update by PR, so every lockfile bump remains reviewable.

@@ -1,83 +1,94 @@
 # Install Guide
 
-Install this workflow as generated wrappers over one canonical workflow source.
+Install this workflow into a consumer repo as a reusable workflow with full local skill bodies.
+
+Consumer `.agents/skills/linear-*` files must be directly executable after opening `SKILL.md`. They must not be thin adapters that send the agent to an env var, sibling checkout, GitHub URL, or `main`.
 
 ## Source Of Truth
 
-Canonical workflow truth stays only in `linear-agent-workflow`:
+Canonical workflow truth stays in `linear-agent-workflow`:
 
 - `skills/linear-*/SKILL.md`
 - `references/*`
 - `templates/*`
+- `scripts/sync-consumer.mjs`
 
-Consumer repos must not copy full workflow truth. They get generated wrappers and, in consumer mode, a lockfile.
+Consumer repos receive generated, reviewable copies. Those generated files are not the place to edit workflow behavior by hand.
 
-## Self Mode
+## Consumer Install
 
-Use self mode inside this repo:
-
-```bash
-scripts/install.sh --mode self --target "$(pwd)"
-scripts/check.sh --mode self --target "$(pwd)"
-```
-
-Self mode generates Codex and Claude Code wrappers that point repo-relatively to `skills/linear-*/SKILL.md`. It does not create `.agents/linear-workflow.lock.json`.
-
-## Consumer Mode
-
-Use consumer mode in Zeni and future repos:
+Run the sync command from the upstream checkout:
 
 ```bash
-scripts/install.sh \
-  --mode consumer \
-  --target <path/to/consumer-repo> \
-  --version v0.1.0
+node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name Zeni
 ```
 
-Run this after the requested SemVer tag exists in the workflow repository.
+The command writes:
 
-Consumer mode generates:
-
-- `.agents/linear-workflow.lock.json`
 - `.agents/skills/linear-*/SKILL.md`
+- `.agents/skills/linear-*/references/*`
+- `.agents/skills/linear-*/templates/*`
 - `.claude/skills/linear-*/SKILL.md`
+- `.agents/linear-workflow.lock.json`
+- `.agents/linear-workflow.config.md` when it does not already exist
 
-The lockfile pins repository URL, SemVer tag, immutable commit SHA, adapter format version, generated wrapper hashes, and consumer configuration.
+Generated `.agents/skills/linear-*` files include a header like:
 
-Consumer wrappers must read the lockfile and resolve the pinned workflow source. They must not resolve from a local absolute path, a sibling checkout, or `main`.
+```markdown
+<!-- Generated from darkdepot/linear-agent-workflow @ <commit-sha>. Do not edit manually. -->
+```
+
+The generated `.claude` files are discovery wrappers only. They point the agent to the executable `.agents` copy in the consumer repo.
+
+## Consumer Policy
+
+Keep consumer-specific policy in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting repo docs, not in redirect adapters.
+
+Add or preserve a short consumer repo instruction:
+
+- Linear Project, PRD, Tech Spec, and Issue are source of truth.
+- GitHub is PR/review/CI/deploy/merge history only.
+- Use `linear-idea`, `linear-handoff`, `linear-check`, and `linear-ship` for the main workflow.
+- Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` as atomic helpers.
+- Configure the ship, review feedback, and land workflows used by `linear-ship`.
 
 ## Updates
 
-Updates should happen on a branch and be reviewed as a consumer PR:
+Update a consumer repo by rerunning the same sync command from the desired upstream checkout. Do it on a normal branch and review the generated diff before merging it.
 
-```bash
-scripts/update.sh \
-  --mode consumer \
-  --target <path/to/consumer-repo> \
-  --version v0.2.0 \
-  --branch linear-workflow-v0.2.0
-```
-
-`update.sh` rewrites only generated wrappers and lockfile metadata. It does not rewrite consumer product code.
+The sync command rewrites generated Linear skill copies, generated Claude wrappers, copied `references/` and `templates/`, and lockfile metadata. It preserves `.agents/linear-workflow.config.md` when that file already exists.
 
 ## Checks
 
-Use:
+Verify a consumer repo without writing:
 
 ```bash
-scripts/check.sh --mode self --target "$(pwd)"
-scripts/check.sh --mode consumer --target <path/to/consumer-repo>
+node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
 
-Self check verifies generated wrappers and confirms no lockfile is required.
+The check fails when:
 
-Consumer check verifies lockfile shape, pinned commit resolution, wrapper hashes, generated wrapper thinness, and absence of copied `references/` or `templates/` inside consumer skill dirs.
+- installed `.agents/skills/linear-*` files are missing, stale, edited, or too small to be executable;
+- generated metadata is missing near the top of an installed skill;
+- copied `references/` or `templates/` are missing beside a generated skill;
+- `.claude/skills/linear-*` wrappers are missing or stale;
+- `.agents/linear-workflow.lock.json` is missing, corrupted, or has stale hashes/paths;
+- an unmanaged `linear-*` skill or wrapper appears in `.agents` or `.claude`;
+- installed skill bodies contain redirect-stub patterns.
 
 ## Zeni Consumer Notes
 
 - Zeni should keep its existing project-specific skills.
-- Zeni should not copy the whole reusable workflow into `.agents/skills` or `.claude/skills`.
-- Zeni should use generated consumer wrappers plus `.agents/linear-workflow.lock.json`.
+- Zeni `.agents/skills/linear-*` should be generated full copies from upstream.
+- Zeni `.claude/skills/linear-*` should remain tiny discovery wrappers to `.agents`.
+- Zeni-specific policy belongs in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting docs.
 - Zeni ship workflow is gstack `ship`.
 - Zeni review feedback workflow is Compound `ce-resolve-pr-feedback`.
 - Zeni land workflow is gstack `land-and-deploy`.
+
+## Anti-Patterns
+
+- Do not install consumer skills as env-var, sibling-checkout, GitHub URL, or `main` redirects.
+- Do not hand-edit generated `.agents/skills/linear-*` files in a consumer repo.
+- Do not use `.claude/skills/linear-*` as the executable source of truth.
+- Do not make Project Updates a required gate; record user review acceptance as a Linear comment.

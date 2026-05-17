@@ -16,7 +16,7 @@ Read first:
 
 Rules:
 
-- Keep Project body in Russian.
+- Keep Project body in the consumer config language; use Russian when no consumer config is present.
 - Keep Project overview-level; do not inline the PRD or Tech Spec.
 - Use Linear chips for documents and issues.
 - Keep active Project documents to PRD and Tech Spec for this MVP.
@@ -27,8 +27,8 @@ Rules:
 Status policy:
 
 - Idea: strengthened brief only; no PRD, Tech Spec, or Issue.
-- Discovery: Project plus PRD or PRD-lite.
-- Delivery: Project plus PRD plus Tech Spec or explicit no-spec exception.
+- Discovery: Project plus discovery outputs; durable PRD/Tech Spec are normally created by `linear-handoff`.
+- Delivery: Project plus PRD plus Tech Spec or explicit no-spec exception plus approved Issue plan.
 - Ship: Issue and PR state are synced by `linear-ship`, not by Project Updates.
 
 Before finishing:
