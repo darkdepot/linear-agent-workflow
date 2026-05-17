@@ -2,13 +2,13 @@
 
 Reusable Linear workflow skills for AI coding agents.
 
-The workflow keeps Linear as the source of truth from raw idea to shipped PR:
+The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
 Idea -> Discovery -> Delivery -> Issue -> Ship
 ```
 
-GitHub remains the branch, PR, review, CI, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
+GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
 
 ## Skills
 
@@ -18,7 +18,7 @@ GitHub remains the branch, PR, review, CI, and merge-history surface. Linear own
 - `linear-spec`: Tech Spec after engineering review or lightweight engineering pass.
 - `linear-issue`: one-PR Issue from Project + PRD + Tech Spec/exception.
 - `linear-check`: report-only transition readiness checks.
-- `linear-ship`: wrapper around a configured project ship workflow.
+- `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
 ## Install And Update
 
@@ -75,7 +75,7 @@ scripts/update.sh \
   --branch linear-workflow-v0.2.0
 ```
 
-For Zeni, the configured ship workflow is gstack `ship`.
+For Zeni, the configured flow is gstack `ship`, Compound `ce-resolve-pr-feedback`, then gstack `land-and-deploy`.
 
 See `references/versioning.md` for the full adapter contract and breaking-change policy.
 

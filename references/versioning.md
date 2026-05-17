@@ -59,7 +59,7 @@ The lockfile pins:
 - adapter format version;
 - generator version;
 - generated wrapper file hashes;
-- consumer configuration such as ship workflow, language, hosts, and skills.
+- consumer configuration such as ship workflow, optional review feedback workflow, optional land workflow, language, hosts, and skills.
 
 Example shape:
 
@@ -87,11 +87,15 @@ Example shape:
   "consumer": {
     "name": "zeni",
     "shipWorkflow": "gstack ship",
+    "reviewFeedbackWorkflow": "compound-engineering:ce-resolve-pr-feedback",
+    "landWorkflow": "gstack land-and-deploy",
     "linearFacingLanguage": "ru",
     "skillInstructionLanguage": "en"
   }
 }
 ```
+
+`reviewFeedbackWorkflow` and `landWorkflow` are optional. Older lockfiles that do not include them remain valid. When absent, `linear-ship` keeps the previous behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of silently inventing a resolver or merge path.
 
 ## Updates
 

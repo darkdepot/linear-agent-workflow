@@ -79,3 +79,5 @@ Consumer check verifies lockfile shape, pinned commit resolution, wrapper hashes
 - Zeni should not copy the whole reusable workflow into `.agents/skills` or `.claude/skills`.
 - Zeni should use generated consumer wrappers plus `.agents/linear-workflow.lock.json`.
 - Zeni ship workflow is gstack `ship`.
+- Zeni review feedback workflow is Compound `ce-resolve-pr-feedback`.
+- Zeni land workflow is gstack `land-and-deploy`.

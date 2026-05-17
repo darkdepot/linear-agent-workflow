@@ -82,6 +82,8 @@ def add_install_parser(subparsers: argparse._SubParsersAction, command: str) -> 
     parser.add_argument("--hosts", default="codex,claude")
     parser.add_argument("--skills")
     parser.add_argument("--ship-workflow", default="gstack ship")
+    parser.add_argument("--review-feedback-workflow")
+    parser.add_argument("--land-workflow")
     parser.add_argument("--linear-language", default="ru")
     parser.add_argument("--skill-language", default="en")
     parser.add_argument("--consumer-name")
@@ -104,6 +106,7 @@ def install_or_update(args: argparse.Namespace, update: bool) -> None:
 
     if update:
         ensure_reviewable_update_branch(target, getattr(args, "branch", None))
+    existing_consumer_config = read_existing_consumer_config(target) if update else {}
 
     if not args.version:
         raise WorkflowError("consumer mode requires --version, for example --version v0.1.0")
@@ -124,6 +127,16 @@ def install_or_update(args: argparse.Namespace, update: bool) -> None:
         generator_version=generator_version,
         consumer_name=args.consumer_name or target.name,
         ship_workflow=args.ship_workflow,
+        review_feedback_workflow=resolve_optional_consumer_workflow(
+            args.review_feedback_workflow,
+            existing_consumer_config,
+            "reviewFeedbackWorkflow",
+        ),
+        land_workflow=resolve_optional_consumer_workflow(
+            args.land_workflow,
+            existing_consumer_config,
+            "landWorkflow",
+        ),
         linear_language=args.linear_language,
         skill_language=args.skill_language,
     )
@@ -165,6 +178,36 @@ def parse_optional_csv(value: str | None) -> list[str] | None:
     if value is None:
         return None
     return parse_csv(value)
+
+
+def normalize_optional_workflow(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def resolve_optional_consumer_workflow(
+    value: str | None,
+    existing_consumer_config: dict,
+    key: str,
+) -> str | None:
+    if value is not None:
+        return value
+    existing = existing_consumer_config.get(key)
+    return existing if isinstance(existing, str) else None
+
+
+def read_existing_consumer_config(target: Path) -> dict:
+    lock_path = target / LOCKFILE_RELATIVE_PATH
+    if not lock_path.exists():
+        return {}
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    consumer = lock.get("consumer")
+    return consumer if isinstance(consumer, dict) else {}
 
 
 def load_version(root: Path) -> str:
@@ -315,6 +358,8 @@ def write_consumer_wrappers_and_lock(
     generator_version: str,
     consumer_name: str,
     ship_workflow: str,
+    review_feedback_workflow: str | None,
+    land_workflow: str | None,
     linear_language: str,
     skill_language: str,
 ) -> dict:
@@ -343,6 +388,21 @@ def write_consumer_wrappers_and_lock(
         for path in sorted(wrapper_paths)
     ]
 
+    consumer = {
+        "name": consumer_name,
+        "shipWorkflow": ship_workflow,
+        "linearFacingLanguage": linear_language,
+        "skillInstructionLanguage": skill_language,
+    }
+
+    normalized_review_feedback_workflow = normalize_optional_workflow(review_feedback_workflow)
+    if normalized_review_feedback_workflow:
+        consumer["reviewFeedbackWorkflow"] = normalized_review_feedback_workflow
+
+    normalized_land_workflow = normalize_optional_workflow(land_workflow)
+    if normalized_land_workflow:
+        consumer["landWorkflow"] = normalized_land_workflow
+
     lock = {
         "schemaVersion": LOCKFILE_SCHEMA_VERSION,
         "workflow": {
@@ -358,12 +418,7 @@ def write_consumer_wrappers_and_lock(
             "skills": [skill.name for skill in skills],
             "generatedFiles": generated_files,
         },
-        "consumer": {
-            "name": consumer_name,
-            "shipWorkflow": ship_workflow,
-            "linearFacingLanguage": linear_language,
-            "skillInstructionLanguage": skill_language,
-        },
+        "consumer": consumer,
     }
 
     lock_path = target / LOCKFILE_RELATIVE_PATH
@@ -535,6 +590,11 @@ def validate_lock_shape(lock: dict) -> None:
     for key in ("shipWorkflow", "linearFacingLanguage", "skillInstructionLanguage"):
         if not consumer.get(key):
             raise WorkflowError(f"lockfile missing consumer.{key}")
+    for key in ("reviewFeedbackWorkflow", "landWorkflow"):
+        if key in consumer and not (
+            isinstance(consumer[key], str) and consumer[key].strip()
+        ):
+            raise WorkflowError(f"lockfile consumer.{key} must be a non-empty string when present")
 
 
 def validate_generated_file_coverage(adapter: dict) -> None:

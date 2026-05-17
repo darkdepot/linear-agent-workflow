@@ -13,13 +13,15 @@ trap cleanup EXIT
 SOURCE="$TMP_DIR/source"
 CONSUMER="$TMP_DIR/consumer"
 RETRY_CONSUMER="$TMP_DIR/retry-consumer"
+CONFIG_CONSUMER="$TMP_DIR/config-consumer"
 
-mkdir -p "$SOURCE" "$CONSUMER" "$RETRY_CONSUMER"
+mkdir -p "$SOURCE" "$CONSUMER" "$RETRY_CONSUMER" "$CONFIG_CONSUMER"
 rsync -a \
   --exclude ".git" \
   --exclude ".agents" \
   --exclude ".claude" \
   "$REPO_ROOT/" "$SOURCE/"
+printf "0.1.0\n" > "$SOURCE/VERSION"
 
 git -C "$SOURCE" init --quiet
 git -C "$SOURCE" config user.email "linear-workflow-smoke@example.com"
@@ -41,6 +43,11 @@ git -C "$RETRY_CONSUMER" init --quiet
 git -C "$RETRY_CONSUMER" config user.email "linear-workflow-smoke@example.com"
 git -C "$RETRY_CONSUMER" config user.name "Linear Workflow Smoke"
 git -C "$RETRY_CONSUMER" commit --allow-empty --quiet -m "Initial retry consumer"
+
+git -C "$CONFIG_CONSUMER" init --quiet
+git -C "$CONFIG_CONSUMER" config user.email "linear-workflow-smoke@example.com"
+git -C "$CONFIG_CONSUMER" config user.name "Linear Workflow Smoke"
+git -C "$CONFIG_CONSUMER" commit --allow-empty --quiet -m "Initial config consumer"
 if "$SOURCE/scripts/update.sh" \
   --mode consumer \
   --target "$RETRY_CONSUMER" \
@@ -63,16 +70,65 @@ test "$(git -C "$RETRY_CONSUMER" branch --show-current)" = "linear-workflow-retr
 
 "$SOURCE/scripts/install.sh" \
   --mode consumer \
+  --target "$CONFIG_CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.1.0 \
+  --review-feedback-workflow "compound-engineering:ce-resolve-pr-feedback" \
+  --land-workflow "gstack land-and-deploy"
+"$SOURCE/scripts/check.sh" --mode consumer --target "$CONFIG_CONSUMER" --source "$SOURCE"
+python3 - "$CONFIG_CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as fh:
+    lock = json.load(fh)
+consumer = lock["consumer"]
+assert consumer["reviewFeedbackWorkflow"] == "compound-engineering:ce-resolve-pr-feedback"
+assert consumer["landWorkflow"] == "gstack land-and-deploy"
+PY
+
+"$SOURCE/scripts/install.sh" \
+  --mode consumer \
   --target "$CONSUMER" \
   --source "$SOURCE" \
   --repository "$SOURCE" \
   --version v0.1.0
 "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SOURCE" --latest
+python3 - "$CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as fh:
+    lock = json.load(fh)
+consumer = lock["consumer"]
+assert "reviewFeedbackWorkflow" not in consumer
+assert "landWorkflow" not in consumer
+PY
 
 printf "0.2.0\n" > "$SOURCE/VERSION"
 git -C "$SOURCE" add VERSION
 git -C "$SOURCE" commit --quiet -m "Release 0.2.0"
 git -C "$SOURCE" tag v0.2.0
+
+"$SOURCE/scripts/update.sh" \
+  --mode consumer \
+  --target "$CONFIG_CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.2.0 \
+  --branch linear-workflow-config-update
+"$SOURCE/scripts/check.sh" --mode consumer --target "$CONFIG_CONSUMER" --source "$SOURCE"
+python3 - "$CONFIG_CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as fh:
+    lock = json.load(fh)
+consumer = lock["consumer"]
+assert consumer["reviewFeedbackWorkflow"] == "compound-engineering:ce-resolve-pr-feedback"
+assert consumer["landWorkflow"] == "gstack land-and-deploy"
+PY
 
 "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SOURCE" --latest >"$TMP_DIR/stale.log"
 grep -q "STALE" "$TMP_DIR/stale.log"
@@ -260,4 +316,4 @@ fi
 grep -q "must not copy workflow truth" "$TMP_DIR/copied.log"
 grep -q "hash mismatch" "$TMP_DIR/copied.log"
 
-echo "PASS: fixture smoke covered self install/check, consumer install/update/check, retryable branch updates, pinned commit generation, removed-skill cleanup, orphan detection, coverage, schema, stale, drift, and copied truth detection"
+echo "PASS: fixture smoke covered self install/check, consumer install/update/check, optional review/land config, optional config preservation, retryable branch updates, pinned commit generation, removed-skill cleanup, orphan detection, coverage, schema, stale, drift, and copied truth detection"
