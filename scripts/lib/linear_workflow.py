@@ -246,10 +246,7 @@ def load_skills_at_commit(source: Path, commit: str, requested: list[str] | None
     skills: list[Skill] = []
     for skill_name in skill_names:
         canonical_path = Path("skills") / skill_name / "SKILL.md"
-        try:
-            content = git_show(source, commit, canonical_path.as_posix())
-        except WorkflowError:
-            continue
+        content = git_show(source, commit, canonical_path.as_posix())
         meta = parse_frontmatter_text(content)
         name = meta.get("name", skill_name)
         description = meta.get("description", "")
@@ -472,9 +469,10 @@ def check_consumer(target: Path, source: Path, check_latest: bool) -> str:
 
     copied_truth = find_copied_truth_dirs(target)
     if copied_truth:
-        raise WorkflowError(
-            "consumer skill dirs must not copy workflow truth:\n- "
-            + "\n- ".join(path.as_posix() for path in copied_truth)
+        drift.extend(
+            "copied workflow truth (consumer skill dirs must not copy workflow truth): "
+            + path.as_posix()
+            for path in copied_truth
         )
 
     if drift:
@@ -504,6 +502,8 @@ def validate_lock_shape(lock: dict) -> None:
     adapter = lock["adapter"]
     if adapter.get("formatVersion") != ADAPTER_FORMAT_VERSION:
         raise WorkflowError(f"unsupported adapter formatVersion: {adapter.get('formatVersion')}")
+    if not adapter.get("generatorVersion"):
+        raise WorkflowError("lockfile missing adapter.generatorVersion")
     if not adapter.get("generatedFiles"):
         raise WorkflowError("lockfile missing adapter.generatedFiles")
     if not adapter.get("hosts"):

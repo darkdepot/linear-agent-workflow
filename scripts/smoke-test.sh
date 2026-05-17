@@ -84,7 +84,8 @@ python3 - "$CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
 import json
 import sys
 
-lock = json.load(open(sys.argv[1]))
+with open(sys.argv[1]) as fh:
+    lock = json.load(fh)
 assert "linear-new" not in lock["adapter"]["skills"]
 PY
 test ! -e "$CONSUMER/.agents/skills/linear-new/SKILL.md"
@@ -96,9 +97,11 @@ import json
 import sys
 
 path = sys.argv[1]
-lock = json.load(open(path))
+with open(path) as fh:
+  lock = json.load(fh)
 removed = lock["adapter"]["generatedFiles"].pop()
-open(path, "w").write(json.dumps(lock, indent=2) + "\n")
+with open(path, "w") as fh:
+  fh.write(json.dumps(lock, indent=2) + "\n")
 print(removed["path"])
 PY
 )"
@@ -108,6 +111,30 @@ if "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SO
   exit 1
 fi
 grep -q "generatedFiles does not match" "$TMP_DIR/coverage.log"
+
+"$SOURCE/scripts/install.sh" \
+  --mode consumer \
+  --target "$CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.2.0
+
+python3 - "$CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path) as fh:
+    lock = json.load(fh)
+del lock["adapter"]["generatorVersion"]
+with open(path, "w") as fh:
+    fh.write(json.dumps(lock, indent=2) + "\n")
+PY
+if "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SOURCE" >"$TMP_DIR/generator-version.log" 2>&1; then
+  echo "Expected missing generatorVersion check to fail" >&2
+  exit 1
+fi
+grep -q "adapter.generatorVersion" "$TMP_DIR/generator-version.log"
 
 "$SOURCE/scripts/install.sh" \
   --mode consumer \
@@ -130,10 +157,12 @@ grep -q "DRIFT" "$TMP_DIR/drift.log"
   --repository "$SOURCE" \
   --version v0.2.0
 mkdir -p "$CONSUMER/.agents/skills/linear-check/references"
+printf "\nmanual edit\n" >> "$CONSUMER/.agents/skills/linear-check/SKILL.md"
 if "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SOURCE" >"$TMP_DIR/copied.log" 2>&1; then
-  echo "Expected copied workflow truth check to fail" >&2
+  echo "Expected copied workflow truth and drift check to fail" >&2
   exit 1
 fi
 grep -q "must not copy workflow truth" "$TMP_DIR/copied.log"
+grep -q "hash mismatch" "$TMP_DIR/copied.log"
 
-echo "PASS: fixture smoke covered self install/check, consumer install/update/check, pinned commit generation, coverage, stale, drift, and copied truth detection"
+echo "PASS: fixture smoke covered self install/check, consumer install/update/check, pinned commit generation, coverage, schema, stale, drift, and copied truth detection"
