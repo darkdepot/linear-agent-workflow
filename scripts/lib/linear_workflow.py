@@ -617,6 +617,7 @@ def cleanup_removed_generated_wrappers(target: Path, next_wrapper_paths: set[str
     if not isinstance(generated_files, list):
         return
 
+    wrappers_to_remove: list[Path] = []
     for generated in generated_files:
         if not isinstance(generated, dict) or not generated.get("path") or not generated.get("sha256"):
             continue
@@ -635,6 +636,9 @@ def cleanup_removed_generated_wrappers(target: Path, next_wrapper_paths: set[str
                 + rel_path.as_posix()
             )
 
+        wrappers_to_remove.append(wrapper)
+
+    for wrapper in wrappers_to_remove:
         wrapper.unlink()
         try:
             wrapper.parent.rmdir()
@@ -648,7 +652,13 @@ def ensure_reviewable_update_branch(target: Path, requested_branch: str | None) 
         return
 
     if requested_branch:
-        run_git(target, "switch", "-c", requested_branch)
+        current_branch = run_git(target, "branch", "--show-current").strip()
+        if current_branch == requested_branch:
+            return
+        if local_branch_exists(target, requested_branch):
+            run_git(target, "switch", requested_branch)
+        else:
+            run_git(target, "switch", "-c", requested_branch)
         return
 
     branch = run_git(target, "branch", "--show-current").strip()
@@ -656,6 +666,14 @@ def ensure_reviewable_update_branch(target: Path, requested_branch: str | None) 
         raise WorkflowError(
             "consumer update refuses to edit the default branch; pass --branch or switch to a review branch"
         )
+
+
+def local_branch_exists(target: Path, branch: str) -> bool:
+    try:
+        run_git(target, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
+    except WorkflowError:
+        return False
+    return True
 
 
 def resolve_version_commit(source: Path, repository: str, version: str) -> str:

@@ -12,8 +12,9 @@ trap cleanup EXIT
 
 SOURCE="$TMP_DIR/source"
 CONSUMER="$TMP_DIR/consumer"
+RETRY_CONSUMER="$TMP_DIR/retry-consumer"
 
-mkdir -p "$SOURCE" "$CONSUMER"
+mkdir -p "$SOURCE" "$CONSUMER" "$RETRY_CONSUMER"
 rsync -a \
   --exclude ".git" \
   --exclude ".agents" \
@@ -35,6 +36,30 @@ git -C "$CONSUMER" config user.email "linear-workflow-smoke@example.com"
 git -C "$CONSUMER" config user.name "Linear Workflow Smoke"
 git -C "$CONSUMER" commit --allow-empty --quiet -m "Initial consumer"
 git -C "$CONSUMER" switch -c linear-workflow-update --quiet
+
+git -C "$RETRY_CONSUMER" init --quiet
+git -C "$RETRY_CONSUMER" config user.email "linear-workflow-smoke@example.com"
+git -C "$RETRY_CONSUMER" config user.name "Linear Workflow Smoke"
+git -C "$RETRY_CONSUMER" commit --allow-empty --quiet -m "Initial retry consumer"
+if "$SOURCE/scripts/update.sh" \
+  --mode consumer \
+  --target "$RETRY_CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v9.9.9 \
+  --branch linear-workflow-retry >"$TMP_DIR/retry-missing-tag.log" 2>&1; then
+  echo "Expected update with missing tag to fail" >&2
+  exit 1
+fi
+test "$(git -C "$RETRY_CONSUMER" branch --show-current)" = "linear-workflow-retry"
+"$SOURCE/scripts/update.sh" \
+  --mode consumer \
+  --target "$RETRY_CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.1.0 \
+  --branch linear-workflow-retry
+"$SOURCE/scripts/check.sh" --mode consumer --target "$RETRY_CONSUMER" --source "$SOURCE"
 
 "$SOURCE/scripts/install.sh" \
   --mode consumer \
@@ -107,6 +132,26 @@ git -C "$SOURCE" add .
 git -C "$SOURCE" commit --quiet -m "Release 0.4.0"
 git -C "$SOURCE" tag v0.4.0
 
+printf "\nmanual edit\n" >> "$CONSUMER/.claude/skills/linear-new/SKILL.md"
+if "$SOURCE/scripts/update.sh" \
+  --mode consumer \
+  --target "$CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.4.0 >"$TMP_DIR/partial-delete.log" 2>&1; then
+  echo "Expected modified stale wrapper cleanup to fail before deleting any stale wrappers" >&2
+  exit 1
+fi
+grep -q "refusing to remove modified generated wrapper" "$TMP_DIR/partial-delete.log"
+test -e "$CONSUMER/.agents/skills/linear-new/SKILL.md"
+test -e "$CONSUMER/.claude/skills/linear-new/SKILL.md"
+
+"$SOURCE/scripts/install.sh" \
+  --mode consumer \
+  --target "$CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.3.0
 "$SOURCE/scripts/update.sh" \
   --mode consumer \
   --target "$CONSUMER" \
@@ -215,4 +260,4 @@ fi
 grep -q "must not copy workflow truth" "$TMP_DIR/copied.log"
 grep -q "hash mismatch" "$TMP_DIR/copied.log"
 
-echo "PASS: fixture smoke covered self install/check, consumer install/update/check, pinned commit generation, removed-skill cleanup, orphan detection, coverage, schema, stale, drift, and copied truth detection"
+echo "PASS: fixture smoke covered self install/check, consumer install/update/check, retryable branch updates, pinned commit generation, removed-skill cleanup, orphan detection, coverage, schema, stale, drift, and copied truth detection"
