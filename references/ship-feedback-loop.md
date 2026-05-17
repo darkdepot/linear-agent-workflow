@@ -46,7 +46,6 @@ Return `green` when all are true:
 Return `needs-human` when any are true:
 
 - Maximum resolver rounds reached.
-- Maximum wall-clock time reached.
 - Greptile failed or skipped repeatedly.
 - Merge conflict appears.
 - Feedback asks for product, UX, business, or scope decisions.
@@ -58,7 +57,7 @@ Return `needs-human` when any are true:
 
 Return `blocked` when required tools, auth, PR state, or Linear context are unavailable and the next action is clear.
 
-Return `timed-out` when checks, reviews, Greptile, or deploy readiness stay pending past the configured wall-clock limit.
+Return `timed-out` when checks, reviews, Greptile, deploy readiness, or the overall loop stay pending past the configured wall-clock limit. Wall-clock expiry takes precedence over `needs-human` unless the resolver already reported `needs-human` or a human decision is already known to be required.
 
 ## Linear Comments
 
