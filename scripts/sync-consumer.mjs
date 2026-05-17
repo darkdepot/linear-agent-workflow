@@ -43,7 +43,16 @@ function parseArgs(argv) {
 }
 
 function command(cwd, commandName, args) {
-  return execFileSync(commandName, args, { cwd, encoding: "utf8" }).trim();
+  try {
+    return execFileSync(commandName, args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch (error) {
+    const detail = error.stderr?.toString().trim() || error.message;
+    throw new Error(`${commandName} ${args.join(" ")} failed in ${cwd}: ${detail}`);
+  }
 }
 
 function sha256(text) {
@@ -223,19 +232,25 @@ function sync(root, repo, consumerName, commit, dirty) {
 
 function check(root, repo, consumerName, commit, dirty) {
   const lockPath = path.join(repo, ".agents", "linear-workflow.lock.json");
+  const failures = [];
   let lock = null;
   let checkConsumerName = consumerName;
   let checkCommit = commit;
   let checkDirty = dirty;
   if (fs.existsSync(lockPath)) {
-    lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-    if (lock.consumerName) checkConsumerName = lock.consumerName;
-    if (lock.upstreamCommit) checkCommit = lock.upstreamCommit;
-    if (typeof lock.upstreamDirty === "boolean") checkDirty = lock.upstreamDirty;
+    try {
+      lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    } catch (error) {
+      failures.push(`Lockfile is corrupted: ${path.relative(repo, lockPath)} (${error.message})`);
+    }
+    if (lock) {
+      if (lock.consumerName) checkConsumerName = lock.consumerName;
+      if (lock.upstreamCommit) checkCommit = lock.upstreamCommit;
+      if (typeof lock.upstreamDirty === "boolean") checkDirty = lock.upstreamDirty;
+    }
   }
 
   const plan = plannedInstall(root, repo, checkConsumerName, checkCommit, checkDirty);
-  const failures = [];
   const expectedSkills = new Set(plan.skills);
 
   for (const file of plan.files) {
@@ -305,7 +320,7 @@ function check(root, repo, consumerName, commit, dirty) {
 
   if (!fs.existsSync(plan.lockPath)) {
     failures.push(`Missing lockfile: ${path.relative(repo, plan.lockPath)}`);
-  } else {
+  } else if (lock) {
     const lockedSkills = new Map((lock.installedSkills || []).map((skill) => [skill.name, skill]));
     for (const file of plan.files) {
       const locked = lockedSkills.get(file.skill);
@@ -345,8 +360,16 @@ if (!fs.existsSync(repo) || !fs.statSync(repo).isDirectory()) {
   process.exit(1);
 }
 
-const commit = command(root, "git", ["rev-parse", "--short", "HEAD"]);
-const dirty = command(root, "git", ["status", "--short"]).length > 0;
+let commit = "";
+let dirty = false;
+try {
+  commit = command(root, "git", ["rev-parse", "--short", "HEAD"]);
+  dirty = command(root, "git", ["status", "--short"]).length > 0;
+} catch (error) {
+  console.error(`Upstream must be a git checkout: ${root}`);
+  console.error(error.message);
+  process.exit(1);
+}
 
 if (args.check) {
   check(root, repo, consumerName, commit, dirty);
