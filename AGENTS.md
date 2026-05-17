@@ -17,7 +17,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Linear PRD = WHAT: problem, operator, workflow, scenarios, requirements, acceptance.
 - Linear Tech Spec = HOW: architecture, contracts, failure modes, validation.
 - Linear Issue = one-PR execution contract with context snapshot.
-- GitHub = branch, PR, review, CI, and merge history only.
+- GitHub = branch, PR, review, CI, deploy, and merge history only.
 - `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 
 ## Skill Design Rules

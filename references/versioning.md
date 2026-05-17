@@ -48,7 +48,7 @@ Example shape:
 {
   "schemaVersion": 1,
   "upstreamRepo": "darkdepot/linear-agent-workflow",
-  "upstreamVersion": "0.2.0",
+  "upstreamVersion": "0.3.0",
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
   "upstreamDirty": false,
   "installedAt": "2026-05-17T00:00:00.000Z",
@@ -65,6 +65,24 @@ Example shape:
 ```
 
 `installedAt` changes on every sync. Consumers should review the generated diff and treat `upstreamCommit`, `upstreamVersion`, and `sha256` changes as the meaningful release metadata.
+
+## Consumer Config
+
+Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, not in generated skill bodies or lockfile metadata. The optional ship-phase fields are:
+
+- `Ship workflow`: creates the branch/PR through the consumer repo's normal ship command.
+- `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
+- `Land workflow`: merges and verifies/deploys the PR after the review loop is green.
+
+Example Zeni policy:
+
+```markdown
+- Ship workflow: gstack ship
+- Review feedback workflow: compound-engineering:ce-resolve-pr-feedback
+- Land workflow: gstack land-and-deploy
+```
+
+`Review feedback workflow` and `Land workflow` are optional. When absent, `linear-ship` keeps backward-compatible behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of inventing a resolver or merge path.
 
 ## Updates
 
@@ -100,7 +118,7 @@ The sync script rewrites generated workflow files only. Consumer product code an
 Use SemVer tags for consumer releases.
 
 - Patch: documentation, generated text, or validation changes that do not alter workflow behavior.
-- Minor: new skills, new optional lockfile fields, new checks, or backward-compatible workflow additions.
+- Minor: new skills, new optional consumer config fields, new checks, or backward-compatible workflow additions.
 - Major: removed skills, incompatible lockfile schema, required consumer config changes, or workflow changes that alter required Linear artifact semantics.
 
 Before `v1.0.0`, breaking changes are allowed in minor releases only when the changelog and release notes call them out clearly. Consumers still update by PR, so every lockfile bump remains reviewable.

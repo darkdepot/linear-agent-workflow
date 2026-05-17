@@ -2,13 +2,13 @@
 
 Reusable Linear workflow skills for AI coding agents.
 
-The workflow keeps Linear as the source of truth from raw idea to shipped PR:
+The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
 linear-idea -> discovery/reviews -> linear-handoff -> implementation/ship
 ```
 
-GitHub remains the branch, PR, review, CI, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
+GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
 
 ## Skills
 
@@ -19,7 +19,7 @@ GitHub remains the branch, PR, review, CI, and merge-history surface. Linear own
 - `linear-spec`: atomic Tech Spec create/update helper.
 - `linear-issue`: atomic one-PR Issue create/update helper.
 - `linear-check`: report-only transition readiness checks.
-- `linear-ship`: wrapper around a configured project ship workflow.
+- `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
 ## Workflow
 
@@ -45,7 +45,7 @@ when final discovery/review plan appears
 -> implementation starts from approved Issues
 
 /linear-ship
--> PR/review/merge/release sync
+-> PR/review feedback/land/Linear closeout sync
 ```
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `linear-handoff` persists the package.
@@ -74,7 +74,7 @@ node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 
 The check fails when generated skills are missing, stale, edited, too small to be executable, missing copied references/templates, or look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
 
-For Zeni, the configured ship workflow is gstack `ship`.
+For Zeni, the configured flow is gstack `ship`, Compound `ce-resolve-pr-feedback`, then gstack `land-and-deploy`.
 
 See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
 

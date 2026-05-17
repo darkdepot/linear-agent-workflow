@@ -6,7 +6,13 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
-- Reserve future install/update workflow changes for explicit versioned releases.
+## [0.3.0] - 2026-05-17
+
+### Added
+
+- Extend `linear-ship` into a full Ship-phase orchestrator around configured PR creation, review feedback, land/deploy, and Linear closeout workflows.
+- Add optional consumer config fields for review feedback and land/deploy workflows.
+- Add ship feedback-loop reference and ship output template.
 
 ## [0.2.0] - 2026-05-17
 

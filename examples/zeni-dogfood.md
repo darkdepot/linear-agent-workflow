@@ -9,6 +9,8 @@ Consumer policy:
 - Zeni `.claude/skills/linear-*` contains tiny discovery wrappers to `.agents`.
 - Zeni stores consumer policy in `.agents/linear-workflow.config.md` and repo docs.
 - Zeni's configured ship workflow is gstack `ship`.
+- Zeni's configured review feedback workflow is Compound `ce-resolve-pr-feedback`.
+- Zeni's configured land workflow is gstack `land-and-deploy`.
 
 Dogfood order:
 

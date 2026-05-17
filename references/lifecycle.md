@@ -89,12 +89,14 @@ Gate: `linear-check issue`.
 
 ## Ship
 
-Create and review PR without losing Linear source of truth.
+Create, stabilize, land, and close out a PR without losing Linear source of truth.
 
 Required:
 
 - `linear-check pre-ship`.
 - Delegate PR creation to configured ship workflow.
 - Issue moves to `In Review` after PR creation.
+- If configured, delegate review feedback stabilization to the configured resolver.
+- If configured, delegate merge/deploy to the configured land workflow.
 - Issue moves to `Done` after merge/user acceptance.
 - `linear-check post-ship`.

@@ -47,10 +47,10 @@ Keep consumer-specific policy in `.agents/linear-workflow.config.md`, `AGENTS.md
 Add or preserve a short consumer repo instruction:
 
 - Linear Project, PRD, Tech Spec, and Issue are source of truth.
-- GitHub is PR/review/CI/merge history only.
+- GitHub is PR/review/CI/deploy/merge history only.
 - Use `linear-idea`, `linear-handoff`, `linear-check`, and `linear-ship` for the main workflow.
 - Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` as atomic helpers.
-- Configure the ship workflow used by `linear-ship`.
+- Configure the ship, review feedback, and land workflows used by `linear-ship`.
 
 ## Updates
 
@@ -83,6 +83,8 @@ The check fails when:
 - Zeni `.claude/skills/linear-*` should remain tiny discovery wrappers to `.agents`.
 - Zeni-specific policy belongs in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting docs.
 - Zeni ship workflow is gstack `ship`.
+- Zeni review feedback workflow is Compound `ce-resolve-pr-feedback`.
+- Zeni land workflow is gstack `land-and-deploy`.
 
 ## Anti-Patterns
 
