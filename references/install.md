@@ -1,20 +1,81 @@
 # Install Guide
 
-Install this workflow into a consumer repo as a reusable workflow, not as copied project truth.
+Install this workflow as generated wrappers over one canonical workflow source.
 
-## Recommended Consumer Setup
+## Source Of Truth
 
-1. Make `skills/linear-*` available to the target agent runtime.
-2. Keep `references/` and `templates/` available next to the skills.
-3. Add a short consumer repo instruction:
-   - Linear Project, PRD, Tech Spec, and Issue are source of truth.
-   - GitHub is PR/review/CI/merge history only.
-   - Use `linear-idea`, `linear-prd`, `linear-spec`, `linear-issue`, `linear-check`, and `linear-ship` for Linear-tracked work.
-4. Configure the ship workflow used by `linear-ship`.
+Canonical workflow truth stays only in `linear-agent-workflow`:
+
+- `skills/linear-*/SKILL.md`
+- `references/*`
+- `templates/*`
+
+Consumer repos must not copy full workflow truth. They get generated wrappers and, in consumer mode, a lockfile.
+
+## Self Mode
+
+Use self mode inside this repo:
+
+```bash
+scripts/install.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode self --target "$(pwd)"
+```
+
+Self mode generates Codex and Claude Code wrappers that point repo-relatively to `skills/linear-*/SKILL.md`. It does not create `.agents/linear-workflow.lock.json`.
+
+## Consumer Mode
+
+Use consumer mode in Zeni and future repos:
+
+```bash
+scripts/install.sh \
+  --mode consumer \
+  --target <path/to/consumer-repo> \
+  --version v0.1.0
+```
+
+Run this after the requested SemVer tag exists in the workflow repository.
+
+Consumer mode generates:
+
+- `.agents/linear-workflow.lock.json`
+- `.agents/skills/linear-*/SKILL.md`
+- `.claude/skills/linear-*/SKILL.md`
+
+The lockfile pins repository URL, SemVer tag, immutable commit SHA, adapter format version, generated wrapper hashes, and consumer configuration.
+
+Consumer wrappers must read the lockfile and resolve the pinned workflow source. They must not resolve from a local absolute path, a sibling checkout, or `main`.
+
+## Updates
+
+Updates should happen on a branch and be reviewed as a consumer PR:
+
+```bash
+scripts/update.sh \
+  --mode consumer \
+  --target <path/to/consumer-repo> \
+  --version v0.2.0 \
+  --branch linear-workflow-v0.2.0
+```
+
+`update.sh` rewrites only generated wrappers and lockfile metadata. It does not rewrite consumer product code.
+
+## Checks
+
+Use:
+
+```bash
+scripts/check.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode consumer --target <path/to/consumer-repo>
+```
+
+Self check verifies generated wrappers and confirms no lockfile is required.
+
+Consumer check verifies lockfile shape, pinned commit resolution, wrapper hashes, generated wrapper thinness, and absence of copied `references/` or `templates/` inside consumer skill dirs.
 
 ## Zeni Consumer Notes
 
 - Zeni should keep its existing project-specific skills.
-- Zeni should not copy the whole reusable workflow into `.agents/skills`.
-- Zeni can add thin wrappers or bootstrap guidance if the agent runtime needs local discovery.
+- Zeni should not copy the whole reusable workflow into `.agents/skills` or `.claude/skills`.
+- Zeni should use generated consumer wrappers plus `.agents/linear-workflow.lock.json`.
 - Zeni ship workflow is gstack `ship`.

@@ -20,14 +20,64 @@ GitHub remains the branch, PR, review, CI, and merge-history surface. Linear own
 - `linear-check`: report-only transition readiness checks.
 - `linear-ship`: wrapper around a configured project ship workflow.
 
-## Install In A Consumer Repo
+## Install And Update
 
-1. Copy or symlink `skills/linear-*` into the consumer repo's agent skill directory.
-2. Keep `references/` and `templates/` available next to the installed skills.
-3. Add a short consumer-repo instruction that Linear Project, PRD, Tech Spec, and Issue are the source of truth.
-4. Configure the ship workflow used by `linear-ship`.
+This repo has one canonical workflow source and two generated wrapper modes.
+
+Canonical truth stays only in this repo:
+
+- `skills/linear-*/SKILL.md`
+- `references/*`
+- `templates/*`
+
+Generated wrappers are discovery adapters. They are not workflow truth.
+
+### Self Mode
+
+Use self mode only inside `linear-agent-workflow` itself:
+
+```bash
+scripts/install.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode self --target "$(pwd)"
+```
+
+Self mode generates local Codex and Claude Code wrappers:
+
+- `.agents/skills/linear-*/SKILL.md`
+- `.claude/skills/linear-*/SKILL.md`
+
+Wrappers point repo-relatively to `skills/linear-*/SKILL.md`. No lockfile is used because self mode follows the current checkout.
+
+### Consumer Mode
+
+Use consumer mode for Zeni and future repos:
+
+```bash
+scripts/install.sh \
+  --mode consumer \
+  --target <path/to/consumer-repo> \
+  --version v0.1.0
+```
+
+Run this after the requested SemVer tag exists in the workflow repository.
+
+Consumer mode generates thin wrappers plus `.agents/linear-workflow.lock.json`. The lockfile pins the repository URL, SemVer tag, immutable commit SHA, adapter format version, generated wrapper hashes, and consumer config.
+
+Consumer wrappers resolve the pinned workflow source from the lockfile. They must not point to `main`, a sibling checkout, or a machine-specific absolute path.
+
+Updates are explicit and reviewable:
+
+```bash
+scripts/update.sh \
+  --mode consumer \
+  --target <path/to/consumer-repo> \
+  --version v0.2.0 \
+  --branch linear-workflow-v0.2.0
+```
 
 For Zeni, the configured ship workflow is gstack `ship`.
+
+See `references/versioning.md` for the full adapter contract and breaking-change policy.
 
 ## Principles
 
@@ -41,4 +91,6 @@ For Zeni, the configured ship workflow is gstack `ship`.
 
 ```bash
 git diff --check
+scripts/check.sh --mode self --target "$(pwd)"
+scripts/smoke-test.sh
 ```
