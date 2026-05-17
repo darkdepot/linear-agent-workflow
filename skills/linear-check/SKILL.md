@@ -29,6 +29,7 @@ Modes:
 - `handoff`
 - `pre-ship`
 - `post-ship`
+- `adapter`
 
 Rules:
 
@@ -41,6 +42,7 @@ Rules:
 - Do not edit Project, documents, or Issues unless the user explicitly asked to sync or fix them.
 - Do not use Project Updates as a required gate; use Linear comments for user review acceptance.
 - Checks are report-only. They must not silently repair drift.
+- When checking adapter status, run or report `scripts/sync-consumer.mjs --check` output. Do not install, update, or rewrite generated skills from `linear-check`.
 
 Mode checks:
 
@@ -52,6 +54,7 @@ Mode checks:
 - `handoff`: Project, PRD, Tech Spec, and approved Issue plan are current; user approval is recorded; implementation starts from Linear Issue(s), not from a raw `/office-hours`, `/brainstorming`, or review plan.
 - `pre-ship`: branch/diff matches Issue, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
 - `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` after merge/user acceptance, and final drift is synced back to Linear.
+- `adapter`: generated consumer skills are full executable copies, Claude wrappers point to `.agents`, the consumer lockfile pins an immutable commit, and drift is reported from `scripts/sync-consumer.mjs --check`.
 
 Hard FAIL examples:
 

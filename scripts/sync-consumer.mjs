@@ -59,6 +59,12 @@ function sha256(text) {
   return crypto.createHash("sha256").update(text).digest("hex");
 }
 
+function readVersion(root) {
+  const versionPath = path.join(root, "VERSION");
+  if (!fs.existsSync(versionPath)) return "";
+  return fs.readFileSync(versionPath, "utf8").trim();
+}
+
 function titleize(value) {
   return value
     .split(/[-_\s]+/)
@@ -187,7 +193,7 @@ function plannedInstall(root, repo, consumerName, commit, dirty) {
   };
 }
 
-function sync(root, repo, consumerName, commit, dirty) {
+function sync(root, repo, consumerName, commit, dirty, version) {
   const plan = plannedInstall(root, repo, consumerName, commit, dirty);
   fs.mkdirSync(path.join(repo, ".agents", "skills"), { recursive: true });
   fs.mkdirSync(path.join(repo, ".claude", "skills"), { recursive: true });
@@ -219,6 +225,7 @@ function sync(root, repo, consumerName, commit, dirty) {
   const manifest = {
     schemaVersion: 1,
     upstreamRepo: UPSTREAM_REPO,
+    upstreamVersion: version,
     upstreamCommit: commit,
     upstreamDirty: dirty,
     installedAt,
@@ -363,7 +370,7 @@ if (!fs.existsSync(repo) || !fs.statSync(repo).isDirectory()) {
 let commit = "";
 let dirty = false;
 try {
-  commit = command(root, "git", ["rev-parse", "--short", "HEAD"]);
+  commit = command(root, "git", ["rev-parse", "HEAD"]);
   dirty = command(root, "git", ["status", "--short"]).length > 0;
 } catch (error) {
   console.error(`Upstream must be a git checkout: ${root}`);
@@ -374,5 +381,5 @@ try {
 if (args.check) {
   check(root, repo, consumerName, commit, dirty);
 } else {
-  sync(root, repo, consumerName, commit, dirty);
+  sync(root, repo, consumerName, commit, dirty, readVersion(root));
 }

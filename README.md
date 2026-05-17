@@ -52,23 +52,35 @@ Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inpu
 
 ## Install In A Consumer Repo
 
-1. Run `node scripts/sync-consumer.mjs --repo /path/to/consumer`.
-2. Keep generated full copies under `.agents/skills/linear-*`.
-3. Keep `.claude/skills/linear-*` as tiny wrappers to `.agents`.
-4. Keep consumer-specific policy in `.agents/linear-workflow.config.md` or repo docs.
-5. Configure the ship workflow used by `linear-ship`.
+Run the sync script from this upstream checkout:
 
-Check an install with:
+```bash
+node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name Zeni
+```
+
+The script generates a reviewable local install:
+
+- `.agents/skills/linear-*`: full executable skill copies generated from upstream.
+- `.agents/skills/linear-*/references` and `.agents/skills/linear-*/templates`: copied beside each generated skill for progressive disclosure.
+- `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
+- `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated file paths, and hashes.
+- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, and ship workflow. Existing config is preserved.
+
+Check an install without writing:
 
 ```bash
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
 
+The check fails when generated skills are missing, stale, edited, too small to be executable, missing copied references/templates, or look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
+
 For Zeni, the configured ship workflow is gstack `ship`.
+
+See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
 
 ## Principles
 
-- Reusable first: consumer repos should not fork the workflow logic.
+- Reusable first: consumer repos should receive generated workflow copies, not hand-maintained forks.
 - Full local install: consumer `.agents/skills/linear-*` files are executable generated copies, not redirect stubs.
 - Linear first: durable requirements live in Linear.
 - Handoff first: discovery implementation plans must pass through `linear-handoff` before implementation.
@@ -80,5 +92,6 @@ For Zeni, the configured ship workflow is gstack `ship`.
 
 ```bash
 git diff --check
+node --check scripts/sync-consumer.mjs
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
