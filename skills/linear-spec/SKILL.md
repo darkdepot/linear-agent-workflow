@@ -17,7 +17,7 @@ Read first:
 
 Rules:
 
-- Write Linear Tech Spec content in Russian.
+- Write Linear Tech Spec content in the consumer config language; use Russian when no consumer config is present.
 - Tech Spec defines HOW, not product discovery.
 - Use Project and PRD as the source documents.
 - If engineering review exists, convert it into a durable Tech Spec.

@@ -85,7 +85,7 @@ Rules:
 - Do not approve or implement a raw discovery/review plan directly.
 - Do not start code implementation until Linear Issue(s) exist and are approved as execution contracts.
 - Do not create PRs directly; use the consumer repo's configured ship workflow after Issues are ready.
-- Keep Linear-facing Project, PRD, Tech Spec, Issue descriptions, and comments in Russian.
+- Keep Linear-facing Project, PRD, Tech Spec, Issue descriptions, and comments in the consumer config language; use Russian when no consumer config is present.
 - Keep repo skill instructions and docs in English.
 - Use Linear comments for user review acceptance, not Project Updates.
 - Split Issues only when one PR is truly too large; split into vertical slices with explicit dependencies.

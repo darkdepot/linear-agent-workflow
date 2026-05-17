@@ -16,7 +16,7 @@ Read first:
 
 Rules:
 
-- Keep Project body in Russian.
+- Keep Project body in the consumer config language; use Russian when no consumer config is present.
 - Keep Project overview-level; do not inline the PRD or Tech Spec.
 - Use Linear chips for documents and issues.
 - Keep active Project documents to PRD and Tech Spec for this MVP.

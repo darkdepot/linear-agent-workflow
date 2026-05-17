@@ -1,6 +1,8 @@
 # Linear Artifact Rules
 
-Linear-facing content must be in Russian:
+Linear-facing content must follow the consumer config language policy.
+
+If no consumer config is present, use Russian for:
 
 - Project summary/body
 - PRD

@@ -17,7 +17,7 @@ Read first:
 
 Rules:
 
-- Write Linear Issue content in Russian.
+- Write Linear Issue content in the consumer config language; use Russian when no consumer config is present.
 - Create one Issue by default.
 - Build the Issue from Project plus PRD plus Tech Spec, or explicit no-spec exception.
 - Include implementation-critical context snapshot directly in the Issue.
