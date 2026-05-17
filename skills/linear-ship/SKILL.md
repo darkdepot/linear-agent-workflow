@@ -38,6 +38,7 @@ Rules:
 - Do not use GitHub Issues as requirements.
 - Sync material drift back to Linear before claiming completion.
 - Use Linear comments for user review acceptance, not Project Updates.
-- If the Review feedback workflow is absent, stop after PR creation/status sync with final verdict `pr-created`.
-- If the Land workflow is absent, stop after review stabilization with final verdict `green`.
+- If both Review feedback workflow and Land workflow are absent, stop after PR creation/status sync with final verdict `pr-created`.
+- If Review feedback workflow is absent but Land workflow is configured, wait for checks/reviews once; stop with `needs-human` if actionable feedback appears, otherwise continue to Land workflow.
+- If Land workflow is absent, stop after review stabilization or green review/check wait with final verdict `green`.
 - Stop with `needs-human` when feedback asks for product, UX, business, or scope decisions.

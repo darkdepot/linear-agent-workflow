@@ -20,9 +20,10 @@
    - Fall back to GitHub checks or commit statuses whose names identify Greptile.
 5. Inspect unresolved GitHub review threads and actionable Greptile comments when available.
 6. If no actionable unresolved feedback remains, start the quiet period.
-7. If actionable unresolved feedback exists, invoke the configured review feedback workflow.
-8. If the resolver pushes commits, record the new head SHA and restart the wait/review cycle.
-9. Repeat until an exit condition is reached.
+7. If actionable unresolved feedback exists and a review feedback workflow is configured, invoke it.
+8. If actionable unresolved feedback exists and no review feedback workflow is configured, return `needs-human` with the unresolved feedback summary and missing resolver note.
+9. If the resolver pushes commits, record the new head SHA and restart the wait/review cycle.
+10. Repeat until an exit condition is reached.
 
 ## Defaults
 
