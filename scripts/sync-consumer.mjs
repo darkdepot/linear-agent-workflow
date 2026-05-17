@@ -288,7 +288,10 @@ function check(root, repo, consumerName, commit, dirty) {
     if (!fs.existsSync(path.join(path.dirname(file.agentsPath), "references", "lifecycle.md"))) {
       failures.push(`Missing copied references for ${file.skill}`);
     }
-    if (!fs.existsSync(path.join(path.dirname(file.agentsPath), "templates", "project.md"))) {
+    if (
+      !fs.existsSync(path.join(path.dirname(file.agentsPath), "templates", "project.md")) ||
+      !fs.existsSync(path.join(path.dirname(file.agentsPath), "templates", "check-output.md"))
+    ) {
       failures.push(`Missing copied templates for ${file.skill}`);
     }
     if (!fs.existsSync(file.claudePath)) {
