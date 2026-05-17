@@ -21,6 +21,10 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 - Add a lightweight regression smoke script and a Profile Workbench example for the first Zeni dogfood failure mode.
 
+### Fixed
+
+- Artifact smoke failures now use portable ESM path resolution and de-duplicated unreadable-file diagnostics.
+
 ## [0.3.0] - 2026-05-17
 
 ### Added
