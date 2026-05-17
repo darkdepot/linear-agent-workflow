@@ -134,7 +134,7 @@ This file is local consumer policy for generated \`linear-*\` skills.
 
 - Consumer: ${consumerName}
 - Linear team: ${isZeni ? "Zeni" : "<set team name>"}
-- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: ${isZeni ? "Russian" : "<set language>"}
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, and merge history only.
@@ -214,7 +214,6 @@ function sync(root, repo, consumerName, commit, dirty) {
     upstreamDirty: dirty,
     installedAt,
     consumerName,
-    consumerRepoPath: repo,
     installedSkills: manifestSkills,
   };
   fs.writeFileSync(plan.lockPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -223,7 +222,17 @@ function sync(root, repo, consumerName, commit, dirty) {
 }
 
 function check(root, repo, consumerName, commit, dirty) {
-  const plan = plannedInstall(root, repo, consumerName, commit, dirty);
+  const lockPath = path.join(repo, ".agents", "linear-workflow.lock.json");
+  let lock = null;
+  let checkCommit = commit;
+  let checkDirty = dirty;
+  if (fs.existsSync(lockPath)) {
+    lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    if (lock.upstreamCommit) checkCommit = lock.upstreamCommit;
+    if (typeof lock.upstreamDirty === "boolean") checkDirty = lock.upstreamDirty;
+  }
+
+  const plan = plannedInstall(root, repo, consumerName, checkCommit, checkDirty);
   const failures = [];
   const expectedSkills = new Set(plan.skills);
 
@@ -295,7 +304,6 @@ function check(root, repo, consumerName, commit, dirty) {
   if (!fs.existsSync(plan.lockPath)) {
     failures.push(`Missing lockfile: ${path.relative(repo, plan.lockPath)}`);
   } else {
-    const lock = JSON.parse(fs.readFileSync(plan.lockPath, "utf8"));
     const lockedSkills = new Map((lock.installedSkills || []).map((skill) => [skill.name, skill]));
     for (const file of plan.files) {
       const locked = lockedSkills.get(file.skill);
