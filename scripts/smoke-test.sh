@@ -129,6 +129,45 @@ consumer = lock["consumer"]
 assert consumer["reviewFeedbackWorkflow"] == "compound-engineering:ce-resolve-pr-feedback"
 assert consumer["landWorkflow"] == "gstack land-and-deploy"
 PY
+python3 - "$CONFIG_CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path) as fh:
+    lock = json.load(fh)
+lock["consumer"]["reviewFeedbackWorkflow"] = ""
+with open(path, "w") as fh:
+    fh.write(json.dumps(lock, indent=2) + "\n")
+PY
+if "$SOURCE/scripts/check.sh" --mode consumer --target "$CONFIG_CONSUMER" --source "$SOURCE" >"$TMP_DIR/empty-review-workflow.log" 2>&1; then
+  echo "Expected empty reviewFeedbackWorkflow check to fail" >&2
+  exit 1
+fi
+grep -q "consumer.reviewFeedbackWorkflow" "$TMP_DIR/empty-review-workflow.log"
+"$SOURCE/scripts/update.sh" \
+  --mode consumer \
+  --target "$CONFIG_CONSUMER" \
+  --source "$SOURCE" \
+  --repository "$SOURCE" \
+  --version v0.2.0 \
+  --branch linear-workflow-config-update
+python3 - "$CONFIG_CONSUMER/.agents/linear-workflow.lock.json" <<'PY'
+import json
+import sys
+
+path = sys.argv[1]
+with open(path) as fh:
+    lock = json.load(fh)
+lock["consumer"]["landWorkflow"] = 42
+with open(path, "w") as fh:
+    fh.write(json.dumps(lock, indent=2) + "\n")
+PY
+if "$SOURCE/scripts/check.sh" --mode consumer --target "$CONFIG_CONSUMER" --source "$SOURCE" >"$TMP_DIR/non-string-land-workflow.log" 2>&1; then
+  echo "Expected non-string landWorkflow check to fail" >&2
+  exit 1
+fi
+grep -q "consumer.landWorkflow" "$TMP_DIR/non-string-land-workflow.log"
 
 "$SOURCE/scripts/check.sh" --mode consumer --target "$CONSUMER" --source "$SOURCE" --latest >"$TMP_DIR/stale.log"
 grep -q "STALE" "$TMP_DIR/stale.log"
