@@ -75,7 +75,7 @@ Execution-mode workflow:
 6. Present the package summary to the user for approval.
 7. Record user approval as a Linear comment.
 8. Create or update Linear Issue(s) from the approved package.
-9. Run or report `linear-check delivery` and `linear-check issue`.
+9. Run or report `linear-check handoff`, then `linear-check delivery` and `linear-check issue`.
 10. Hand off to the configured implementation or ship workflow from the approved Issue(s).
 
 Rules:
