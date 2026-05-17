@@ -17,8 +17,8 @@ Consumer repos must not copy full workflow truth. They get generated wrappers an
 Use self mode inside this repo:
 
 ```bash
-scripts/install.sh --mode self --target /Users/sasha/Projects/linear-agent-workflow
-scripts/check.sh --mode self --target /Users/sasha/Projects/linear-agent-workflow
+scripts/install.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode self --target "$(pwd)"
 ```
 
 Self mode generates Codex and Claude Code wrappers that point repo-relatively to `skills/linear-*/SKILL.md`. It does not create `.agents/linear-workflow.lock.json`.
@@ -30,7 +30,7 @@ Use consumer mode in Zeni and future repos:
 ```bash
 scripts/install.sh \
   --mode consumer \
-  --target /Users/sasha/Projects/zeni \
+  --target <path/to/consumer-repo> \
   --version v0.1.0
 ```
 
@@ -53,7 +53,7 @@ Updates should happen on a branch and be reviewed as a consumer PR:
 ```bash
 scripts/update.sh \
   --mode consumer \
-  --target /Users/sasha/Projects/zeni \
+  --target <path/to/consumer-repo> \
   --version v0.2.0 \
   --branch linear-workflow-v0.2.0
 ```
@@ -65,8 +65,8 @@ scripts/update.sh \
 Use:
 
 ```bash
-scripts/check.sh --mode self --target /Users/sasha/Projects/linear-agent-workflow
-scripts/check.sh --mode consumer --target /Users/sasha/Projects/zeni
+scripts/check.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode consumer --target <path/to/consumer-repo>
 ```
 
 Self check verifies generated wrappers and confirms no lockfile is required.

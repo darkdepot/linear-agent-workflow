@@ -16,6 +16,7 @@ REPOSITORY_URL = "https://github.com/darkdepot/linear-agent-workflow.git"
 LOCKFILE_RELATIVE_PATH = Path(".agents/linear-workflow.lock.json")
 LOCKFILE_SCHEMA_VERSION = 1
 ADAPTER_FORMAT_VERSION = 1
+COMMAND_TIMEOUT_SECONDS = 60
 SKILL_PREFIX = "linear-"
 HOST_DIRS = {
     "codex": Path(".agents/skills"),
@@ -437,10 +438,7 @@ def check_consumer(target: Path, source: Path, check_latest: bool) -> str:
     commit = workflow["commit"]
     require_commit_sha(commit)
 
-    if source:
-        resolved = resolve_version_commit(source, workflow["repository"], workflow["version"])
-    else:
-        resolved = resolve_remote_tag_commit(workflow["repository"], workflow["version"])
+    resolved = resolve_version_commit(source, workflow["repository"], workflow["version"])
     if resolved != commit:
         raise WorkflowError(
             f"pinned commit does not match {workflow['version']}: lockfile={commit}, resolved={resolved}"
@@ -469,8 +467,6 @@ def check_consumer(target: Path, source: Path, check_latest: bool) -> str:
         content = wrapper.read_text(encoding="utf-8")
         if "Mode: consumer" not in content or LOCKFILE_RELATIVE_PATH.as_posix() not in content:
             drift.append(f"wrapper is not generated/thin: {rel_path.as_posix()}")
-        if "Users/sasha" in content or "/Projects/linear-agent-workflow" in content:
-            drift.append(f"wrapper contains machine-specific path: {rel_path.as_posix()}")
         if "github.com/darkdepot/linear-agent-workflow/blob/main" in content:
             drift.append(f"wrapper resolves from main: {rel_path.as_posix()}")
 
@@ -655,7 +651,7 @@ def semver_tuple(tag: str) -> tuple[int, int, int]:
     match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)", tag)
     if not match:
         raise WorkflowError(f"not a SemVer tag: {tag}")
-    return tuple(int(part) for part in match.groups())
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
 
 
 def require_commit_sha(commit: str) -> None:
@@ -690,7 +686,16 @@ def run_git(cwd: Path, *args: str) -> str:
 
 
 def run_command(*args: str) -> str:
-    process = subprocess.run(args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        process = subprocess.run(
+            args,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise WorkflowError(f"command timed out after {COMMAND_TIMEOUT_SECONDS}s: {' '.join(args)}") from exc
     if process.returncode != 0:
         raise WorkflowError(process.stderr.strip() or f"command failed: {' '.join(args)}")
     return process.stdout

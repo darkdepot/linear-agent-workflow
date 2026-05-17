@@ -17,8 +17,8 @@ Generated wrappers are discovery adapters. They are not workflow truth and shoul
 Use self mode only inside `linear-agent-workflow` itself:
 
 ```bash
-scripts/install.sh --mode self --target /Users/sasha/Projects/linear-agent-workflow
-scripts/check.sh --mode self --target /Users/sasha/Projects/linear-agent-workflow
+scripts/install.sh --mode self --target "$(pwd)"
+scripts/check.sh --mode self --target "$(pwd)"
 ```
 
 Self mode generates:
@@ -35,7 +35,7 @@ Use consumer mode for repos like Zeni:
 ```bash
 scripts/install.sh \
   --mode consumer \
-  --target /Users/sasha/Projects/zeni \
+  --target <path/to/consumer-repo> \
   --version v0.1.0
 ```
 
@@ -100,7 +100,7 @@ Consumer updates are explicit:
 ```bash
 scripts/update.sh \
   --mode consumer \
-  --target /Users/sasha/Projects/zeni \
+  --target <path/to/consumer-repo> \
   --version v0.2.0 \
   --branch linear-workflow-v0.2.0
 ```
