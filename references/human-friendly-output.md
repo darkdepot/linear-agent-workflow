@@ -101,6 +101,12 @@ Blocked or timed-out responses must still be useful:
 Чего не было сделано:
 - <Issue/PR/merge/deploy/code/etc.>
 
+Проверено:
+- <artifact/state/check that was actually inspected before the stop>
+
+Не проверено:
+- <manual QA/browser/prod/mobile/deploy surface/etc. that did not run>
+
 Следующий unblock:
 - <one smallest useful action>
 ```

@@ -41,6 +41,12 @@ Use this shorter shape when the PR was merged/deployed:
 
 Review and CI were green before landing. Latest head SHA: `<sha>`.
 Post-ship check: <passed/blocked/details>.
+
+Проверено:
+- <merge/deploy/Linear closeout state actually inspected>.
+
+Не проверено:
+- <manual QA/browser/prod/mobile surface/etc. that did not run, or `none known`>.
 ```
 
 Optional internal summary for logs or Linear comments:
