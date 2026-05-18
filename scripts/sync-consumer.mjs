@@ -153,7 +153,7 @@ This file is local consumer policy for generated \`linear-*\` skills.
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> implementation/ship.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> implementation/ship.
 - Ship workflow: ${isZeni ? "gstack ship" : "<set consumer ship workflow>"}
 - Review feedback workflow: ${isZeni ? "compound-engineering:ce-resolve-pr-feedback" : "<optional review feedback workflow>"}
 - Land workflow: ${isZeni ? "gstack land-and-deploy" : "<optional land/deploy workflow>"}

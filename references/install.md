@@ -48,9 +48,9 @@ Add or preserve a short consumer repo instruction:
 
 - Linear Project, PRD, Tech Spec, and Issue are source of truth.
 - GitHub is PR/review/CI/deploy/merge history only.
-- Use `linear-idea`, `linear-handoff`, `linear-check`, and `linear-ship` for the main workflow.
-- Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` as atomic helpers.
-- Configure the ship, review feedback, and land workflows used by `linear-ship`.
+- Use `linear-idea`, `linear-handoff`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
+- Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
+- Configure the ship, review feedback, and land/deploy workflows used by `linear-ship`.
 
 ## Updates
 

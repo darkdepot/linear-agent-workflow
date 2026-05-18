@@ -13,7 +13,8 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 
 ## Source Of Truth
 
-- Linear Project = shaped outcome, lifecycle status, active docs, and issue plan.
+- Linear Project entity = shaped outcome plus lifecycle/status and relationships carried through Linear metadata, resources, comments, and the handoff package.
+- Linear Project body = concise product brief only: what, why, target outcome, in scope, and out of scope.
 - Linear PRD = WHAT: problem, operator, workflow, scenarios, requirements, acceptance.
 - Linear Tech Spec = HOW: architecture, contracts, failure modes, validation.
 - Linear Issue = one-PR execution contract with context snapshot.

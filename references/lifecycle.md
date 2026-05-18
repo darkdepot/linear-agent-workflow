@@ -32,25 +32,27 @@ Required:
 - `/plan-design-review` when UI or product surface needs design review.
 - `/plan-eng-review` when architecture is ready to review.
 - Handoff to `linear-handoff` instead of direct implementation approval.
+- PRD and Tech Spec may exist while the Project remains in Discovery.
 
 Forbidden:
 
 - Treating discovery artifacts as durable Linear truth.
 - Approving a discovery implementation plan directly.
 - Starting implementation from a raw discovery or review plan.
+- Moving the Project to Delivery merely because PRD or Tech Spec exists.
 
 Gate: `linear-check discovery`, then `linear-handoff`.
 
 ## Handoff
 
-Turn discovery into Linear-backed delivery.
+Turn discovery into a Linear-backed execution package.
 
 Required:
 
-- Project in Delivery.
+- Project remains in Discovery or an equivalent configured pre-delivery state. If no separate pre-delivery status exists, keep Discovery and record handoff readiness in comments or check output.
 - Current PRD.
 - Current Tech Spec.
-- User approval recorded as a Linear comment.
+- Package approval recorded as a Linear comment.
 - Proposed Issue slicing.
 
 Forbidden:
@@ -58,21 +60,9 @@ Forbidden:
 - Code changes during handoff.
 - PR creation during handoff.
 - Implementation before approved Issue(s) exist.
+- Moving the Project to Delivery before approved execution Issue(s) exist.
 
 Gate: `linear-check handoff`.
-
-## Delivery
-
-Prepare implementation from approved Linear Issue(s).
-
-Required:
-
-- Project in Delivery.
-- Current PRD.
-- Current Tech Spec or explicit no-spec exception.
-- Approved Issue plan.
-
-Gate: `linear-check delivery`.
 
 ## Issue
 
@@ -84,8 +74,36 @@ Required:
 - Context snapshot from Project, PRD, and Tech Spec or exception.
 - Concrete validation.
 - User approval of the handoff package.
+- Linear chips for Project, PRD, and Tech Spec where available.
+
+Forbidden:
+
+- Attached PRD or Tech Spec documents on the Issue.
+- Raw document URLs when Linear chips can represent the entities.
+- Code changes before the Issue is sufficient for another agent.
 
 Gate: `linear-check issue`.
+
+## Delivery
+
+Prepare implementation from approved Linear Issue(s). Delivery starts only after execution Issue(s) exist and implementation is ready to begin.
+
+Required:
+
+- Project in Delivery.
+- Current PRD.
+- Current Tech Spec or explicit no-spec exception.
+- Approved execution Issue(s).
+- Approval covers the current Issue set and explicitly allows implementation start.
+- Implementation starts from the approved Issue(s), not from raw discovery output.
+
+Forbidden:
+
+- Passing delivery readiness with only PRD and Tech Spec.
+- Moving to Delivery when package approval did not authorize implementation start.
+- Starting implementation from a raw `/office-hours`, `/brainstorming`, or review plan.
+
+Gate: `linear-check delivery`.
 
 ## Ship
 

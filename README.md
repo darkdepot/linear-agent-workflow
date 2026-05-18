@@ -5,7 +5,7 @@ Reusable Linear workflow skills for AI coding agents.
 The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
-linear-idea -> discovery/reviews -> linear-handoff -> implementation/ship
+linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> implementation/ship
 ```
 
 GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
@@ -13,11 +13,11 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 ## Skills
 
 - `linear-idea`: raw idea intake, AskQuestion mini-grill, Project in Idea.
-- `linear-handoff`: post-discovery bridge into Project, PRD, Tech Spec, and Issue(s).
-- `linear-project`: Project body, status, lifecycle, and chips.
-- `linear-prd`: atomic PRD create/update helper.
-- `linear-spec`: atomic Tech Spec create/update helper.
-- `linear-issue`: atomic one-PR Issue create/update helper.
+- `linear-handoff`: primary post-discovery bridge into Project, PRD, Tech Spec, package approval, and Issue(s).
+- `linear-project`: concise Project product brief helper.
+- `linear-prd`: internal/advanced atomic PRD create/update helper.
+- `linear-spec`: internal/advanced atomic Tech Spec create/update helper.
+- `linear-issue`: internal/advanced one-PR Issue create/update helper.
 - `linear-check`: report-only transition readiness checks.
 - `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
@@ -39,16 +39,22 @@ when final discovery/review plan appears
 
 /linear-handoff
 -> if still in Plan Mode: produce handoff exit-plan
--> after approval: update Linear artifacts
--> ask package approval
--> create Linear Issue(s)
--> implementation starts from approved Issues
+-> draft package and ask package approval before durable writes
+-> after approval: update Linear artifacts and create Issue(s)
+-> run delivery gate before implementation starts
+-> implementation starts from approved Issues only
 
 /linear-ship
 -> PR/review feedback/land/Linear closeout sync
 ```
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `linear-handoff` persists the package.
+
+Do not use the direct user-facing chain `linear-prd -> linear-spec -> linear-issue` after discovery. Those atomic skills remain installed for repair and advanced maintenance, but the normal route is `linear-handoff`.
+
+Use `linear-handoff` for post-discovery packaging, scope changes, or any state where Project, PRD, Tech Spec, and execution Issues are not current together. Use atomic helpers only for explicit targeted repair, reviewer-feedback updates, drift sync, or maintaining an already-approved package without changing execution scope. If an atomic helper is invoked as the normal post-discovery route, stop and route to `linear-handoff`.
+
+PRD and Tech Spec creation does not mean Delivery. A Project should move to Delivery only after approved execution Issue(s) exist and implementation is ready to begin from those Issue(s).
 
 ## Install In A Consumer Repo
 
@@ -84,6 +90,9 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Full local install: consumer `.agents/skills/linear-*` files are executable generated copies, not redirect stubs.
 - Linear first: durable requirements live in Linear.
 - Handoff first: discovery implementation plans must pass through `linear-handoff` before implementation.
+- Strong artifacts first: skills and examples carry the workflow contract; scripts are only lightweight smoke guards for known regressions.
+- Product brief Projects: Project bodies cover only five concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
+- WHAT/HOW/execution split: PRD defines behavior and acceptance, Tech Spec defines implementation, Issue defines one PR.
 - One issue by default: split only into vertical slices with dependencies.
 - No silent sync: report drift before moving stages.
 - Report-only checks: `PASS` means inspected and no blocking drift found, not deterministic proof.
@@ -93,5 +102,7 @@ See `references/install.md` for install details and `references/versioning.md` f
 ```bash
 git diff --check
 node --check scripts/sync-consumer.mjs
+node --check scripts/lint-linear-artifacts.mjs
+node scripts/lint-linear-artifacts.mjs
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
