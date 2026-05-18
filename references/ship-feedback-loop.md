@@ -42,6 +42,27 @@ Return `green` when all are true:
 - No unaddressed Greptile comments remain when Greptile MCP data is available.
 - Quiet period passes.
 
+## Review Status Reporting
+
+Every exit with a PR must report review state in human terms, not only workflow terms.
+
+Include:
+
+- Whether pre-ship review ran, was skipped by gate rules, or was unavailable.
+- Whether GitHub review, Greptile, or another configured reviewer ran.
+- Blocking findings, nits, and product/UX/scope questions separately.
+- Fixes applied by the resolver, with the commit SHA when a commit was pushed.
+- Unresolved GitHub review thread count or an explicit "unknown" when the tool cannot inspect threads.
+- Latest head SHA after the final resolver run.
+- Merge state after the final re-check.
+- CI/check state after the final re-check.
+
+If the loop fixed feedback, make the timeline clear: initial review result, feedback found, fix pushed, post-fix review/check status.
+
+Do not collapse a completed loop into "Greptile passed" when the user needs to know whether code review is actually done. Say whether actionable feedback remains and whether the PR is safe to land from the review/CI perspective.
+
+Also state what was not checked. If the loop did not run manual browser QA, production smoke, mobile QA, deploy verification, or user acceptance, say so explicitly instead of letting "green" imply broader confidence.
+
 ## Needs-Human Exit
 
 Return `needs-human` when any are true:

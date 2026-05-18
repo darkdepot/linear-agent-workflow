@@ -13,7 +13,8 @@ Read first:
 2. `references/artifact-rules.md`
 3. `references/readiness-gates.md`
 4. `references/lifecycle.md`
-5. `templates/check-output.md`
+5. `references/human-friendly-output.md`
+6. `templates/check-output.md`
 
 Statuses:
 
@@ -40,6 +41,7 @@ Rules:
 - Return `PASS` only when required state was inspected and no blocking drift was found.
 - Return `FAIL` loudly when a hard workflow contract was violated.
 - Return `BLOCKED` when artifacts cannot be inspected because context or permissions are unavailable.
+- Keep `PASS`, `FAIL`, and `BLOCKED` in the status line for machine readability, but add a one-line human meaning immediately after it.
 - Never edit Project, documents, or Issues from `linear-check`. If the user asks to sync or fix artifacts, report the owner workflow to run.
 - Do not use Project Updates as a required gate; use Linear comments for user review acceptance.
 - Checks are report-only. They must not silently repair drift.
@@ -52,6 +54,7 @@ Rules:
 - When checking adapter status in an upstream checkout, run or report `scripts/sync-consumer.mjs --repo <consumer> --check` output.
 - When checking adapter status inside a generated consumer install, run or report `node .agents/linear-workflow-check.mjs` output.
 - Do not install, update, or rewrite generated skills from `linear-check`.
+- Include a compact "checked / not checked" boundary. `PASS` must not imply uninspected manual QA, browser QA, production smoke, deploy verification, or user acceptance.
 
 Mode checks:
 
@@ -92,3 +95,4 @@ Output:
 - Keep output concise.
 - Include the exact mode in the status line.
 - For FAIL, lead with `FAIL - Linear <mode> not ready`.
+- For BLOCKED, name the smallest useful unblock step.
