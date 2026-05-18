@@ -219,7 +219,7 @@ Completion example:
 - Linear Project/PRD/Tech Spec/Issue package shape.
 - Handoff review/check gate.
 
-Не проверял:
+Не проверено:
 - Код и UI: реализация еще не начиналась.
 
 Безопасные пути дальше:

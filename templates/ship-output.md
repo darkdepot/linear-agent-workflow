@@ -19,17 +19,17 @@ CI status:
 - <blocking check>: <state>.
 - <other relevant checks>: <state or "no blocking checks">.
 
-Checked:
+Проверено:
 - <Linear/PR/review/check/deploy state actually inspected>.
 
-Not checked:
+Не проверено:
 - <manual QA/browser/prod/mobile/deploy surface/etc. that did not run, or `none known`>.
 
 Linear status:
 - <issue/project sync outcome>.
 - <comments/resources/status updates outcome>.
 
-Decision needed:
+Что дальше:
 1. <recommended next action, when one exists>.
 2. <alternative next action, when useful>.
 ```

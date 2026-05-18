@@ -68,10 +68,10 @@ CI status:
 - <blocking check>: <state>.
 - <other relevant checks>: <state or "no blocking checks">.
 
-Checked:
+Проверено:
 - <review/check/Linear state actually inspected>.
 
-Not checked:
+Не проверено:
 - <manual QA/prod/browser/mobile/deploy surface that did not run>.
 ```
 

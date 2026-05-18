@@ -6,8 +6,8 @@ Pass:
 PASS - Linear <mode> ready
 Meaning: inspected required state and found no blocking drift; this is not deterministic proof.
 
-Inspected:
-Not checked:
+Проверено:
+Не проверено:
 Notes:
 ```
 
@@ -20,8 +20,8 @@ Meaning: required state could not be inspected or updated, so readiness is unkno
 Missing:
 Drift:
 Risk:
-Inspected:
-Not checked:
+Проверено:
+Не проверено:
 Next action:
 ```
 
@@ -33,8 +33,8 @@ Meaning: a hard workflow contract was violated or a required artifact/stage is m
 
 Contract violation:
 Evidence:
-Inspected:
-Not checked:
+Проверено:
+Не проверено:
 Required recovery:
 ```
 

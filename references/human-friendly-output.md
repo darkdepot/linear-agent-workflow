@@ -42,7 +42,7 @@ For any handoff, review, check, ship, blocked, or timed-out final, include a com
 Проверено:
 - <artifact/state/check that was actually inspected>
 
-Не проверял:
+Не проверено:
 - <manual QA/browser/prod/mobile/deploy surface/etc. that did not run>
 ```
 
