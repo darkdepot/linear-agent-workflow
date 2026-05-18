@@ -16,7 +16,8 @@ Read first:
 5. `references/readiness-gates.md`
 6. `references/install.md`
 7. `references/ship-feedback-loop.md`
-8. `templates/ship-output.md`
+8. `references/human-friendly-output.md`
+9. `templates/ship-output.md`
 
 Workflow:
 
@@ -34,6 +35,56 @@ Workflow:
 12. `linear-closeout`: after merge/user acceptance, update the Linear Issue to `Done`.
 13. `linear-closeout`: run or report `linear-check post-ship`.
 14. Return the concise report in `templates/ship-output.md`.
+
+User-facing ship status UX:
+
+- Start with the outcome in human language. Do not start with `Linear ship: <verdict>` when talking to the user.
+- Translate internal verdicts:
+  - `pr-created`: PR created and Linear synced; waiting for configured review or human next step.
+  - `green`: PR is ready for landing, but merge/deploy did not run because the land workflow is absent or human approval is required.
+  - `merged`: PR was merged/deployed and Linear closeout ran.
+  - `needs-human`: a specific decision is needed; name the decision, not only the verdict.
+  - `blocked`: the workflow cannot proceed because required context, auth, tools, PR state, or Linear state is unavailable.
+  - `timed-out`: waiting did not settle; name what is still pending.
+- When the PR is green but merge/deploy requires explicit user approval, say: "PR is ready to land, but I stopped before merge/deploy because I need your explicit approval."
+- Make code review state understandable. Include who or what reviewed, what was found, what was fixed, what remains unresolved, CI state, and whether the PR is safe to merge from the review perspective.
+- If a resolver pushed fixes, include the latest head SHA and say that review state was checked again after that push.
+- Include a compact "checked / not checked" boundary. If manual browser QA, production smoke, mobile QA, deploy verification, or other surfaces did not run, say so plainly.
+- Do not dump phase names, git directives, or internal workflow telemetry unless they materially explain the status.
+- End with concrete next choices when a human decision is needed.
+- Decision choices must explain consequences and include a recommendation when review/CI state makes one path clearly preferable.
+
+Required review status shape when a PR exists:
+
+```text
+Review status:
+- Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
+- GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
+- Fixes applied: <none or concise list with commit SHA>.
+- Unresolved review threads: <count/status>.
+- Merge state: <clean/blocked/conflict/unknown>.
+
+CI status:
+- <blocking check>: <state>.
+- <other relevant checks>: <state or "no blocking checks">.
+
+Проверено:
+- <review/check/Linear state actually inspected>.
+
+Не проверено:
+- <manual QA/prod/browser/mobile/deploy surface that did not run>.
+```
+
+When a feedback loop ran, include a short timeline:
+
+```text
+Review timeline:
+1. Before PR: pre-ship review passed and scope matched the Linear Issue.
+2. After PR: CI settled green.
+3. Greptile left 1 nit.
+4. Nit fixed in `<sha>`.
+5. Re-check: Greptile passed, unresolved threads: 0, merge state: `CLEAN`.
+```
 
 Rules:
 

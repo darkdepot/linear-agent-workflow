@@ -16,6 +16,7 @@ Read first:
 3. `skills/linear-check/SKILL.md`
 4. `references/questioning.md`
 5. `references/lifecycle.md`
+6. `references/human-friendly-output.md`
 
 Workflow:
 
@@ -30,17 +31,54 @@ Workflow:
 9. Run or report `linear-check idea`.
 10. Stop immediately.
 
+User-facing narration:
+
+- Keep workflow mechanics backstage. Do not narrate reading this skill, lifecycle rules, templates, or internal Linear constraints unless something is blocked.
+- The first visible update should be product-context-first: name the user problem, the product area, and the immediate intake action.
+- Mention Linear mechanics only when a durable state changes, approval is needed, or a blocker prevents the required Project mutation.
+- Phrase constraints as product safety instead of process compliance: "I am stopping at Idea so we do not accidentally turn a raw direction into delivery scope."
+- Do not re-summarize the user's own idea back to them as if it were new information. Strengthen it: clarify the tension, outcome, boundary, and next best discovery route.
+
+Good first update shape:
+
+```text
+Понял: это про доверие к Settings loading, не просто про красивые skeletons. Я быстро проверю, нет ли уже такого Project в Linear, задам пару вопросов про границы и зафиксирую только Idea - без PRD, Issue и кода.
+```
+
 Hard terminal contract:
 
 - Project creation or update in Linear status `Idea` is mandatory.
 - No Linear Project link or id means `linear-idea` is not complete.
 - After the Project is created or updated, stop. Do not continue into discovery, planning, or delivery.
-- Final response must include:
+- Final response must be one human message, not a compliance checklist. It must include:
   - Linear Project link.
-  - Strengthened brief summary.
+  - Project status.
+  - Strengthened brief summary in product language.
   - Selected next-step recommendation: `/office-hours` or `/brainstorming`.
   - Short reason for that recommendation.
-  - Explicit statement that no PRD, Tech Spec, Issue, implementation plan, ExecPlan, or code was created.
+  - Compact boundary statement that no PRD, Tech Spec, Issue, implementation plan, ExecPlan, or code was created.
+
+Final response UX:
+
+- Start with the durable outcome: Project created or updated, Project name, status, and link.
+- Give the user a product understanding check they can validate without opening Linear.
+- Prefer `/office-hours` when the idea already has a clear product direction but needs taste, scope, and tradeoff shaping.
+- Prefer `/brainstorming` when the idea is still broad, ambiguous, or has multiple possible product directions.
+- Avoid duplicated "nothing else was created" footers; say it once, naturally.
+
+Example final:
+
+```text
+Готово. Создал проект в Linear: [Settings skeleton states cleanup](<url>). Статус: `Idea`.
+
+Я понял задачу так: loading в Settings должен ощущаться как стабильная форма будущей страницы, а не как временная серая заглушка. Scope широкий по разделу, но узкий по состоянию: все Settings pages, только initial page load. Главное качество - без скачка композиции после загрузки: skeleton держит основные размеры, плотность, карточки, таблицы, формы и settings-nav контекст, но не копирует каждый текст, иконку и кнопку.
+
+На этом этапе я остановился ровно на идее: зафиксировал направление, но не заводил PRD, Tech Spec, Issue и не трогал код.
+
+Следующий шаг я бы сделал через `/office-hours`. Тут уже не нужно придумывать фичу с нуля; нужно договориться о вкусе и границах: где skeleton должен повторять структуру, где детализация становится шумом, и какие экраны брать за эталон.
+```
+
+Do not include raw gate logs, internal command transcripts, or repeated lifecycle explanations in the final response.
 
 Plan Mode and permission boundary:
 

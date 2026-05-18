@@ -23,6 +23,7 @@ Read first:
 10. `references/readiness-gates.md`
 11. `references/questioning.md`
 12. `references/lifecycle.md`
+13. `references/human-friendly-output.md`
 
 When to use:
 
@@ -49,6 +50,61 @@ Quality bar:
 - Handoff should make the next agent invent less, not more.
 - Prefer fewer, stronger artifacts over verbose workflow transcripts.
 - Do not rely on lint scripts to make artifacts good. The skill must produce clean artifacts by construction.
+
+User-facing handoff UX:
+
+- Assume the user already knows the idea. Do not re-explain discovery back to them unless the package changes the interpretation.
+- Be confident and artifact-oriented: show how approved discovery maps into Project, PRD, Tech Spec, and Issue(s).
+- Put Project first, then documents, then Issue(s). The Issue is execution detail, not the primary container of the work.
+- Explain each artifact by job: Project is the product brief and lifecycle container, PRD is WHAT, Tech Spec is HOW, Issue is the first one-PR execution slice.
+- Say clearly whether anything has been written to Linear yet. Draft approval and completion have different tones.
+- Keep capability caveats small and decision-relevant. Do not center the response on connector limitations unless they block the next step.
+
+Draft package approval UX:
+
+- The pre-write approval screen must be a package map, not an idea recap.
+- It must include:
+  - "Nothing written yet" or the exact mutation boundary.
+  - Project brief shape.
+  - PRD product decisions.
+  - Tech Spec implementation decisions.
+  - Issue slicing and why this split is right.
+  - Review gate, risk, and validation plan.
+  - Decision options.
+- If there is one recommended path, name it plainly.
+
+Draft package example:
+
+```text
+Готов handoff draft. В Linear пока ничего не записывал.
+
+Я разложил approved discovery в пакет так:
+
+Project
+Короткий product brief: привести Settings initial loading к structural skeletons. Без workflow-шума, без списков документов и без статуса реализации в body.
+
+PRD
+Фиксирует продуктовые правила: все Settings pages, только initial page load, skeleton structural-not-literal, route-known chrome остается стабильным, mobile/a11y не ломаются, background refresh и redesign не входят.
+
+Tech Spec
+Фиксирует реализацию: небольшой Settings skeleton kit в `src/components/settings`, route-family mapping для form/table/list/detail/logs pages, reuse текущих `Skeleton`, `Card`, `SettingsShell`, `SettingsSectionNav` и logs skeleton direction.
+
+Issue
+Один PR: `Привести initial skeleton состояний Settings к structural kit`.
+Я бы не дробил это на несколько issues: изменение широкое по routes, но цель одна. Если резать по страницам, выше риск получить разный skeleton language в одном разделе.
+
+Review gate
+Risk: `standard`, потому что touched surface широкий: много Settings routes и визуальное качество. Перед Issue будет handoff review; перед PR нужен pre-ship review.
+
+Validation
+Static: `pnpm typecheck`, lint/targeted tests по факту diff.
+Visual: desktop/mobile smoke на representative routes: general, profile, integrations, provider detail, import detail, accounts, counterparties, logs.
+
+Что делаем?
+1. Зафиксировать пакет в Linear и остановиться перед кодом. Рекомендую, если хочешь сначала увидеть durable PRD/Spec/Issue.
+2. Зафиксировать пакет и сразу после readiness gate начать реализацию.
+3. Поправить пакет перед записью.
+```
 
 Plan Mode behavior:
 
@@ -132,12 +188,54 @@ Rules:
 
 Final response after an approved package must include:
 
-- Linear Project link.
-- PRD link.
-- Tech Spec link.
-- Issue link(s).
+- Outcome sentence: handoff is fixed in Linear and whether code was touched.
+- Clickable artifact map, ordered Project -> PRD -> Tech Spec -> Issue(s).
+- Project status.
+- One-line role for each artifact:
+  - Project: top-level product brief and lifecycle container.
+  - PRD: WHAT decisions and boundaries.
+  - Tech Spec: HOW, mapping, validation, rollout or rollback.
+  - Issue(s): execution slice(s), usually one PR unless split is necessary.
 - Review verdict, risk classification, and whether the review gate was required or advisory.
-- Summary of what was approved.
-- Explicit statement that implementation should start from the approved Linear Issue(s).
+- Clear statement whether the user needs to run `linear-review` again. If handoff review and checks already passed and artifacts did not change afterward, say repeat review is not needed until implementation or pre-ship.
+- Compact "checked / not checked" boundary when review, validation, manual QA, browser checks, or implementation did not run.
+- Next-step options with a recommendation.
+- Offer fresh-agent handoff as a first-class option when the current session is long, the user raised context-quality concerns, or implementation is about to start after substantial discovery.
+
+Completion example:
+
+```text
+Готово. Handoff зафиксирован в Linear, код не трогал.
+
+Пакет:
+- Project: [Settings skeleton states cleanup](<url>) - статус `Discovery`; верхний контейнер работы и короткий product brief.
+- PRD: [Settings structural skeletons](<url>) - WHAT: какие Settings loading states покрываем, что значит structural-not-literal, где границы.
+- Tech Spec: [Settings structural skeletons](<url>) - HOW: skeleton kit, route-family mapping, validation, rollout/rollback.
+- Issue: [ZENI-6](<url>) - первый execution slice; сейчас это один PR.
+
+Пакет уже проверен: `linear-review handoff` и `linear-check` прошли, блокеров нет. Повторно запускать `linear-review` сейчас не нужно. Следующий review нужен перед PR/ship, после реализации.
+
+Проверено:
+- Linear Project/PRD/Tech Spec/Issue package shape.
+- Handoff review/check gate.
+
+Не проверено:
+- Код и UI: реализация еще не начиналась.
+
+Безопасные пути дальше:
+
+1. **Начать реализацию здесь** - рекомендую, если остаемся в этой сессии.
+   Я сначала сделаю implementation-start checkpoint: перечитаю Project/PRD/Tech Spec/Issue, проверю git status/branch и только потом начну код.
+
+2. **Подготовить handoff prompt для свежего агента** - лучший вариант, если не хочешь тащить длинный чат в реализацию.
+   Я соберу короткий prompt с Linear links, scope, validation и запретом на rediscovery.
+
+3. **Запустить subagent-driven flow** - подходит, если работу можно безопасно разрезать.
+   Для визуальных задач чаще выбирай один implementer + reviewer agents, чтобы не потерять единый стиль.
+
+4. **Еще обсудить пакет** - если хочешь поменять split, validation или scope до старта кода.
+```
+
+If implementation start was explicitly approved, the final response may replace the next-step options with the implementation-start checkpoint and the workflow that will run next.
 
 If handoff is `BLOCKED / INCOMPLETE`, include the current Project/PRD/Tech Spec links that exist, the missing approval or inspection step, and a clear statement that no Issue creation or implementation handoff happened.

@@ -16,7 +16,8 @@ Read first:
 3. `references/artifact-quality.md`
 4. `references/readiness-gates.md`
 5. `references/review-rubric.md`
-6. `templates/review-output.md`
+6. `references/human-friendly-output.md`
+7. `templates/review-output.md`
 
 Modes:
 
@@ -40,6 +41,7 @@ Workflow:
 Rules:
 
 - Do not use `PASS`, `FAIL`, or `BLOCKED` as the main review status. Those belong to `linear-check`.
+- Translate the review verdict into a short human meaning before recommending the next workflow.
 - Do not mutate Linear artifacts.
 - Do not record Linear comments.
 - Do not create Issues or PRs.
@@ -48,6 +50,7 @@ Rules:
 - Keep repo skill instructions and docs in English.
 - Treat Project, PRD, Tech Spec, and Issue as source of truth.
 - Treat GitHub as PR, review, CI, deploy, and merge history only.
+- Include a compact "checked / not checked" boundary. For `pre-ship`, distinguish inspected PR/review/CI state from manual QA, browser QA, deployment verification, or production smoke that did not run.
 
 Verdicts:
 
@@ -75,9 +78,11 @@ Hard boundaries:
 Final response must include:
 
 - Review verdict.
+- Human meaning of the verdict.
 - Mode.
 - Risk classification.
 - Whether the gate is required or advisory.
 - Inspected artifacts.
+- What was checked and what was not checked.
 - Findings grouped as blocking findings, proposed fixes, decisions, and FYI.
 - Recommended next workflow.
