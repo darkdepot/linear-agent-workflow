@@ -16,9 +16,13 @@ Read first:
 3. `skills/linear-prd/SKILL.md`
 4. `skills/linear-spec/SKILL.md`
 5. `skills/linear-issue/SKILL.md`
-6. `skills/linear-check/SKILL.md`
-7. `references/artifact-rules.md`
-8. `references/lifecycle.md`
+6. `skills/linear-review/SKILL.md`
+7. `skills/linear-check/SKILL.md`
+8. `references/artifact-rules.md`
+9. `references/artifact-quality.md`
+10. `references/readiness-gates.md`
+11. `references/questioning.md`
+12. `references/lifecycle.md`
 
 When to use:
 
@@ -33,6 +37,7 @@ Inputs to gather:
 - Current conversation discovery decisions.
 - Relevant `/office-hours`, `/brainstorming`, `/plan-design-review`, and `/plan-eng-review` outputs.
 - Existing Linear Project, PRD, Tech Spec, and Issues.
+- Latest `linear-review` report when one already exists.
 - Minimal repo context needed to verify scope, interfaces, and validation.
 
 Quality bar:
@@ -64,10 +69,11 @@ Plan: turn discovery into a Linear-backed execution package
 2. Prepare the Linear Project update as a concise product brief.
 3. Prepare the PRD from product and workflow decisions.
 4. Prepare the Tech Spec from engineering and design review decisions.
-5. Present the Linear handoff package for approval before durable writes.
-6. After approval, update Linear artifacts and create Linear Issue(s) as execution contracts.
-7. Run the delivery gate before implementation starts from those Issues.
-8. Return the approved Issue link(s) and stop unless the user explicitly approved starting implementation.
+5. Classify risk and identify whether `linear-review handoff` is required or advisory.
+6. Present the Linear handoff package and review-gate plan for approval before durable writes.
+7. After approval, update Linear artifacts, run or report `linear-review handoff`, apply accepted artifact fixes through `linear-handoff`, and create Linear Issue(s) as execution contracts.
+8. Run the delivery gate before implementation starts from those Issues.
+9. Return the approved Issue link(s) and stop unless the user explicitly approved starting implementation.
 
 No code changes happen during handoff.
 ```
@@ -81,6 +87,7 @@ Execution-mode workflow:
    - PRD as product truth with requirement IDs and acceptance examples when useful.
    - Tech Spec as implementation truth that traces HOW decisions back to PRD requirements.
    - Proposed Issue slicing with one-PR default and explicit dependencies if split.
+   - Risk classification and whether the review gate is required, advisory, skipped, or blocked.
    - Remaining assumptions, if any, that the user should see before Issue creation.
 4. Run a content-shape review on the package:
    - Project reads like a product brief, not a dashboard.
@@ -93,10 +100,14 @@ Execution-mode workflow:
 7. After package approval, create or update PRD and Tech Spec in Linear.
 8. Update the Project body with only the product brief concerns: what, why, target outcome, in scope, and out of scope. Render headings in the consumer config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 9. Record approval as a Linear comment. The comment should identify the approved package, PRD/Tech Spec links or intended titles, approved Issue slice titles or ids, and whether implementation may start.
-10. Create or update Linear Issue(s) from the approved package.
-11. Run or report `linear-check handoff` and `linear-check issue`.
-12. If the user explicitly approved implementation start, move the Project to Delivery and run or report `linear-check delivery`. If delivery check fails or is blocked, stop and report the current Linear artifact links.
-13. Hand off to the configured implementation or ship workflow from the approved Issue(s) only after delivery readiness passes.
+10. Run or report `linear-review handoff` when the gate is required or advisory.
+11. Present review verdict, blocking findings, proposed fixes, and decisions to the user before Issue creation.
+12. Record accepted review fixes, explicit deferrals, and final approval as a Linear comment.
+13. Apply accepted Project, PRD, Tech Spec, or Issue-plan fixes through `linear-handoff`.
+14. Create or update Linear Issue(s) from the approved package.
+15. Run or report `linear-check handoff` and `linear-check issue`.
+16. If the user explicitly approved implementation start, move the Project to Delivery and run or report `linear-check delivery`. If delivery check fails or is blocked, stop and report the current Linear artifact links.
+17. Hand off to the configured implementation or ship workflow from the approved Issue(s) only after delivery readiness passes.
 
 Rules:
 
@@ -114,6 +125,10 @@ Rules:
 - Use Linear comments for user review acceptance, not Project Updates.
 - Split Issues only when one PR is truly too large; split into vertical slices with explicit dependencies.
 - If a source artifact is a local plan or review report, translate it into PRD/Spec/Issue shape. Do not paste the local artifact body into Linear unchanged.
+- `linear-review` is report-only. Do not ask it to apply fixes or create artifacts.
+- Required `linear-review handoff` findings must be resolved, accepted, or explicitly deferred before creating Issues.
+- Advisory tiny-scope review may be skipped only when the reason is recorded in the Project and Issue review-gate fields.
+- Apply accepted review fixes in `linear-handoff`; then run `linear-check` to report readiness.
 
 Final response after an approved package must include:
 
@@ -121,6 +136,7 @@ Final response after an approved package must include:
 - PRD link.
 - Tech Spec link.
 - Issue link(s).
+- Review verdict, risk classification, and whether the review gate was required or advisory.
 - Summary of what was approved.
 - Explicit statement that implementation should start from the approved Linear Issue(s).
 

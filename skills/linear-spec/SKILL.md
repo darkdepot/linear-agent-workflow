@@ -15,7 +15,9 @@ Read first:
 
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
-3. `templates/tech-spec.md`
+3. `references/artifact-quality.md`
+4. `references/readiness-gates.md`
+5. `templates/tech-spec.md`
 
 Rules:
 
@@ -26,6 +28,10 @@ Rules:
 - Do not rewrite PRD behavior in different words. Link HOW back to WHAT; if WHAT is missing, return to PRD or mark the gap before continuing.
 - If engineering review exists, convert it into a durable Tech Spec.
 - If engineering review does not exist, run a lightweight engineering pass and create a lightweight spec.
+- Trace implementation decisions back to PRD requirement IDs.
+- Use stable implementation unit IDs (`U1`, `U2`, ...).
+- Include system-wide impact, contracts, failure modes, validation, rollout, and rollback.
+- For standard, deep, risky, or review-sensitive packages, make requirement trace, validation, rollback, and failure modes concrete enough for `linear-review artifact` to inspect. Do not add review workflow sections to the Tech Spec body.
 - Use explicit no-spec exception only for truly simple, low-risk work.
 - Do not use no-spec exception for risky, cross-cutting, data, auth, release, or multi-surface work.
 - Keep plan-time and implementation-time unknowns separate. Do not pretend exact helper names, SQL, branch sequencing, or runtime failure details are settled before implementation has touched the code.

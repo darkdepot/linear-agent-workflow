@@ -31,5 +31,6 @@ Rules:
 - Do not inline full PRD or Tech Spec.
 - Do not include active docs, active issues, status bookkeeping, lifecycle notes, or workflow mechanics in the Project body.
 - Keep document and issue relationships in Linear metadata, resources, comments, or the handoff package.
+- Record review-gate state in Linear comments, metadata, or the handoff package, not as visible Project-body sections.
 - Do not include PR chips before a real PR exists.
-- Do not include visible sections such as `Принципы workflow`, `Lifecycle`, `Документы`, `План задач`, or `Текущий статус`.
+- Do not include visible sections such as `Принципы workflow`, `Lifecycle`, `Документы`, `План задач`, `Ревью-гейт`, or `Текущий статус`.

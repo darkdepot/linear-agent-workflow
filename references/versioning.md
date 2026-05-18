@@ -25,7 +25,8 @@ The install writes:
 - `.agents/skills/linear-*/SKILL.md` as full executable generated skill bodies;
 - `.agents/skills/linear-*/references/*` and `.agents/skills/linear-*/templates/*` beside each generated skill;
 - `.claude/skills/linear-*/SKILL.md` as tiny discovery wrappers pointing at `.agents`;
-- `.agents/linear-workflow.lock.json` with upstream identity, version, commit, paths, and hashes;
+- `.agents/linear-workflow-check.mjs` as a self-contained read-only consumer install checker;
+- `.agents/linear-workflow.lock.json` with upstream identity, version, commit, generated skill paths/hashes, wrapper hashes, copied asset hashes, and checker hash;
 - `.agents/linear-workflow.config.md` as preserved consumer policy.
 
 Consumer installs must not depend on an env var, sibling checkout, GitHub URL, or moving branch to execute the workflow. Opening the generated `.agents/skills/<name>/SKILL.md` in the consumer repo must be enough for the agent to follow the skill.
@@ -40,7 +41,10 @@ The lockfile pins:
 - whether the upstream checkout was dirty when generated;
 - install timestamp;
 - consumer name;
-- generated skill paths and hashes.
+- generated skill paths and hashes;
+- generated Claude wrapper paths and hashes;
+- generated checker path and hash;
+- copied `references/` and `templates/` file paths and hashes.
 
 Example shape:
 
@@ -53,18 +57,25 @@ Example shape:
   "upstreamDirty": false,
   "installedAt": "2026-05-17T00:00:00.000Z",
   "consumerName": "Zeni",
+  "checkerPath": ".agents/linear-workflow-check.mjs",
+  "checkerSha256": "...",
+  "copiedAssets": {
+    "references": [{ "path": "artifact-quality.md", "sha256": "..." }],
+    "templates": [{ "path": "prd.md", "sha256": "..." }]
+  },
   "installedSkills": [
     {
       "name": "linear-check",
       "agentsPath": ".agents/skills/linear-check/SKILL.md",
       "claudePath": ".claude/skills/linear-check/SKILL.md",
-      "sha256": "..."
+      "sha256": "...",
+      "wrapperSha256": "..."
     }
   ]
 }
 ```
 
-`installedAt` changes on every sync. Consumers should review the generated diff and treat `upstreamCommit`, `upstreamVersion`, and `sha256` changes as the meaningful release metadata.
+`installedAt` changes on every sync. Consumers should review the generated diff and treat `upstreamCommit`, `upstreamVersion`, generated body hashes, copied asset hashes, and checker hash changes as the meaningful release metadata.
 
 ## Consumer Config
 
@@ -92,7 +103,8 @@ Consumer updates are explicit and reviewable:
 2. Run `node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name <Name>` from the desired upstream checkout.
 3. Review generated `.agents`, `.claude`, and lockfile changes.
 4. Run `node scripts/sync-consumer.mjs --repo /path/to/consumer --check`.
-5. Land the consumer PR.
+5. In the consumer repo, run `node .agents/linear-workflow-check.mjs`.
+6. Land the consumer PR.
 
 The sync script rewrites generated workflow files only. Consumer product code and `.agents/linear-workflow.config.md` are preserved.
 
@@ -105,13 +117,16 @@ The sync script rewrites generated workflow files only. Consumer product code an
 - generated upstream metadata is near the top;
 - installed skill contents match the upstream-generated body for the pinned lockfile commit and dirty flag;
 - installed skills are large enough to be executable;
-- copied `references/` and `templates/` exist beside each generated skill;
+- copied `references/` and `templates/` match the upstream checkout beside each generated skill;
 - `.claude/skills/linear-*` wrappers match generated discovery wrappers;
-- lockfile entries have matching paths and SHA-256 hashes;
+- `.agents/linear-workflow-check.mjs` matches the generated checker body;
+- lockfile entries have matching paths and SHA-256 hashes for skills, wrappers, copied assets, and checker;
 - unmanaged `linear-*` skills or wrappers are reported;
 - redirect-stub patterns are rejected.
 
-`linear-check` may report adapter status, but install, update, stale detection, and drift detection belong to `scripts/sync-consumer.mjs`.
+`node .agents/linear-workflow-check.mjs` verifies the same generated install contract from inside a consumer repo without needing the upstream checkout. It cannot compare to a newer upstream checkout, but it can prove the installed files still match the lockfile.
+
+`linear-check` may report adapter status, but install, update, stale detection, and drift detection belong to `scripts/sync-consumer.mjs` and the generated local checker.
 
 ## Release Policy
 

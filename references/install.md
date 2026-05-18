@@ -29,6 +29,7 @@ The command writes:
 - `.agents/skills/linear-*/references/*`
 - `.agents/skills/linear-*/templates/*`
 - `.claude/skills/linear-*/SKILL.md`
+- `.agents/linear-workflow-check.mjs`
 - `.agents/linear-workflow.lock.json`
 - `.agents/linear-workflow.config.md` when it does not already exist
 
@@ -40,6 +41,8 @@ Generated `.agents/skills/linear-*` files include a header like:
 
 The generated `.claude` files are discovery wrappers only. They point the agent to the executable `.agents` copy in the consumer repo.
 
+The generated `.agents/linear-workflow-check.mjs` file is a read-only checker that can run inside the consumer repo without an upstream checkout. It verifies generated skill bodies, Claude wrappers, copied `references/` and `templates/`, redirect-stub patterns, unmanaged Linear skill directories, and lockfile hashes.
+
 ## Consumer Policy
 
 Keep consumer-specific policy in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting repo docs, not in redirect adapters.
@@ -48,7 +51,7 @@ Add or preserve a short consumer repo instruction:
 
 - Linear Project, PRD, Tech Spec, and Issue are source of truth.
 - GitHub is PR/review/CI/deploy/merge history only.
-- Use `linear-idea`, `linear-handoff`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
+- Use `linear-idea`, `linear-handoff`, `linear-review`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
 - Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
 - Configure the ship, review feedback, and land/deploy workflows used by `linear-ship`.
 
@@ -60,19 +63,32 @@ The sync command rewrites generated Linear skill copies, generated Claude wrappe
 
 ## Checks
 
+Validate the upstream workflow contract:
+
+```bash
+node scripts/validate-workflow.mjs
+```
+
 Verify a consumer repo without writing:
 
 ```bash
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
 
+Verify from inside a generated consumer repo without the upstream checkout:
+
+```bash
+node .agents/linear-workflow-check.mjs
+```
+
 The check fails when:
 
 - installed `.agents/skills/linear-*` files are missing, stale, edited, or too small to be executable;
 - generated metadata is missing near the top of an installed skill;
-- copied `references/` or `templates/` are missing beside a generated skill;
+- copied `references/` or `templates/` are missing, stale, edited, or have unexpected extra files beside a generated skill;
 - `.claude/skills/linear-*` wrappers are missing or stale;
-- `.agents/linear-workflow.lock.json` is missing, corrupted, or has stale hashes/paths;
+- `.agents/linear-workflow-check.mjs` is missing or stale when checked from upstream;
+- `.agents/linear-workflow.lock.json` is missing, corrupted, or has stale hashes/paths for skills, wrappers, copied assets, or the checker;
 - an unmanaged `linear-*` skill or wrapper appears in `.agents` or `.claude`;
 - installed skill bodies contain redirect-stub patterns.
 
@@ -91,4 +107,5 @@ The check fails when:
 - Do not install consumer skills as env-var, sibling-checkout, GitHub URL, or `main` redirects.
 - Do not hand-edit generated `.agents/skills/linear-*` files in a consumer repo.
 - Do not use `.claude/skills/linear-*` as the executable source of truth.
+- Do not let `linear-review` mutate Linear artifacts; accepted fixes belong to `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Do not make Project Updates a required gate; record user review acceptance as a Linear comment.

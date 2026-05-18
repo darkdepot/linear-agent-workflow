@@ -15,16 +15,21 @@ Read first:
 
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
-3. `templates/issue.md`
+3. `references/artifact-quality.md`
+4. `references/readiness-gates.md`
+5. `templates/issue.md`
 
 Rules:
 
 - Write Linear Issue content in the consumer config language; use Russian when no consumer config is present.
 - Create one Issue by default.
 - Build the Issue from Project plus PRD plus Tech Spec, or explicit no-spec exception.
+- Include a `Прочитать сначала` / Read first section with Project, PRD, Tech Spec, and supporting docs or code paths.
+- Include the risk classification and review-gate record from `linear-review` or the advisory tiny-scope exception, including verdict, evidence or comment link, finding disposition, owner workflow, and next step.
 - Include implementation-critical context snapshot directly in the Issue.
 - Do not copy PRD or Tech Spec wholesale into the Issue. Extract the one-PR contract: goal, scope, surfaces, validation, acceptance, and non-goals.
 - Map Issue scope to PRD requirement IDs and Tech Spec surfaces when available.
+- Include concrete validation, acceptance criteria, and non-goals.
 - Use chips for Project, PRD, and Tech Spec.
 - Add PRD and Tech Spec as Linear resources/links when the connector supports it.
 - Do not use raw PRD or Tech Spec URLs in the body when chips can represent those documents.

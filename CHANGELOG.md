@@ -6,6 +6,23 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-18
+
+### Added
+
+- Add `linear-review` as a report-only quality and risk review gate for Project, PRD, Tech Spec, Issue, and pre-ship packages.
+- Add shared questioning, artifact-quality, readiness-gate, and review-rubric references plus a review output template.
+- Add workflow validation through `scripts/validate-workflow.mjs`.
+- Add generated consumer-local `.agents/linear-workflow-check.mjs` plus copied asset and wrapper hashes in the install lockfile.
+
+### Changed
+
+- Strengthen PRD, Tech Spec, and Issue templates with review-gate fields, traceable IDs, richer acceptance, implementation units, failure modes, validation, and rollback expectations while preserving product-brief Project bodies.
+- Update `linear-handoff`, `linear-check`, and `linear-ship` around the risk-based review gate while keeping `linear-check` as readiness-only.
+- Make consumer install checks compare copied `references/` and `templates/` against upstream instead of checking only sentinel files.
+- Make workflow validation exercise consumer-sync behavior with fixtures for edited, missing, extra, and redirect-stub generated files.
+- Keep Linear-facing template headings in Russian while preserving repo skill instructions in English.
+
 ## [0.4.0] - 2026-05-17
 
 ### Changed

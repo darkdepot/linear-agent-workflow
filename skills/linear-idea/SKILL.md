@@ -14,7 +14,8 @@ Read first:
 1. `AGENTS.md`
 2. `skills/linear-project/SKILL.md`
 3. `skills/linear-check/SKILL.md`
-4. `references/lifecycle.md`
+4. `references/questioning.md`
+5. `references/lifecycle.md`
 
 Workflow:
 

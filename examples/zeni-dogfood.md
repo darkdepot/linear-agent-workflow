@@ -19,8 +19,10 @@ Dogfood order:
 3. Use `linear-idea` for raw idea intake.
 4. Use discovery/review skills in Plan Mode when helpful.
 5. Use `linear-handoff` before implementation.
-6. Create approved execution Issue(s) through handoff.
-7. Start implementation from the approved Issue(s).
+6. Use `linear-review` as a risk-based gate before Issue creation or pre-ship when required.
+7. Create approved execution Issue(s) through handoff.
+8. Start implementation from the approved Issue(s).
+9. Keep Project, PRD, Tech Spec, and Issue current in Linear.
 
 ## Correct Raw Idea Intake
 
@@ -53,8 +55,10 @@ Expected behavior:
 3. When a discovery/review implementation plan appears, user runs `/linear-handoff` instead of `linear-prd -> linear-spec -> linear-issue` or direct implementation.
 4. `linear-handoff` produces a handoff exit-plan if still in Plan Mode.
 5. `linear-handoff` previews the package for approval before durable writes; after approval, it updates Project, PRD, and Tech Spec in Linear, creates Issue(s), and only hands off to implementation after the delivery gate passes.
-6. PRD and Tech Spec creation keeps the Project in Discovery or an equivalent pre-delivery state.
-7. The Project moves to Delivery only after approved execution Issue(s) exist and implementation is ready to begin.
+6. `linear-handoff` runs or reports the required/advisory `linear-review handoff` gate before Issue creation.
+7. Accepted review fixes are applied by `linear-handoff`, not by `linear-review`.
+8. PRD and Tech Spec creation keeps the Project in Discovery or an equivalent pre-delivery state.
+9. The Project moves to Delivery only after approved execution Issue(s) exist and implementation is ready to begin.
 
 ## Correct Project Body Shape
 
@@ -82,6 +86,66 @@ Expected Issue relationship shape:
 - PRD and Tech Spec are added as Linear resources/links when the connector supports it.
 - PRD and Tech Spec are not attached as Issue documents.
 - Raw PRD or Tech Spec URLs are avoided when chips can represent the documents.
+
+## Risk-Based Review Gate Examples
+
+### Correct Risky Handoff Review
+
+Input:
+
+```text
+Settings > Agent will change identity, phase, voice guardrails, and context behavior across multiple saveable blocks.
+```
+
+Expected behavior:
+
+1. `linear-handoff` classifies the package as `deep` or `risky`.
+2. Project, PRD, and Tech Spec are updated first.
+3. `linear-review handoff` reports `needs-fixes` if actors, flows, requirement trace, validation, or rollout are weak.
+4. User accepts or rejects proposed fixes.
+5. `linear-handoff` applies accepted artifact fixes and records acceptance as a Linear comment.
+6. `linear-check handoff`, `linear-check delivery`, and `linear-check issue` run or are reported before implementation starts.
+
+### Correct Tiny Advisory Review
+
+Input:
+
+```text
+Rename one static empty-state sentence in a low-risk settings panel.
+```
+
+Expected behavior:
+
+1. Scope is classified as `tiny`.
+2. PRD-lite or no-spec exception is allowed only with the reason recorded.
+3. `linear-review` is advisory and may be skipped.
+4. `linear-check` can pass only when the advisory review-gate record is present in Project or Issue context.
+
+### Anti-Example: Required Review Skipped
+
+FAIL:
+
+1. Handoff creates a standard Project, PRD, Tech Spec, and Issue package.
+2. No `linear-review handoff` report or advisory exception is recorded.
+3. Agent creates Issues and starts implementation.
+
+Why this fails:
+
+- Standard, deep, risky, or materially rewritten packages require the review gate.
+- `linear-check handoff` should report FAIL.
+
+### Anti-Example: Review Mutates Linear
+
+FAIL:
+
+1. `linear-review` finds weak acceptance examples.
+2. `linear-review` edits the PRD directly.
+3. Handoff proceeds without recording accepted fixes.
+
+Why this fails:
+
+- `linear-review` is report-only.
+- Accepted fixes must be applied by `linear-handoff`, an explicit atomic skill, or `linear-ship`.
 
 ## Anti-Example: Thin Adapter Install
 

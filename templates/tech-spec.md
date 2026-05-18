@@ -9,7 +9,7 @@ Default sections:
 ```markdown
 ## Кратко
 
-## Источник PRD
+## Исходные требования
 
 ## Цели и не цели
 
@@ -17,7 +17,13 @@ Default sections:
 
 ## Контракты и границы
 
+## Единицы реализации
+
+## Системное влияние
+
 ## Риски и защита
+
+## Режимы отказа
 
 ## Файлы и поверхности
 
@@ -32,6 +38,9 @@ Rules:
 
 - Tech Spec defines HOW for the approved PRD. It must not redefine WHAT.
 - Use PRD requirement IDs when available. Important design choices should say which `R` or `AE` IDs they support, or explicitly mark themselves as cross-cutting technical support.
+- Use stable implementation unit IDs (`U1`, `U2`, ...). Do not renumber existing unit IDs after splits or reordering.
+- Each implementation unit should include goal, requirements covered, dependencies, files or surfaces, approach, test scenarios, and verification.
+- The `Системное влияние` section should cover affected interfaces, error propagation, state lifecycle risks, and unchanged invariants when relevant.
 - Capture architecture, contracts, boundaries, validation, rollout, rollback, and failure modes.
 - Keep plan-time and implementation-time unknowns separate. If something depends on touching real code or seeing test failures, mark it as deferred implementation detail instead of pretending it is settled.
 - Directional pseudo-code or diagrams are allowed when they clarify shape. Do not include copy-paste implementation code or shell choreography.
