@@ -15,7 +15,9 @@ Read first:
 
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
-3. `templates/prd.md`
+3. `references/artifact-quality.md`
+4. `references/questioning.md`
+5. `templates/prd.md`
 
 Rules:
 
@@ -31,6 +33,10 @@ Rules:
 - Add success criteria for both:
   - the human/operator outcome;
   - handoff quality, so Tech Spec and Issue slicing can proceed without inventing product behavior.
+- Capture actors, current workflow, target workflow, scenarios, requirements, acceptance examples, success criteria, scope boundaries, assumptions, open questions, non-goals, and links.
+- Use stable actor IDs (`A1`, `A2`, ...), flow IDs (`F1`, `F2`, ...), requirement IDs (`R1`, `R2`, ...), and acceptance example IDs (`AE1`, `AE2`, ...).
+- Keep requirements observable or structural enough to trace into the Tech Spec.
+- Use questions only for product, workflow, scope, or risk choices that cannot be inferred from Project, discovery output, or repo context.
 - Record user review acceptance as a Linear comment.
 - Do not create Issues.
 - Do not include implementation architecture that belongs in Tech Spec.

@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 const UPSTREAM_REPO = "darkdepot/linear-agent-workflow";
 const REDIRECT_PATTERNS = [
@@ -84,11 +85,36 @@ function readSkillMeta(text, fallbackName) {
   return { name, description };
 }
 
-function installBody(sourceText, commit, dirty) {
+function toPosixPath(value) {
+  return value.split(path.sep).join("/");
+}
+
+function relativeGeneratedPath(fromDir, toPath, label) {
+  const relativePath = toPosixPath(path.relative(fromDir, toPath));
+  if (!relativePath || path.isAbsolute(relativePath)) {
+    throw new Error(`Could not compute ${label} relative path from ${fromDir} to ${toPath}`);
+  }
+  if (path.resolve(fromDir, relativePath) !== path.resolve(toPath)) {
+    throw new Error(`Computed ${label} path does not resolve to expected target: ${relativePath}`);
+  }
+  return relativePath;
+}
+
+function installBody(sourceText, commit, dirty, installPaths) {
   const marker = dirty ? `${commit} dirty` : commit;
   const metadata = `<!-- Generated from ${UPSTREAM_REPO} @ ${marker}. Do not edit manually. -->`;
+  const agentsPath = relativeGeneratedPath(
+    installPaths.skillDir,
+    path.join(installPaths.consumerRoot, "AGENTS.md"),
+    "consumer AGENTS.md"
+  );
+  const configPath = relativeGeneratedPath(
+    installPaths.skillDir,
+    path.join(installPaths.consumerRoot, ".agents", "linear-workflow.config.md"),
+    "consumer config"
+  );
   let body = sourceText
-    .replace(/`AGENTS\.md`/g, "`../../../AGENTS.md`")
+    .replace(/`AGENTS\.md`/g, `\`${agentsPath}\``)
     .replace(/`skills\/(linear-[^`]+\/SKILL\.md)`/g, "`../$1`");
 
   const lines = body.split("\n");
@@ -98,7 +124,7 @@ function installBody(sourceText, commit, dirty) {
       h1Index + 1,
       0,
       "",
-      "Installed consumer note: read `../../linear-workflow.config.md` when present for repo-specific Linear team, language, and ship-workflow policy. Shared `references/` and `templates/` are copied into this skill directory."
+      `Installed consumer note: read \`${configPath}\` when present for repo-specific Linear team, language, and ship-workflow policy. Shared \`references/\` and \`templates/\` are copied into this skill directory.`
     );
     body = lines.join("\n");
   }
@@ -132,6 +158,222 @@ function copyDirectory(source, destination) {
   }
 }
 
+function listFilesRecursive(rootDir) {
+  if (!fs.existsSync(rootDir)) return [];
+  const files = [];
+  function walk(currentDir) {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+      } else if (entry.isFile()) {
+        files.push(path.relative(rootDir, entryPath));
+      }
+    }
+  }
+  walk(rootDir);
+  return files.sort();
+}
+
+function directoryManifest(rootDir) {
+  return listFilesRecursive(rootDir).map((relativePath) => ({
+    path: relativePath,
+    sha256: sha256(fs.readFileSync(path.join(rootDir, relativePath))),
+  }));
+}
+
+function compareCopiedAssets(installedDir, label, expectedAssets, failures) {
+  if (!fs.existsSync(installedDir)) {
+    failures.push(`Missing copied ${label}`);
+    return;
+  }
+
+  const installedFiles = listFilesRecursive(installedDir);
+  const expectedFiles = expectedAssets.map((asset) => asset.path);
+  const expectedSet = new Set(expectedFiles);
+  const installedSet = new Set(installedFiles);
+
+  for (const asset of expectedAssets) {
+    const relativePath = asset.path;
+    const installedPath = path.join(installedDir, relativePath);
+    if (!installedSet.has(relativePath)) {
+      failures.push(`Missing copied ${label} file: ${relativePath}`);
+      continue;
+    }
+    if (sha256(fs.readFileSync(installedPath)) !== asset.sha256) {
+      failures.push(`Copied ${label} file is stale or edited: ${relativePath}`);
+    }
+  }
+
+  for (const relativePath of installedFiles) {
+    if (!expectedSet.has(relativePath)) {
+      failures.push(`Unexpected copied ${label} file: ${relativePath}`);
+    }
+  }
+}
+
+function checkerBody() {
+  return `#!/usr/bin/env node
+
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const lockPath = path.join(repo, ".agents", "linear-workflow.lock.json");
+const failures = [];
+const REDIRECT_PATTERNS = [
+  /thin adapter/i,
+  /Resolve and follow/i,
+  /LINEAR_AGENT_WORKFLOW_HOME/,
+  /\\.\\.\\/linear-agent-workflow/,
+  /github\\.com\\/darkdepot\\/linear-agent-workflow\\/blob/i,
+  /reusable workflow source in this order/i,
+];
+
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function listFilesRecursive(rootDir) {
+  if (!fs.existsSync(rootDir)) return [];
+  const files = [];
+  function walk(currentDir) {
+    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+      } else if (entry.isFile()) {
+        files.push(path.relative(rootDir, entryPath));
+      }
+    }
+  }
+  walk(rootDir);
+  return files.sort();
+}
+
+function checkHash(relativePath, expectedHash, label) {
+  const absolutePath = path.join(repo, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    failures.push("Missing " + label + ": " + relativePath);
+    return "";
+  }
+  const text = fs.readFileSync(absolutePath);
+  const actualHash = sha256(text);
+  if (actualHash !== expectedHash) {
+    failures.push("Stale or edited " + label + ": " + relativePath);
+  }
+  return text.toString("utf8");
+}
+
+function checkCopiedAssets(skill, assetType, expectedAssets) {
+  const skillDir = path.dirname(path.join(repo, skill.agentsPath));
+  const installedDir = path.join(skillDir, assetType);
+  if (!fs.existsSync(installedDir)) {
+    failures.push("Missing copied " + assetType + " for " + skill.name);
+    return;
+  }
+
+  const installedFiles = listFilesRecursive(installedDir);
+  const expectedFiles = expectedAssets.map((asset) => asset.path);
+  const installedSet = new Set(installedFiles);
+  const expectedSet = new Set(expectedFiles);
+
+  for (const asset of expectedAssets) {
+    const installedPath = path.join(installedDir, asset.path);
+    if (!installedSet.has(asset.path)) {
+      failures.push("Missing copied " + assetType + " for " + skill.name + " file: " + asset.path);
+      continue;
+    }
+    if (sha256(fs.readFileSync(installedPath)) !== asset.sha256) {
+      failures.push("Copied " + assetType + " for " + skill.name + " file is stale or edited: " + asset.path);
+    }
+  }
+
+  for (const relativePath of installedFiles) {
+    if (!expectedSet.has(relativePath)) {
+      failures.push("Unexpected copied " + assetType + " for " + skill.name + " file: " + relativePath);
+    }
+  }
+}
+
+function checkUnexpectedLinearDirs(rootDir, expectedSkills, label) {
+  if (!fs.existsSync(rootDir)) return;
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !entry.name.startsWith("linear-")) continue;
+    if (!expectedSkills.has(entry.name)) {
+      failures.push("Unexpected unmanaged " + label + ": " + path.relative(repo, path.join(rootDir, entry.name)));
+    }
+  }
+}
+
+if (!fs.existsSync(lockPath)) {
+  failures.push("Missing lockfile: .agents/linear-workflow.lock.json");
+} else {
+  let lock = null;
+  try {
+    lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+  } catch (error) {
+    failures.push("Lockfile is corrupted: " + error.message);
+  }
+
+  if (lock) {
+    const references = lock.copiedAssets?.references || [];
+    const templates = lock.copiedAssets?.templates || [];
+    const expectedSkills = new Set((lock.installedSkills || []).map((skill) => skill.name));
+    if (references.length === 0) failures.push("Lockfile missing copied reference hashes");
+    if (templates.length === 0) failures.push("Lockfile missing copied template hashes");
+    if (lock.checkerPath && lock.checkerSha256) {
+      checkHash(lock.checkerPath, lock.checkerSha256, "local install checker");
+    } else {
+      failures.push("Lockfile missing local checker hash");
+    }
+
+    for (const skill of lock.installedSkills || []) {
+      const skillText = checkHash(skill.agentsPath, skill.sha256, "installed skill");
+      if (skillText) {
+        if (!skillText.startsWith("---\\n")) {
+          failures.push("Installed skill must keep YAML frontmatter first: " + skill.agentsPath);
+        }
+        if (!skillText.slice(0, 1200).includes("Generated from " + lock.upstreamRepo + " @ ")) {
+          failures.push("Missing generated metadata near top: " + skill.agentsPath);
+        }
+        for (const pattern of REDIRECT_PATTERNS) {
+          if (pattern.test(skillText)) {
+            failures.push("Redirect-stub pattern " + pattern + " found in " + skill.agentsPath);
+          }
+        }
+        if (skillText.length < 1000) {
+          failures.push("Installed skill looks too small to be executable: " + skill.agentsPath);
+        }
+      }
+
+      if (skill.wrapperSha256) {
+        checkHash(skill.claudePath, skill.wrapperSha256, "Claude wrapper");
+      } else if (!fs.existsSync(path.join(repo, skill.claudePath))) {
+        failures.push("Missing Claude wrapper: " + skill.claudePath);
+      }
+
+      checkCopiedAssets(skill, "references", references);
+      checkCopiedAssets(skill, "templates", templates);
+    }
+
+    checkUnexpectedLinearDirs(path.join(repo, ".agents", "skills"), expectedSkills, "Linear skill");
+    checkUnexpectedLinearDirs(path.join(repo, ".claude", "skills"), expectedSkills, "Claude Linear wrapper");
+  }
+}
+
+if (failures.length > 0) {
+  console.error("Linear workflow local install check failed:");
+  for (const failure of failures) console.error("- " + failure);
+  process.exit(1);
+}
+
+console.log("Linear workflow local install check passed for " + repo);
+`;
+}
+
 function writeIfMissing(filePath, contents) {
   if (!fs.existsSync(filePath)) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -153,7 +395,7 @@ This file is local consumer policy for generated \`linear-*\` skills.
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> implementation/ship.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
 - Ship workflow: ${isZeni ? "gstack ship" : "<set consumer ship workflow>"}
 - Review feedback workflow: ${isZeni ? "compound-engineering:ce-resolve-pr-feedback" : "<optional review feedback workflow>"}
 - Land workflow: ${isZeni ? "gstack land-and-deploy" : "<optional land/deploy workflow>"}
@@ -171,26 +413,39 @@ function listSourceSkills(root) {
 function plannedInstall(root, repo, consumerName, commit, dirty) {
   const skills = listSourceSkills(root);
   const files = [];
+  const generatedChecker = checkerBody();
   for (const skill of skills) {
     const sourcePath = path.join(root, "skills", skill, "SKILL.md");
     const sourceText = fs.readFileSync(sourcePath, "utf8");
-    const installed = installBody(sourceText, commit, dirty);
+    const agentsPath = path.join(repo, ".agents", "skills", skill, "SKILL.md");
+    const installed = installBody(sourceText, commit, dirty, {
+      consumerRoot: repo,
+      skillDir: path.dirname(agentsPath),
+    });
     const wrapper = wrapperBody(sourceText, skill);
     files.push({
       skill,
       sourcePath,
-      agentsPath: path.join(repo, ".agents", "skills", skill, "SKILL.md"),
+      agentsPath,
       claudePath: path.join(repo, ".claude", "skills", skill, "SKILL.md"),
       installed,
       wrapper,
       hash: sha256(installed),
+      wrapperHash: sha256(wrapper),
     });
   }
   return {
     skills,
     files,
+    copiedAssets: {
+      references: directoryManifest(path.join(root, "references")),
+      templates: directoryManifest(path.join(root, "templates")),
+    },
     configPath: path.join(repo, ".agents", "linear-workflow.config.md"),
     configText: defaultConfig(consumerName),
+    checkerPath: path.join(repo, ".agents", "linear-workflow-check.mjs"),
+    checkerText: generatedChecker,
+    checkerHash: sha256(generatedChecker),
     lockPath: path.join(repo, ".agents", "linear-workflow.lock.json"),
   };
 }
@@ -234,10 +489,12 @@ function sync(root, repo, consumerName, commit, dirty, version) {
       agentsPath: path.relative(repo, file.agentsPath),
       claudePath: path.relative(repo, file.claudePath),
       sha256: file.hash,
+      wrapperSha256: file.wrapperHash,
     });
   }
 
   writeIfMissing(plan.configPath, plan.configText);
+  fs.writeFileSync(plan.checkerPath, plan.checkerText);
 
   const manifest = {
     schemaVersion: 1,
@@ -247,6 +504,9 @@ function sync(root, repo, consumerName, commit, dirty, version) {
     upstreamDirty: dirty,
     installedAt,
     consumerName,
+    checkerPath: path.relative(repo, plan.checkerPath),
+    checkerSha256: plan.checkerHash,
+    copiedAssets: plan.copiedAssets,
     installedSkills: manifestSkills,
   };
   fs.writeFileSync(plan.lockPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -302,15 +562,19 @@ function check(root, repo, consumerName, commit, dirty) {
     if (text.length < 1000) {
       failures.push(`Installed skill looks too small to be executable: ${relativeAgentsPath}`);
     }
-    if (!fs.existsSync(path.join(path.dirname(file.agentsPath), "references", "lifecycle.md"))) {
-      failures.push(`Missing copied references for ${file.skill}`);
-    }
-    if (
-      !fs.existsSync(path.join(path.dirname(file.agentsPath), "templates", "project.md")) ||
-      !fs.existsSync(path.join(path.dirname(file.agentsPath), "templates", "check-output.md"))
-    ) {
-      failures.push(`Missing copied templates for ${file.skill}`);
-    }
+    const installedSkillDir = path.dirname(file.agentsPath);
+    compareCopiedAssets(
+      path.join(installedSkillDir, "references"),
+      `references for ${file.skill}`,
+      plan.copiedAssets.references,
+      failures
+    );
+    compareCopiedAssets(
+      path.join(installedSkillDir, "templates"),
+      `templates for ${file.skill}`,
+      plan.copiedAssets.templates,
+      failures
+    );
     if (!fs.existsSync(file.claudePath)) {
       failures.push(`Missing Claude wrapper: ${relativeClaudePath}`);
     } else {
@@ -318,6 +582,15 @@ function check(root, repo, consumerName, commit, dirty) {
       if (wrapperText !== file.wrapper) {
         failures.push(`Claude wrapper is stale or edited: ${relativeClaudePath}`);
       }
+    }
+  }
+
+  if (!fs.existsSync(plan.checkerPath)) {
+    failures.push(`Missing local install checker: ${path.relative(repo, plan.checkerPath)}`);
+  } else {
+    const checkerText = fs.readFileSync(plan.checkerPath, "utf8");
+    if (checkerText !== plan.checkerText) {
+      failures.push(`Local install checker is stale or edited: ${path.relative(repo, plan.checkerPath)}`);
     }
   }
 
@@ -364,6 +637,18 @@ function check(root, repo, consumerName, commit, dirty) {
       if (locked.sha256 !== file.hash) {
         failures.push(`Lockfile sha256 mismatch for ${file.skill}`);
       }
+      if (locked.wrapperSha256 !== file.wrapperHash) {
+        failures.push(`Lockfile wrapperSha256 mismatch for ${file.skill}`);
+      }
+    }
+    if (lock.checkerPath !== path.relative(repo, plan.checkerPath)) {
+      failures.push("Lockfile checkerPath mismatch");
+    }
+    if (lock.checkerSha256 !== plan.checkerHash) {
+      failures.push("Lockfile checkerSha256 mismatch");
+    }
+    if (JSON.stringify(lock.copiedAssets || {}) !== JSON.stringify(plan.copiedAssets)) {
+      failures.push("Lockfile copiedAssets mismatch");
     }
   }
 
@@ -377,7 +662,7 @@ function check(root, repo, consumerName, commit, dirty) {
 }
 
 const args = parseArgs(process.argv.slice(2));
-const scriptPath = new URL(import.meta.url).pathname;
+const scriptPath = fileURLToPath(import.meta.url);
 const root = path.resolve(path.dirname(scriptPath), "..");
 const repo = path.resolve(args.repo);
 const consumerName = args.consumerName || titleize(path.basename(repo));

@@ -11,8 +11,9 @@ Read first:
 
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
-3. `references/lifecycle.md`
-4. `templates/project.md`
+3. `references/readiness-gates.md`
+4. `references/lifecycle.md`
+5. `templates/project.md`
 
 Rules:
 
@@ -22,6 +23,8 @@ Rules:
 - Do not include active docs, active issues, status bookkeeping, lifecycle notes, or workflow mechanics in the Project body.
 - Use Linear metadata, resources, comments, and the handoff package for document and issue relationships.
 - Keep active Project documents to PRD and Tech Spec for this MVP.
+- Keep active Project plan to one Issue by default.
+- Record the current review-gate state in Linear comments, metadata, or the handoff package: risk, required/advisory/skipped, verdict, evidence or comment link, inspected artifacts, finding disposition, owner workflow, and next step.
 - Do not include PR chips before a real PR exists.
 - Do not leave obsolete/closed PR chips or raw PR URLs in durable body.
 

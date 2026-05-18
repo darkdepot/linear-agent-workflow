@@ -18,6 +18,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Linear PRD = WHAT: problem, operator, workflow, scenarios, requirements, acceptance.
 - Linear Tech Spec = HOW: architecture, contracts, failure modes, validation.
 - Linear Issue = one-PR execution contract with context snapshot.
+- `linear-review` = report-only quality/risk review; no Linear mutations.
 - GitHub = branch, PR, review, CI, deploy, and merge history only.
 - `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 
@@ -28,6 +29,8 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Keep wrappers focused on orchestration.
 - Use `references/` and `templates/` through progressive disclosure.
 - Do not copy long templates into every skill.
+- Keep `linear-review` report-only and `linear-check` readiness-only.
+- Apply accepted review fixes through `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
 - Consumer `.agents/skills/linear-*` installs must be full generated skill bodies, not redirect adapters.

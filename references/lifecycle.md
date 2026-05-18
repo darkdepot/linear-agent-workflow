@@ -53,6 +53,9 @@ Required:
 - Current PRD.
 - Current Tech Spec.
 - Package approval recorded as a Linear comment.
+- Risk classification and review-gate policy.
+- `linear-review handoff` when required by `references/readiness-gates.md`.
+- User approval recorded as a Linear comment.
 - Proposed Issue slicing.
 
 Forbidden:
@@ -62,7 +65,7 @@ Forbidden:
 - Implementation before approved Issue(s) exist.
 - Moving the Project to Delivery before approved execution Issue(s) exist.
 
-Gate: `linear-check handoff`.
+Gate: `linear-review handoff` when required or advisory, then `linear-check handoff`.
 
 ## Issue
 
@@ -71,6 +74,8 @@ Create the one-PR execution contract.
 Required:
 
 - Issue attached to the Project.
+- `Прочитать сначала` / Read first context.
+- Review-gate record.
 - Context snapshot from Project, PRD, and Tech Spec or exception.
 - Concrete validation.
 - User approval of the handoff package.
@@ -95,6 +100,7 @@ Required:
 - Current Tech Spec or explicit no-spec exception.
 - Approved execution Issue(s).
 - Approval covers the current Issue set and explicitly allows implementation start.
+- Required review findings resolved, accepted, or explicitly deferred.
 - Implementation starts from the approved Issue(s), not from raw discovery output.
 
 Forbidden:
@@ -111,6 +117,7 @@ Create, stabilize, land, and close out a PR without losing Linear source of trut
 
 Required:
 
+- `linear-review pre-ship` when risk is standard, deep, risky, or implementation materially drifted from Linear artifacts.
 - `linear-check pre-ship`.
 - Delegate PR creation to configured ship workflow.
 - Issue moves to `In Review` after PR creation.

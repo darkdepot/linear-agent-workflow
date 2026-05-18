@@ -5,7 +5,7 @@ Reusable Linear workflow skills for AI coding agents.
 The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
-linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> implementation/ship
+linear-idea -> discovery/reviews -> linear-handoff -> linear-review gate -> approved Issue(s) -> implementation/ship
 ```
 
 GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
@@ -18,6 +18,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-prd`: internal/advanced atomic PRD create/update helper.
 - `linear-spec`: internal/advanced atomic Tech Spec create/update helper.
 - `linear-issue`: internal/advanced one-PR Issue create/update helper.
+- `linear-review`: report-only artifact quality and risk review.
 - `linear-check`: report-only transition readiness checks.
 - `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
@@ -40,11 +41,15 @@ when final discovery/review plan appears
 /linear-handoff
 -> if still in Plan Mode: produce handoff exit-plan
 -> draft package and ask package approval before durable writes
--> after approval: update Linear artifacts and create Issue(s)
+-> after approval: update Linear artifacts
+-> run required/advisory linear-review gate
+-> apply accepted artifact fixes
+-> create Linear Issue(s)
 -> run delivery gate before implementation starts
 -> implementation starts from approved Issues only
 
 /linear-ship
+-> run pre-ship linear-review when standard, deep, risky, or drifted
 -> PR/review feedback/land/Linear closeout sync
 ```
 
@@ -69,7 +74,8 @@ The script generates a reviewable local install:
 - `.agents/skills/linear-*`: full executable skill copies generated from upstream.
 - `.agents/skills/linear-*/references` and `.agents/skills/linear-*/templates`: copied beside each generated skill for progressive disclosure.
 - `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
-- `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated file paths, and hashes.
+- `.agents/linear-workflow-check.mjs`: generated read-only local install checker for the consumer repo.
+- `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated skill/wrapper paths and hashes, checker hash, and copied reference/template hashes.
 - `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, and ship workflow. Existing config is preserved.
 
 Check an install without writing:
@@ -78,7 +84,13 @@ Check an install without writing:
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
 ```
 
-The check fails when generated skills are missing, stale, edited, too small to be executable, missing copied references/templates, or look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
+Inside a generated consumer repo, run the self-contained local checker:
+
+```bash
+node .agents/linear-workflow-check.mjs
+```
+
+The checks fail when generated skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, wrapper/checker/lockfile hashes drift, unmanaged Linear skills appear, or installed skills look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
 
 For Zeni, the configured flow is gstack `ship`, Compound `ce-resolve-pr-feedback`, then gstack `land-and-deploy`.
 
@@ -93,6 +105,8 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Strong artifacts first: skills and examples carry the workflow contract; scripts are only lightweight smoke guards for known regressions.
 - Product brief Projects: Project bodies cover only five concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 - WHAT/HOW/execution split: PRD defines behavior and acceptance, Tech Spec defines implementation, Issue defines one PR.
+- Risk-based review: `linear-review` is required for standard, deep, risky, or drifted flows and advisory for tiny PRD-lite/no-spec exceptions.
+- Review/check split: `linear-review` returns findings and next owner; `linear-check` owns `PASS`, `FAIL`, and `BLOCKED` readiness.
 - One issue by default: split only into vertical slices with dependencies.
 - No silent sync: report drift before moving stages.
 - Report-only checks: `PASS` means inspected and no blocking drift found, not deterministic proof.
@@ -104,5 +118,8 @@ git diff --check
 node --check scripts/sync-consumer.mjs
 node --check scripts/lint-linear-artifacts.mjs
 node scripts/lint-linear-artifacts.mjs
+node --check scripts/validate-workflow.mjs
+node scripts/validate-workflow.mjs
 node scripts/sync-consumer.mjs --repo /path/to/consumer --check
+node /path/to/consumer/.agents/linear-workflow-check.mjs
 ```

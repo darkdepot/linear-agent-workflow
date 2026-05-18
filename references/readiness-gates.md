@@ -1,0 +1,60 @@
+# Readiness Gates
+
+Readiness gates protect the Linear lifecycle without turning every small change into ceremony.
+
+## Risk Classification
+
+Use `tiny`, `standard`, `deep`, or `risky`.
+
+`tiny`:
+
+- One narrow artifact update.
+- No data, auth, billing, migration, multi-surface UX, release, or public API risk.
+- PRD-lite or explicit no-spec exception may be acceptable.
+
+`standard`:
+
+- Normal product or workflow change.
+- Needs Project, PRD, Tech Spec, and one Issue before implementation.
+- Needs review before handoff and pre-ship.
+
+`deep`:
+
+- Cross-cutting workflow, multiple artifacts, new abstractions, or multi-step agent behavior.
+- Needs review before handoff and pre-ship.
+
+`risky`:
+
+- Touches auth, permissions, billing, migrations, sensitive data, production data, release/deploy flow, public API, or security boundaries.
+- Needs review before handoff and pre-ship.
+
+## Review Gate Policy
+
+`linear-review` is required when:
+
+- scope is `standard`, `deep`, or `risky`;
+- handoff creates or materially rewrites PRD, Tech Spec, or Issue contracts;
+- pre-ship scope is `standard`, `deep`, or `risky`;
+- pre-ship scope differs from approved Linear artifacts;
+- work touches risky domains;
+- a no-spec exception is requested for anything beyond tiny low-risk work.
+
+`linear-review` is advisory when:
+
+- work is `tiny`;
+- PRD-lite is explicitly accepted;
+- no-spec exception is explicit, low-risk, and recorded.
+
+## Gate Outcomes
+
+- `ready`: required review ran, no blocking findings remain, or accepted fixes were applied by the owning workflow.
+- `advisory-ready`: review was optional and skipped or produced only non-blocking FYI.
+- `needs-fixes`: proposed fixes or decisions remain before the next stage.
+- `blocked`: required artifacts, permissions, or context are unavailable.
+
+## Ownership
+
+- `linear-review` reports findings only.
+- `linear-check` reports readiness only.
+- `linear-handoff` applies accepted artifact fixes and records approval comments.
+- `linear-ship` syncs PR/review/merge state and reports pre-ship drift.
