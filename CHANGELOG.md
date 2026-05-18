@@ -6,6 +6,13 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-18
+
+### Changed
+
+- Make `linear-idea`, `linear-handoff`, and `linear-ship` user-facing responses outcome-first and more human: product-first idea intake, artifact-map handoff summaries, explicit next-step options, and review/CI status that explains whether a PR is actually ready to land.
+- Add a shared human-friendly output contract with status translation, checked/not-checked confidence boundaries, consequence-aware decision prompts, fresh-agent handoff guidance, and blocked/timed-out response shape.
+
 ## [0.5.0] - 2026-05-18
 
 ### Added
