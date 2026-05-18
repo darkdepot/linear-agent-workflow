@@ -85,11 +85,36 @@ function readSkillMeta(text, fallbackName) {
   return { name, description };
 }
 
-function installBody(sourceText, commit, dirty) {
+function toPosixPath(value) {
+  return value.split(path.sep).join("/");
+}
+
+function relativeGeneratedPath(fromDir, toPath, label) {
+  const relativePath = toPosixPath(path.relative(fromDir, toPath));
+  if (!relativePath || path.isAbsolute(relativePath)) {
+    throw new Error(`Could not compute ${label} relative path from ${fromDir} to ${toPath}`);
+  }
+  if (path.resolve(fromDir, relativePath) !== path.resolve(toPath)) {
+    throw new Error(`Computed ${label} path does not resolve to expected target: ${relativePath}`);
+  }
+  return relativePath;
+}
+
+function installBody(sourceText, commit, dirty, installPaths) {
   const marker = dirty ? `${commit} dirty` : commit;
   const metadata = `<!-- Generated from ${UPSTREAM_REPO} @ ${marker}. Do not edit manually. -->`;
+  const agentsPath = relativeGeneratedPath(
+    installPaths.skillDir,
+    path.join(installPaths.consumerRoot, "AGENTS.md"),
+    "consumer AGENTS.md"
+  );
+  const configPath = relativeGeneratedPath(
+    installPaths.skillDir,
+    path.join(installPaths.consumerRoot, ".agents", "linear-workflow.config.md"),
+    "consumer config"
+  );
   let body = sourceText
-    .replace(/`AGENTS\.md`/g, "`../../../AGENTS.md`")
+    .replace(/`AGENTS\.md`/g, `\`${agentsPath}\``)
     .replace(/`skills\/(linear-[^`]+\/SKILL\.md)`/g, "`../$1`");
 
   const lines = body.split("\n");
@@ -99,7 +124,7 @@ function installBody(sourceText, commit, dirty) {
       h1Index + 1,
       0,
       "",
-      "Installed consumer note: read `../../linear-workflow.config.md` when present for repo-specific Linear team, language, and ship-workflow policy. Shared `references/` and `templates/` are copied into this skill directory."
+      `Installed consumer note: read \`${configPath}\` when present for repo-specific Linear team, language, and ship-workflow policy. Shared \`references/\` and \`templates/\` are copied into this skill directory.`
     );
     body = lines.join("\n");
   }
@@ -392,12 +417,16 @@ function plannedInstall(root, repo, consumerName, commit, dirty) {
   for (const skill of skills) {
     const sourcePath = path.join(root, "skills", skill, "SKILL.md");
     const sourceText = fs.readFileSync(sourcePath, "utf8");
-    const installed = installBody(sourceText, commit, dirty);
+    const agentsPath = path.join(repo, ".agents", "skills", skill, "SKILL.md");
+    const installed = installBody(sourceText, commit, dirty, {
+      consumerRoot: repo,
+      skillDir: path.dirname(agentsPath),
+    });
     const wrapper = wrapperBody(sourceText, skill);
     files.push({
       skill,
       sourcePath,
-      agentsPath: path.join(repo, ".agents", "skills", skill, "SKILL.md"),
+      agentsPath,
       claudePath: path.join(repo, ".claude", "skills", skill, "SKILL.md"),
       installed,
       wrapper,

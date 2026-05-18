@@ -246,7 +246,6 @@ function validateTemplateSections() {
 function validateReviewCheckBoundary() {
   const review = read("skills/linear-review/SKILL.md");
   const check = read("skills/linear-check/SKILL.md");
-  const reviewTemplate = read("templates/review-output.md");
 
   for (const required of [
     "report-only",
@@ -254,8 +253,8 @@ function validateReviewCheckBoundary() {
     "Do not use `PASS`, `FAIL`, or `BLOCKED`",
     "`linear-review` is report-only",
   ]) {
-    if (!review.includes(required) && !reviewTemplate.includes(required)) {
-      fail(`linear-review boundary missing: ${required}`);
+    if (!review.includes(required)) {
+      fail(`linear-review skill boundary missing: ${required}`);
     }
   }
 
