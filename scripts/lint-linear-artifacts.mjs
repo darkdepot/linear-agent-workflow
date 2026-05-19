@@ -53,6 +53,7 @@ for (const [file, snippets] of [
       "Run a content-shape review on the package",
       "PRD as product truth with requirement IDs",
       "Tech Spec as implementation truth that traces HOW decisions back to PRD requirements",
+      "Issue slicing, `AFK`/`HITL` readiness",
     ],
   ],
   [
@@ -60,6 +61,7 @@ for (const [file, snippets] of [
     [
       "What would `linear-spec` still have to invent",
       "Use acceptance examples for stateful or conditional behavior",
+      "actor -> capability -> benefit",
     ],
   ],
   [
@@ -67,6 +69,7 @@ for (const [file, snippets] of [
     [
       "trace important HOW decisions back to `R` or `AE` IDs",
       "Do not rewrite PRD behavior in different words",
+      "interface as test surface",
     ],
   ],
   [
@@ -74,6 +77,20 @@ for (const [file, snippets] of [
     [
       "Map Issue scope to PRD requirement IDs",
       "Do not copy PRD or Tech Spec wholesale into the Issue",
+      "`AFK`",
+      "`HITL`",
+      "feedback-loop contract",
+    ],
+  ],
+  [
+    "references/execution-quality.md",
+    [
+      "actor -> capability -> benefit",
+      "AFK",
+      "HITL",
+      "feedback-loop contract",
+      "deletion test",
+      "interface is the test surface",
     ],
   ],
   [

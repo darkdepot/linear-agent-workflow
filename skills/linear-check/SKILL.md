@@ -12,9 +12,10 @@ Read first:
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
 3. `references/readiness-gates.md`
-4. `references/lifecycle.md`
-5. `references/human-friendly-output.md`
-6. `templates/check-output.md`
+4. `references/execution-quality.md`
+5. `references/lifecycle.md`
+6. `references/human-friendly-output.md`
+7. `templates/check-output.md`
 
 Statuses:
 
@@ -63,7 +64,8 @@ Mode checks:
 - `discovery`: Project is in Discovery or an equivalent pre-delivery state, discovery outputs are available, no implementation has started from a raw discovery plan, and the next required durable mutation is `linear-handoff`.
 - `discovery`: PASS when PRD and Tech Spec exist but Project remains pre-delivery; FAIL when Project moved to Delivery merely because PRD or Tech Spec exists.
 - `handoff`: PASS when Project, PRD, Tech Spec, and proposed or created Issue slicing are current; Project body is a concise product brief; package approval is recorded as a Linear comment; required `linear-review handoff` ran or a tiny advisory exception is recorded; and implementation has not started from raw `/office-hours`, `/brainstorming`, or review plan. Return `BLOCKED` when the package is otherwise valid but approval is pending.
-- `issue`: Issue belongs to the Project, is a one-PR contract, has required sections, includes `Прочитать сначала` / Read first context, Project/PRD/Tech Spec chips plus context snapshot, adds PRD/Tech Spec as resources/links when available, has coherent review-gate status and disposition, and has no attached PRD/Tech Spec docs.
+- `issue`: Issue belongs to the Project, is a one-PR contract, has required sections, includes `Прочитать сначала` / Read first context, `AFK` or `HITL` readiness, dependencies/blockers, Project/PRD/Tech Spec chips plus context snapshot, adds PRD/Tech Spec as resources/links when available, has coherent review-gate status and disposition, and has no attached PRD/Tech Spec docs.
+- `issue`: bug/perf Issues include current behavior, desired behavior, reproduction or baseline, and fix-proof expectation, or explicitly say why the original symptom cannot be reproduced yet.
 - `delivery`: Project is in Delivery, PRD is current, Tech Spec or explicit no-spec exception exists, approved execution Issue(s) exist, approval covers the current Issue set and implementation start, required/advisory review-gate record is coherent with the risk classification, and implementation starts from those Issue(s).
 - `pre-ship`: branch/diff matches Issue, required `linear-review pre-ship` ran for standard, deep, risky, or materially drifted work, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
 - `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` after merge/user acceptance, and final drift is synced back to Linear.
@@ -74,7 +76,7 @@ Content-shape checks:
 - Project: concise product brief. Relationships, status, review acceptance, and links live in Linear metadata, resources, or comments.
 - PRD: WHAT document. It defines operator, problem, target workflow, requirements, non-goals, acceptance, and success criteria. Standard/Deep PRDs should use stable `R` requirement IDs and acceptance examples when behavior is conditional.
 - Tech Spec: HOW document. It traces important design decisions back to PRD requirements when IDs exist, captures contracts/boundaries/validation/rollout, and does not redefine product behavior.
-- Issue: one-PR execution contract. It contains chips for Project/PRD/Tech Spec, resource links when available, an implementation-critical context snapshot, and concrete validation/acceptance.
+- Issue: one-PR execution contract. It contains chips for Project/PRD/Tech Spec, resource links when available, `AFK` or `HITL` readiness, dependencies, key contracts when useful, an implementation-critical context snapshot, and concrete validation/acceptance.
 
 Hard FAIL examples:
 

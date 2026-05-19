@@ -75,8 +75,12 @@ Required:
 
 - Issue attached to the Project.
 - `Прочитать сначала` / Read first context.
+- `AFK` or `HITL` readiness with the exact human dependency when present.
+- Dependencies and blockers.
 - Review-gate record.
 - Context snapshot from Project, PRD, and Tech Spec or exception.
+- Current vs desired behavior plus reproduction or baseline for bug/perf work.
+- Key contracts when they matter for implementation.
 - Concrete validation.
 - User approval of the handoff package.
 - Linear chips for Project, PRD, and Tech Spec where available.

@@ -28,6 +28,7 @@ Document policy:
 - PRD is the WHAT artifact. It defines operator, problem, target workflow, requirements, acceptance examples, success criteria, and non-goals.
 - Tech Spec is the HOW artifact. It defines architecture, contracts, boundaries, risks, files/surfaces, validation, rollout, and rollback against the approved PRD.
 - Issue is the one-PR execution contract. It should be enough for a zero-context implementation agent without copying the whole PRD or Tech Spec.
+- Execution quality follows `references/execution-quality.md`: PRDs cover actor, capability, and benefit; Issues state `AFK` or `HITL`, dependencies, key contracts, and bug/perf feedback-loop proof when relevant.
 - Prefer content-shape correctness over exact heading policing. Headings help readers, but the hard contract is responsibility separation: Project = product brief, PRD = WHAT, Tech Spec = HOW, Issue = execution.
 - Attach PRD and Tech Spec to the Project, not to the Issue.
 - The Issue should contain chips and an implementation-critical snapshot, not attached docs.

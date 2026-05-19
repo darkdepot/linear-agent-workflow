@@ -22,6 +22,11 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-check`: report-only transition readiness checks.
 - `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
+The workflow includes an execution quality layer inspired by proven agent-skill
+guardrails: PRDs must cover actor, capability, and benefit; Issues must be
+durable AFK/HITL execution contracts; bug/perf work must carry a feedback-loop
+proof expectation; and deep/risky work gets an architecture-quality lens.
+
 ## Workflow
 
 ```text
@@ -108,6 +113,7 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Risk-based review: `linear-review` is required for standard, deep, risky, or drifted flows and advisory for tiny PRD-lite/no-spec exceptions.
 - Review/check split: `linear-review` returns findings and next owner; `linear-check` owns `PASS`, `FAIL`, and `BLOCKED` readiness.
 - One issue by default: split only into vertical slices with dependencies.
+- Agent-ready Issues: mark `AFK` or `HITL`, name dependencies, avoid brittle line-number edit scripts, and require repro/fix proof for bug/perf work.
 - No silent sync: report drift before moving stages.
 - Report-only checks: `PASS` means inspected and no blocking drift found, not deterministic proof.
 

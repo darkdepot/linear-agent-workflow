@@ -54,6 +54,8 @@ Add or preserve a short consumer repo instruction:
 - Use `linear-idea`, `linear-handoff`, `linear-review`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
 - Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
 - Configure the ship, review feedback, and land/deploy workflows used by `linear-ship`.
+- Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while required policy still contains `<...>` placeholders.
+- Keep Issues agent-ready: mark `AFK` or `HITL`, name dependencies, and capture bug/perf feedback-loop proof when relevant.
 
 ## Updates
 
@@ -91,6 +93,7 @@ The check fails when:
 - `.agents/linear-workflow.lock.json` is missing, corrupted, or has stale hashes/paths for skills, wrappers, copied assets, or the checker;
 - an unmanaged `linear-*` skill or wrapper appears in `.agents` or `.claude`;
 - installed skill bodies contain redirect-stub patterns.
+- `.agents/linear-workflow.config.md` is missing or still contains unresolved `<...>` placeholders.
 
 ## Zeni Consumer Notes
 

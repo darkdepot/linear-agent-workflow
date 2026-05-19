@@ -105,8 +105,8 @@ function runNode(args, options = {}) {
   });
 }
 
-function runSyncConsumer(repo, check = false) {
-  const args = ["scripts/sync-consumer.mjs", "--repo", repo, "--consumer-name", "Fixture"];
+function runSyncConsumer(repo, check = false, consumerName = "Fixture") {
+  const args = ["scripts/sync-consumer.mjs", "--repo", repo, "--consumer-name", consumerName];
   if (check) args.push("--check");
   return runNode(args);
 }
@@ -117,6 +117,27 @@ function runLocalChecker(repo) {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
+}
+
+function writeCompleteConsumerConfig(repo) {
+  fs.writeFileSync(
+    path.join(repo, ".agents", "linear-workflow.config.md"),
+    `# Linear Workflow Consumer Config
+
+This file is local consumer policy for generated \`linear-*\` skills.
+
+- Consumer: Fixture
+- Linear team: Fixture
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Repo docs and code comments language: English
+- Linear is the planning, spec, and task source of truth.
+- GitHub is branch, PR, review, CI, deploy, and merge history only.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
+- Ship workflow: fixture ship
+- Review feedback workflow: None
+- Land workflow: None
+`
+  );
 }
 
 function expectCommandFailure(label, callback, expectedText) {
@@ -199,6 +220,7 @@ function validateTemplateSections() {
       "## Текущий процесс",
       "## Требования",
       "## Примеры приемки",
+      "## Намерение проверки поведения",
       "## Критерии успеха",
       "## Допущения",
       "## Открытые вопросы",
@@ -215,6 +237,12 @@ function validateTemplateSections() {
     ],
     "templates/issue.md": [
       "# Прочитать сначала",
+      "# Готовность агента",
+      "# Зависимости",
+      "# Ключевые контракты",
+      "# Текущее поведение",
+      "# Желаемое поведение",
+      "# Шаги воспроизведения",
       "# Ревью-гейт",
       "# Снимок контекста",
       "# Как проверить",
@@ -304,11 +332,26 @@ function validateGeneratedReadFirstPaths(repo) {
   }
 }
 
+function validateFreshZeniInstall() {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-zeni-"));
+  try {
+    fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Zeni Consumer\n");
+    runSyncConsumer(repo, false, "Zeni");
+    runSyncConsumer(repo, true, "Zeni");
+    runLocalChecker(repo);
+  } finally {
+    fs.rmSync(repo, { recursive: true, force: true });
+  }
+}
+
 function validateSyncConsumerBehavior() {
+  validateFreshZeniInstall();
+
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-validate-"));
   try {
     fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Fixture Consumer\n");
     runSyncConsumer(repo);
+    writeCompleteConsumerConfig(repo);
     runSyncConsumer(repo, true);
     runLocalChecker(repo);
     validateGeneratedReadFirstPaths(repo);
@@ -379,6 +422,22 @@ function validateSyncConsumerBehavior() {
       () => runLocalChecker(repo),
       "Redirect-stub pattern"
     );
+
+    runSyncConsumer(repo);
+    fs.writeFileSync(
+      path.join(repo, ".agents", "linear-workflow.config.md"),
+      "- Linear team: <set team name>\n"
+    );
+    expectCommandFailure(
+      "sync-consumer --check placeholder config fixture",
+      () => runSyncConsumer(repo, true),
+      "Consumer config has unresolved placeholder"
+    );
+    expectCommandFailure(
+      "local checker placeholder config fixture",
+      () => runLocalChecker(repo),
+      "Consumer config has unresolved placeholder"
+    );
   } finally {
     fs.rmSync(repo, { recursive: true, force: true });
   }
@@ -397,6 +456,7 @@ function validateDocsAndExamples() {
     ],
     "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:"],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings"],
+    "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
   })) {
     if (!exists(relativePath)) {

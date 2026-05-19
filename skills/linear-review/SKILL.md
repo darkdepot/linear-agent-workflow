@@ -15,9 +15,10 @@ Read first:
 2. `references/artifact-rules.md`
 3. `references/artifact-quality.md`
 4. `references/readiness-gates.md`
-5. `references/review-rubric.md`
-6. `references/human-friendly-output.md`
-7. `templates/review-output.md`
+5. `references/execution-quality.md`
+6. `references/review-rubric.md`
+7. `references/human-friendly-output.md`
+8. `templates/review-output.md`
 
 Modes:
 
@@ -51,6 +52,10 @@ Rules:
 - Treat Project, PRD, Tech Spec, and Issue as source of truth.
 - Treat GitHub as PR, review, CI, deploy, and merge history only.
 - Include a compact "checked / not checked" boundary. For `pre-ship`, distinguish inspected PR/review/CI state from manual QA, browser QA, deployment verification, or production smoke that did not run.
+- For PRD review, check actor -> capability -> benefit coverage and behavior-validation intent.
+- For Issue review, check two axes: whether a zero-context agent can execute it, and whether the Issue is durable rather than procedural or stale-prone.
+- For bug and performance work, check that the Issue or PR carries a reproduction or feedback-loop contract and that pre-ship status reports fix proof.
+- For deep or risky work, apply the architecture lens from `references/execution-quality.md`: interface as test surface, deletion test, and no shallow pass-through modules.
 
 Verdicts:
 

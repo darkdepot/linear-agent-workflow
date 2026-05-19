@@ -16,8 +16,9 @@ Read first:
 1. `AGENTS.md`
 2. `references/artifact-rules.md`
 3. `references/artifact-quality.md`
-4. `references/questioning.md`
-5. `templates/prd.md`
+4. `references/execution-quality.md`
+5. `references/questioning.md`
+6. `templates/prd.md`
 
 Rules:
 
@@ -29,10 +30,12 @@ Rules:
 - If the user explicitly skips `/brainstorming` and `/office-hours`, create PRD-lite from the strengthened brief and mark lower confidence.
 - Capture problem, target operator, workflow, scenarios, requirements, non-goals, and acceptance.
 - For Standard or Deep work, assign stable requirement IDs: `R1.`, `R2.`, `R3.`. Use plain bullets only for very small PRD-lite docs.
+- Use the `actor -> capability -> benefit` shape from `references/execution-quality.md` as a coverage check for scenarios and requirements. Do not add a long user-story section unless it materially clarifies the product truth.
 - Use acceptance examples for stateful or conditional behavior. In default Russian output, use: `AE1. Покрывает R1, R2. Дано ..., когда ..., тогда ...`. Adapt the wording to the consumer config language.
 - Add success criteria for both:
   - the human/operator outcome;
   - handoff quality, so Tech Spec and Issue slicing can proceed without inventing product behavior.
+- Add behavior-validation intent: the user-visible behaviors later Tech Spec and Issue validation must prove. Keep this product-facing; do not name test files or implementation commands in the PRD.
 - Capture actors, current workflow, target workflow, scenarios, requirements, acceptance examples, success criteria, scope boundaries, assumptions, open questions, non-goals, and links.
 - Use stable actor IDs (`A1`, `A2`, ...), flow IDs (`F1`, `F2`, ...), requirement IDs (`R1`, `R2`, ...), and acceptance example IDs (`AE1`, `AE2`, ...).
 - Keep requirements observable or structural enough to trace into the Tech Spec.
@@ -46,6 +49,8 @@ Rules:
 Self-review before finishing:
 
 - What would `linear-spec` still have to invent if this PRD ended here? Fix those gaps.
+- Does every important requirement have an actor, capability, and benefit?
+- Does the PRD name the behavior-validation target without leaking HOW?
 - Does every Standard/Deep requirement have an observable behavior or a stated structural reason?
 - Do acceptance examples cover ambiguous conditional behavior?
 - Are all implementation details deferred to Tech Spec?

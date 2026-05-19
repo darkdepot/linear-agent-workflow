@@ -14,10 +14,11 @@ Read first:
 3. `skills/linear-check/SKILL.md`
 4. `references/artifact-rules.md`
 5. `references/readiness-gates.md`
-6. `references/install.md`
-7. `references/ship-feedback-loop.md`
-8. `references/human-friendly-output.md`
-9. `templates/ship-output.md`
+6. `references/execution-quality.md`
+7. `references/install.md`
+8. `references/ship-feedback-loop.md`
+9. `references/human-friendly-output.md`
+10. `templates/ship-output.md`
 
 Workflow:
 
@@ -49,6 +50,7 @@ User-facing ship status UX:
 - When the PR is green but merge/deploy requires explicit user approval, say: "PR is ready to land, but I stopped before merge/deploy because I need your explicit approval."
 - Make code review state understandable. Include who or what reviewed, what was found, what was fixed, what remains unresolved, CI state, and whether the PR is safe to merge from the review perspective.
 - If a resolver pushed fixes, include the latest head SHA and say that review state was checked again after that push.
+- For bug or performance work, include the original repro or baseline, the fix proof, and the regression proof or documented test-seam gap.
 - Include a compact "checked / not checked" boundary. If manual browser QA, production smoke, mobile QA, deploy verification, or other surfaces did not run, say so plainly.
 - Do not dump phase names, git directives, or internal workflow telemetry unless they materially explain the status.
 - End with concrete next choices when a human decision is needed.
@@ -59,6 +61,7 @@ Required review status shape when a PR exists:
 ```text
 Review status:
 - Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
+- Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>.
 - GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
 - Fixes applied: <none or concise list with commit SHA>.
 - Unresolved review threads: <count/status>.

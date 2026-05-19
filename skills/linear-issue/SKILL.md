@@ -17,7 +17,8 @@ Read first:
 2. `references/artifact-rules.md`
 3. `references/artifact-quality.md`
 4. `references/readiness-gates.md`
-5. `templates/issue.md`
+5. `references/execution-quality.md`
+6. `templates/issue.md`
 
 Rules:
 
@@ -29,6 +30,10 @@ Rules:
 - Include implementation-critical context snapshot directly in the Issue.
 - Do not copy PRD or Tech Spec wholesale into the Issue. Extract the one-PR contract: goal, scope, surfaces, validation, acceptance, and non-goals.
 - Map Issue scope to PRD requirement IDs and Tech Spec surfaces when available.
+- Include agent readiness: `AFK` when another agent can execute from the artifact set without new human judgment, or `HITL` when product, design, external access, manual QA, or risk acceptance is still needed.
+- Include dependencies: parent/source package, `Blocked by`, and whether the Issue can start immediately.
+- For bug or performance Issues, include current behavior, desired behavior, reproduction steps or benchmark loop, and the fix-proof expectation. If the original symptom cannot be reproduced yet, say so explicitly.
+- Include key contracts when they matter: stable types, config shapes, endpoints, domain contracts, invariants, or external behavior. Do not turn this into a file-by-file edit script.
 - Include concrete validation, acceptance criteria, and non-goals.
 - Use chips for Project, PRD, and Tech Spec.
 - Add PRD and Tech Spec as Linear resources/links when the connector supports it.
@@ -39,10 +44,13 @@ Rules:
 - Do not add PR chips before a real PR exists.
 - Do not create Issues from raw discovery plans before Project, PRD, and Tech Spec are current.
 - Do not move the Project to Delivery unless the user has approved execution from this Issue and implementation is ready to begin.
+- Write durable Issues: no line numbers, no brittle implementation choreography, and no "open file X line Y" instructions. File paths are allowed only as stable read-first surfaces.
 
 Before finishing:
 
 - Check whether another zero-context implementation agent could start from the Issue without reading the discovery transcript.
+- Check whether the readiness classification is honest: `AFK` has no unresolved human judgment; `HITL` names the exact human dependency.
+- Check whether bug/performance work has a feedback-loop contract.
 - Check whether acceptance criteria are concrete enough to verify after the PR.
 - Check whether the Issue introduces scope that is not in PRD or Tech Spec; if yes, return to handoff approval.
 - Run or report `linear-check issue`.
