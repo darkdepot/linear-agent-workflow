@@ -21,6 +21,7 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 `deep`:
 
 - Cross-cutting workflow, multiple artifacts, new abstractions, or multi-step agent behavior.
+- Needs explicit architecture-quality review for stable interfaces, real seams, and test surface.
 - Needs review before handoff and pre-ship.
 
 `risky`:
@@ -36,6 +37,8 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 - handoff creates or materially rewrites PRD, Tech Spec, or Issue contracts;
 - pre-ship scope is `standard`, `deep`, or `risky`;
 - pre-ship scope differs from approved Linear artifacts;
+- bug or performance work lacks a recorded reproduction, baseline, or feedback-loop expectation;
+- an Issue is marked `AFK` but still contains unresolved human judgment;
 - work touches risky domains;
 - a no-spec exception is requested for anything beyond tiny low-risk work.
 

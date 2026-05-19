@@ -6,6 +6,17 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-19
+
+### Added
+
+- Add an execution quality reference for PRD coverage, durable Issue writing, AFK/HITL readiness, bug/perf feedback-loop proof, tracer-bullet implementation guidance, and deep/risky architecture review.
+
+### Changed
+
+- Strengthen PRD and Issue contracts with actor/capability/benefit coverage, behavior-validation intent, agent readiness, dependencies, key contracts, and bug/perf current-vs-desired reproduction shape.
+- Make consumer install checks fail while `.agents/linear-workflow.config.md` still contains unresolved `<...>` placeholders.
+
 ## [0.6.0] - 2026-05-18
 
 ### Changed

@@ -21,9 +21,10 @@ Read first:
 8. `references/artifact-rules.md`
 9. `references/artifact-quality.md`
 10. `references/readiness-gates.md`
-11. `references/questioning.md`
-12. `references/lifecycle.md`
-13. `references/human-friendly-output.md`
+11. `references/execution-quality.md`
+12. `references/questioning.md`
+13. `references/lifecycle.md`
+14. `references/human-friendly-output.md`
 
 When to use:
 
@@ -67,8 +68,9 @@ Draft package approval UX:
   - "Nothing written yet" or the exact mutation boundary.
   - Project brief shape.
   - PRD product decisions.
+  - PRD actor -> capability -> benefit coverage and behavior-validation intent.
   - Tech Spec implementation decisions.
-  - Issue slicing and why this split is right.
+  - Issue slicing, `AFK`/`HITL` readiness, dependencies, and why this split is right.
   - Review gate, risk, and validation plan.
   - Decision options.
 - If there is one recommended path, name it plainly.
@@ -141,15 +143,18 @@ Execution-mode workflow:
 3. Synthesize a draft handoff package before mutating durable Linear artifacts:
    - Project summary as a concise product brief.
    - PRD as product truth with requirement IDs and acceptance examples when useful.
+   - PRD coverage check for actor, capability, benefit, and behavior-validation intent.
    - Tech Spec as implementation truth that traces HOW decisions back to PRD requirements.
-   - Proposed Issue slicing with one-PR default and explicit dependencies if split.
+   - Proposed Issue slicing with one-PR default, `AFK`/`HITL` readiness, and explicit dependencies if split.
    - Risk classification and whether the review gate is required, advisory, skipped, or blocked.
    - Remaining assumptions, if any, that the user should see before Issue creation.
 4. Run a content-shape review on the package:
    - Project reads like a product brief, not a dashboard.
    - PRD contains WHAT and acceptance, not implementation architecture.
+   - PRD requirements and scenarios have clear actor, capability, and benefit coverage.
    - Tech Spec contains HOW and validation, not product rediscovery.
-   - Issue slices are execution contracts, not copied PRD/Spec documents.
+   - Issue slices are durable execution contracts, not copied PRD/Spec documents or brittle edit scripts.
+   - Bug and performance Issues carry a reproduction or feedback-loop expectation.
    - Operational status, lifecycle gates, and workflow mechanics are absent from Linear-facing bodies.
 5. Present the draft package summary to the user for package approval before durable writes.
 6. If approval is missing, rejected, or changes are requested, do not create Issue(s), do not move the Project to Delivery, revise and re-present or stop as `BLOCKED / INCOMPLETE` with current links.
@@ -180,6 +185,7 @@ Rules:
 - Keep repo skill instructions and docs in English.
 - Use Linear comments for user review acceptance, not Project Updates.
 - Split Issues only when one PR is truly too large; split into vertical slices with explicit dependencies.
+- Mark every execution Issue as `AFK` or `HITL` and name dependencies or blockers.
 - If a source artifact is a local plan or review report, translate it into PRD/Spec/Issue shape. Do not paste the local artifact body into Linear unchanged.
 - `linear-review` is report-only. Do not ask it to apply fixes or create artifacts.
 - Required `linear-review handoff` findings must be resolved, accepted, or explicitly deferred before creating Issues.

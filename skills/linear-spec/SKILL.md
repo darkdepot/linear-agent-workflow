@@ -17,7 +17,8 @@ Read first:
 2. `references/artifact-rules.md`
 3. `references/artifact-quality.md`
 4. `references/readiness-gates.md`
-5. `templates/tech-spec.md`
+5. `references/execution-quality.md`
+6. `templates/tech-spec.md`
 
 Rules:
 
@@ -36,6 +37,7 @@ Rules:
 - Do not use no-spec exception for risky, cross-cutting, data, auth, release, or multi-surface work.
 - Keep plan-time and implementation-time unknowns separate. Do not pretend exact helper names, SQL, branch sequencing, or runtime failure details are settled before implementation has touched the code.
 - Include architecture, contracts, boundaries, risks, files/surfaces, validation, rollout, and rollback when relevant. Omit sections only when they truly add no value.
+- For deep or risky work, use the architecture lens from `references/execution-quality.md`: interface as test surface, deletion test, real seams only, and no shallow pass-through modules.
 - Directional pseudo-code and diagrams are allowed when they clarify architecture. Do not include copy-paste implementation code or shell choreography.
 - Do not write historical repair language.
 - Keep workflow mechanics internal. Do not embed `linear-check`, lifecycle, readiness criteria, or agent-contract instructions into the Linear Tech Spec body.
@@ -48,5 +50,6 @@ Self-review before finishing:
 - Does every important HOW decision trace back to PRD requirements or a cross-cutting technical need?
 - Did the spec introduce product behavior that belongs in PRD? If yes, stop and update PRD first.
 - Are deferred implementation details clearly marked instead of guessed?
+- For deep/risky work, does the spec explain the stable interface or seam that implementation and tests should exercise?
 - Is the body free of workflow mechanics and lifecycle/readiness instructions?
 - Run or report `linear-check discovery` for standalone use, or `linear-check handoff` when this skill is being used inside `linear-handoff`.

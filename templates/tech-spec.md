@@ -42,6 +42,7 @@ Rules:
 - Each implementation unit should include goal, requirements covered, dependencies, files or surfaces, approach, test scenarios, and verification.
 - The `Системное влияние` section should cover affected interfaces, error propagation, state lifecycle risks, and unchanged invariants when relevant.
 - Capture architecture, contracts, boundaries, validation, rollout, rollback, and failure modes.
+- For deep or risky work, identify the stable interface or seam that callers and tests should exercise. Avoid shallow pass-through modules and hypothetical seams with only one real adapter.
 - Keep plan-time and implementation-time unknowns separate. If something depends on touching real code or seeing test failures, mark it as deferred implementation detail instead of pretending it is settled.
 - Directional pseudo-code or diagrams are allowed when they clarify shape. Do not include copy-paste implementation code or shell choreography.
 - Avoid transcript summaries and historical repair language.

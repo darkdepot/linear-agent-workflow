@@ -12,6 +12,7 @@ Use this rubric from `linear-review` to inspect Linear Project, PRD, Tech Spec, 
 - Fresh Issue(s), when expected.
 - Discovery and review context when available.
 - Consumer config for language, team, and configured workflows.
+- Execution quality expectations from `references/execution-quality.md`.
 
 ## Persona Lenses
 
@@ -20,6 +21,7 @@ Always apply:
 - Coherence: artifact sections agree with each other.
 - Feasibility: the proposed delivery can be implemented and verified.
 - Scope: Issue slicing and non-goals keep the work to a one-PR contract by default.
+- Agent readiness: Issues are durable, independently verifiable, and honest about `AFK` vs `HITL`.
 
 Apply conditionally:
 
@@ -27,6 +29,7 @@ Apply conditionally:
 - Design: UI/product-surface flows, states, and edge cases are represented.
 - Security/data: auth, permissions, privacy, migration, production data, or public API risks exist.
 - Ship: pre-ship review, PR mapping, and closeout state are coherent.
+- Architecture: deep/risky work has a real seam or stable interface and avoids shallow pass-through abstractions.
 
 ## Checks
 
@@ -41,7 +44,9 @@ PRD:
 
 - Defines WHAT and target operator.
 - Requirements are stable and checkable.
+- Requirements and scenarios cover actor, capability, and benefit.
 - Flows and acceptance examples cover stateful or conditional behavior.
+- Behavior-validation intent gives Tech Spec and Issue a product-facing proof target.
 - Non-goals and assumptions prevent downstream invention.
 
 Tech Spec:
@@ -49,18 +54,23 @@ Tech Spec:
 - Defines HOW and traces to PRD requirements.
 - Implementation units are stable and independently understandable.
 - Failure modes, validation, rollout, and rollback are concrete.
+- Deep/risky specs use the interface as the test surface and pass the deletion-test smell check.
 - No-spec exception is justified when present.
 
 Issue:
 
 - One PR by default.
 - Includes `Прочитать сначала` / Read first context, context snapshot, validation, acceptance, and non-goals.
+- States `AFK` or `HITL`, dependencies, and blockers.
+- For bug/perf work, includes current vs desired behavior and a reproduction, baseline, or feedback-loop expectation.
+- Is durable: no line numbers, brittle edit scripts, or procedural choreography.
 - Uses Project, PRD, and Tech Spec chips.
 - Does not attach PRD or Tech Spec docs.
 
 Pre-ship:
 
 - Branch or PR scope still matches Linear artifacts.
+- Bug/perf PRs report original symptom or baseline, fix proof, and regression proof or documented test-seam gap.
 - Material drift is synced or explicitly accepted.
 - Review feedback and unresolved decisions are represented.
 

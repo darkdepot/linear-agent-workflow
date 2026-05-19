@@ -16,6 +16,7 @@ const REDIRECT_PATTERNS = [
   /github\.com\/darkdepot\/linear-agent-workflow\/blob/i,
   /reusable workflow source in this order/i,
 ];
+const CONFIG_PLACEHOLDER_PATTERN = /<[^>\n]+>/;
 
 function usage() {
   console.error("Usage: node scripts/sync-consumer.mjs --repo /path/to/consumer [--consumer-name Name] [--check]");
@@ -212,6 +213,18 @@ function compareCopiedAssets(installedDir, label, expectedAssets, failures) {
   }
 }
 
+function validateConsumerConfigText(configText, relativePath, failures) {
+  const lines = configText.split("\n");
+  for (const [index, line] of lines.entries()) {
+    const match = line.match(CONFIG_PLACEHOLDER_PATTERN);
+    if (match) {
+      failures.push(
+        `Consumer config has unresolved placeholder in ${relativePath}:${index + 1}: ${match[0]}`
+      );
+    }
+  }
+}
+
 function checkerBody() {
   return `#!/usr/bin/env node
 
@@ -222,6 +235,7 @@ import { fileURLToPath } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lockPath = path.join(repo, ".agents", "linear-workflow.lock.json");
+const configPath = path.join(repo, ".agents", "linear-workflow.config.md");
 const failures = [];
 const REDIRECT_PATTERNS = [
   /thin adapter/i,
@@ -231,6 +245,7 @@ const REDIRECT_PATTERNS = [
   /github\\.com\\/darkdepot\\/linear-agent-workflow\\/blob/i,
   /reusable workflow source in this order/i,
 ];
+const CONFIG_PLACEHOLDER_PATTERN = /<[^>\\n]+>/;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -307,6 +322,28 @@ function checkUnexpectedLinearDirs(rootDir, expectedSkills, label) {
     }
   }
 }
+
+function checkConsumerConfig() {
+  if (!fs.existsSync(configPath)) {
+    failures.push("Missing consumer config: .agents/linear-workflow.config.md");
+    return;
+  }
+
+  const lines = fs.readFileSync(configPath, "utf8").split("\\n");
+  for (const [index, line] of lines.entries()) {
+    const match = line.match(CONFIG_PLACEHOLDER_PATTERN);
+    if (match) {
+      failures.push(
+        "Consumer config has unresolved placeholder in .agents/linear-workflow.config.md:" +
+          (index + 1) +
+          ": " +
+          match[0]
+      );
+    }
+  }
+}
+
+checkConsumerConfig();
 
 if (!fs.existsSync(lockPath)) {
   failures.push("Missing lockfile: .agents/linear-workflow.lock.json");
@@ -388,6 +425,8 @@ function defaultConfig(consumerName) {
   return `# Linear Workflow Consumer Config
 
 This file is local consumer policy for generated \`linear-*\` skills.
+Replace every placeholder value before treating this install as ready.
+For optional workflows, write a workflow name or \`None\`.
 
 - Consumer: ${consumerName}
 - Linear team: ${isZeni ? "Zeni" : "<set team name>"}
@@ -616,6 +655,12 @@ function check(root, repo, consumerName, commit, dirty) {
 
   if (!fs.existsSync(plan.configPath)) {
     failures.push(`Missing consumer config: ${path.relative(repo, plan.configPath)}`);
+  } else {
+    validateConsumerConfigText(
+      fs.readFileSync(plan.configPath, "utf8"),
+      path.relative(repo, plan.configPath),
+      failures
+    );
   }
 
   if (!fs.existsSync(plan.lockPath)) {

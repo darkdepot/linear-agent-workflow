@@ -95,6 +95,10 @@ Example Zeni policy:
 
 `Review feedback workflow` and `Land workflow` are optional. When absent, `linear-ship` keeps backward-compatible behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of inventing a resolver or merge path.
 
+Every placeholder value in `.agents/linear-workflow.config.md` must be resolved
+before the consumer install is ready. For optional workflows, write an explicit
+workflow name or `None`; do not leave `<optional ...>` placeholders in place.
+
 ## Updates
 
 Consumer updates are explicit and reviewable:
@@ -120,6 +124,7 @@ The sync script rewrites generated workflow files only. Consumer product code an
 - copied `references/` and `templates/` match the upstream checkout beside each generated skill;
 - `.claude/skills/linear-*` wrappers match generated discovery wrappers;
 - `.agents/linear-workflow-check.mjs` matches the generated checker body;
+- `.agents/linear-workflow.config.md` exists and contains no unresolved `<...>` placeholders;
 - lockfile entries have matching paths and SHA-256 hashes for skills, wrappers, copied assets, and checker;
 - unmanaged `linear-*` skills or wrappers are reported;
 - redirect-stub patterns are rejected.
