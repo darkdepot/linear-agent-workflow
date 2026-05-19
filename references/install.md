@@ -54,7 +54,7 @@ Add or preserve a short consumer repo instruction:
 - Use `linear-idea`, `linear-handoff`, `linear-review`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
 - Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
 - Configure the ship, review feedback, and land/deploy workflows used by `linear-ship`.
-- Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while required policy still contains `<...>` placeholders.
+- Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while any `<...>` placeholder remains, including optional workflows. Write an explicit workflow name or `None` for optional entries.
 - Keep Issues agent-ready: mark `AFK` or `HITL`, name dependencies, and capture bug/perf feedback-loop proof when relevant.
 
 ## Updates
