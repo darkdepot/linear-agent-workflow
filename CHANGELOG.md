@@ -6,6 +6,21 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-23
+
+### Added
+
+- Add `linear-deploy` as the post-ship owner for Deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
+- Add `templates/deploy-output.md` and a durable `linear-ship green certificate` contract for handoff from ship to deploy.
+- Add optional consumer config field `Documentation workflow`, defaulting Zeni to `gstack document-release`.
+
+### Changed
+
+- Pre-v1.0 workflow behavior change: hard-rename `Land workflow` to `Deploy workflow`; no compatibility alias is supported.
+- Move repo documentation sync into `linear-ship` before final green review stabilization so doc commits are reviewed before deploy.
+- Split `linear-ship` and `linear-deploy`: `linear-ship` now stops at a deploy-ready green certificate, while `linear-deploy` owns merge/deploy, post-ship check, Linear closeout, and learning capture.
+- Strengthen `linear-preflight` with a bounded pre-PR `ce-code-review` loop and residual finding reporting.
+
 ## [0.8.0] - 2026-05-23
 
 ### Added
@@ -19,7 +34,7 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 - Make the lifecycle explicit: `linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> linear-implement -> linear-preflight -> linear-ship`.
 - Update `linear-handoff` to run artifact intake before package synthesis and route explicit start-now approval to `linear-implement` instead of owning Delivery Start.
-- Clarify that `linear-ship` consumes preflight output when present and remains sole owner of formal pre-ship review/check, PR creation/stabilization, review feedback, land/deploy delegation, and Linear closeout.
+- Clarify that `linear-ship` consumes preflight output when present and remains sole owner of formal pre-ship review/check, PR creation/stabilization, review feedback, merge/deploy delegation, and Linear closeout.
 - Extend consumer sync and workflow validation to include the Delivery Bridge Trio skills and copied references/templates.
 
 ## [0.7.0] - 2026-05-19
@@ -80,8 +95,8 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ### Added
 
-- Extend `linear-ship` into a full Ship-phase orchestrator around configured PR creation, review feedback, land/deploy, and Linear closeout workflows.
-- Add optional consumer config fields for review feedback and land/deploy workflows.
+- Extend `linear-ship` into a full Ship-phase orchestrator around configured PR creation, review feedback, merge/deploy, and Linear closeout workflows.
+- Add optional consumer config fields for review feedback and merge/deploy workflows.
 - Add ship feedback-loop reference and ship output template.
 
 ## [0.2.0] - 2026-05-17
