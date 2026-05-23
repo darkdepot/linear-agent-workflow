@@ -63,4 +63,5 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 - `linear-handoff` applies accepted artifact fixes and records approval comments.
 - `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
 - `linear-preflight` owns local branch readiness and emits the preflight certificate.
-- `linear-ship` owns formal pre-ship review/check, accepted pre-ship drift sync, PR/review/merge state, and closeout.
+- `linear-ship` owns formal pre-ship review/check, accepted pre-ship drift sync, PR/review state, repo documentation before final green, and the green certificate.
+- `linear-deploy` owns merge/deploy delegation, post-ship readiness, Linear closeout, and durable learning capture.

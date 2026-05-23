@@ -116,7 +116,7 @@ Forbidden:
 - Passing delivery readiness with only PRD and Tech Spec.
 - Moving to Delivery when package approval did not authorize implementation start.
 - Starting implementation from a raw `/office-hours`, `/brainstorming`, or review plan.
-- Creating PRs, running pre-ship review/check, landing, deploy, or closeout from `linear-implement`.
+- Creating PRs, running pre-ship review/check, deploy, or closeout from `linear-implement`.
 
 Gate: `linear-check delivery`.
 
@@ -145,7 +145,7 @@ Gate: `linear-preflight` certificate, then `linear-ship`.
 
 ## Ship
 
-Create, stabilize, land, and close out a PR without losing Linear source of truth.
+Create, document, and stabilize a PR without losing Linear source of truth.
 
 Required:
 
@@ -154,7 +154,39 @@ Required:
 - `linear-check pre-ship`.
 - Delegate PR creation to configured ship workflow.
 - Issue moves to `In Review` after PR creation.
+- Run the configured Documentation workflow before final green when configured.
+- If documentation changes the PR head, rerun review/check stabilization on the new head.
 - If configured, delegate review feedback stabilization to the configured resolver.
-- If configured, delegate merge/deploy to the configured land workflow.
-- Issue moves to `Done` after merge/user acceptance.
-- `linear-check post-ship`.
+- Poll checks, GitHub review state, unresolved threads, and Greptile every 10 minutes until strict green or terminal stop.
+- Record `linear-ship green certificate` with PR URL, head SHA, CI, Greptile, unresolved feedback count, merge state, checked/not-checked boundary, and next `linear-deploy`.
+
+Forbidden:
+
+- Merging or deploying.
+- Closing Linear Issues as shipped.
+- Running post-ship check.
+- Recording deploy evidence or operational learnings.
+
+Gate: `linear-ship green certificate`, then `linear-deploy`.
+
+## Deploy
+
+Merge/deploy a green PR and close out Linear only after delivery evidence exists.
+
+Required:
+
+- Read the latest `linear-ship green certificate`.
+- Verify current PR head SHA still matches the certificate head SHA.
+- Confirm the configured `Deploy workflow` exists and is not `None`.
+- Delegate merge/deploy to the configured Deploy workflow.
+- Capture merged SHA, deploy target, and deploy verification evidence.
+- Run or report `linear-check post-ship` after deploy evidence is known.
+- Move the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
+- Record durable operational learnings through `gstack-learnings-log` when they would save future time.
+
+Forbidden:
+
+- Deploying when the PR head SHA differs from the green certificate.
+- Running repo documentation workflow; repo docs belong before ship green.
+- Running interactive `/learn prune`, `/learn export`, or `/learn stats` automatically.
+- Inventing a merge/deploy path when `Deploy workflow` is missing or `None`.

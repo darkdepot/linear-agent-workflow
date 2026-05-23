@@ -222,6 +222,11 @@ function validateConsumerConfigText(configText, relativePath, failures) {
         `Consumer config has unresolved placeholder in ${relativePath}:${index + 1}: ${match[0]}`
       );
     }
+    if (/^\s*-\s*Land workflow\s*:/.test(line)) {
+      failures.push(
+        `Consumer config uses unsupported Land workflow in ${relativePath}:${index + 1}; rename it to Deploy workflow`
+      );
+    }
   }
 }
 
@@ -340,6 +345,13 @@ function checkConsumerConfig() {
           match[0]
       );
     }
+    if (/^\\s*-\\s*Land workflow\\s*:/.test(line)) {
+      failures.push(
+        "Consumer config uses unsupported Land workflow in .agents/linear-workflow.config.md:" +
+          (index + 1) +
+          "; rename it to Deploy workflow"
+      );
+    }
   }
 }
 
@@ -434,12 +446,13 @@ For optional workflows, write a workflow name or \`None\`.
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\`.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
 - Artifact roots: None
 - Implementation workflow: ${isZeni ? "compound-engineering:ce-work" : "None"}
 - Ship workflow: ${isZeni ? "gstack ship" : "<set consumer ship workflow>"}
+- Documentation workflow: ${isZeni ? "gstack document-release" : "None"}
 - Review feedback workflow: ${isZeni ? "compound-engineering:ce-resolve-pr-feedback" : "<optional review feedback workflow>"}
-- Land workflow: ${isZeni ? "gstack land-and-deploy" : "<optional land/deploy workflow>"}
+- Deploy workflow: ${isZeni ? "gstack land-and-deploy" : "None"}
 `;
 }
 
