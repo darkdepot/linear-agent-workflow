@@ -22,9 +22,10 @@ Read first:
 9. `references/artifact-quality.md`
 10. `references/readiness-gates.md`
 11. `references/execution-quality.md`
-12. `references/questioning.md`
-13. `references/lifecycle.md`
-14. `references/human-friendly-output.md`
+12. `references/artifact-intake.md`
+13. `references/questioning.md`
+14. `references/lifecycle.md`
+15. `references/human-friendly-output.md`
 
 When to use:
 
@@ -41,6 +42,7 @@ Inputs to gather:
 - Existing Linear Project, PRD, Tech Spec, and Issues.
 - Latest `linear-review` report when one already exists.
 - Minimal repo context needed to verify scope, interfaces, and validation.
+- Artifact intake summary following `references/artifact-intake.md`.
 
 Quality bar:
 
@@ -130,8 +132,8 @@ Plan: turn discovery into a Linear-backed execution package
 5. Classify risk and identify whether `linear-review handoff` is required or advisory.
 6. Present the Linear handoff package and review-gate plan for approval before durable writes.
 7. After approval, update Linear artifacts, run or report `linear-review handoff`, apply accepted artifact fixes through `linear-handoff`, and create Linear Issue(s) as execution contracts.
-8. Run the delivery gate before implementation starts from those Issues.
-9. Return the approved Issue link(s) and stop unless the user explicitly approved starting implementation.
+8. Return the approved Issue link(s) and stop unless the user explicitly approved starting implementation.
+9. If implementation start is approved, route to `linear-implement` as the Delivery Start owner.
 
 No code changes happen during handoff.
 ```
@@ -139,8 +141,16 @@ No code changes happen during handoff.
 Execution-mode workflow:
 
 1. Fetch fresh Linear Project, PRD, Tech Spec, and Issue state.
-2. Gather discovery and review artifacts.
+2. Gather discovery and review artifacts using `references/artifact-intake.md`.
+   - Inspect explicit user-provided artifact paths and Linear resources first.
+   - Inspect fresh Linear Project, PRD, Tech Spec, Issues, comments, and review reports.
+   - Inspect current conversation decisions.
+   - Inspect configured consumer artifact roots when present.
+   - Inspect local gstack artifacts only when scoped by project slug, branch/session, or explicit filename match.
+   - Do not perform broad home-directory scans.
+   - Produce `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`.
 3. Synthesize a draft handoff package before mutating durable Linear artifacts:
+   - Artifact intake summary and confidence boundary.
    - Project summary as a concise product brief.
    - PRD as product truth with requirement IDs and acceptance examples when useful.
    - PRD coverage check for actor, capability, benefit, and behavior-validation intent.
@@ -167,20 +177,22 @@ Execution-mode workflow:
 13. Apply accepted Project, PRD, Tech Spec, or Issue-plan fixes through `linear-handoff`.
 14. Create or update Linear Issue(s) from the approved package.
 15. Run or report `linear-check handoff` and `linear-check issue`.
-16. If the user explicitly approved implementation start, move the Project to Delivery and run or report `linear-check delivery`. If delivery check fails or is blocked, stop and report the current Linear artifact links.
-17. Hand off to the configured implementation or ship workflow from the approved Issue(s) only after delivery readiness passes.
+16. If the user explicitly approved implementation start, route to `linear-implement`. `linear-implement` owns Project-to-Delivery movement, `linear-check delivery`, the implementation-start comment, and implementation execution.
+17. If implementation start is not approved, stop after handoff and return the approved Issue link(s).
 
 Rules:
 
 - Keep durable workflow truth in Linear.
 - Treat local and gstack artifacts as discovery inputs, not durable source of truth.
+- Follow `references/artifact-intake.md`; do not scan broadly or guess which local scratch file is authoritative.
 - Do not approve or implement a raw discovery/review plan directly.
 - Do not start code implementation until Linear Issue(s) exist and are approved as execution contracts.
 - Do not treat package approval as implementation-start approval unless the user explicitly approved starting implementation from the created Issue(s).
+- Do not move the Project to Delivery from `linear-handoff`; route explicit implementation-start approval to `linear-implement`.
 - Do not treat PRD or Tech Spec creation as Delivery.
 - Keep Project descriptions free of active-doc lists, active-issue lists, lifecycle bookkeeping, and workflow mechanics.
 - Keep PRD/Spec bodies free of review-readiness dashboards, next-skill instructions, lint/check instructions, and lifecycle bookkeeping.
-- Do not create PRs directly; use the consumer repo's configured ship workflow after Issues are ready.
+- Do not create PRs directly; implementation and branch readiness must pass through `linear-implement` and `linear-preflight` before the configured ship workflow.
 - Keep Linear-facing Project, PRD, Tech Spec, Issue descriptions, and comments in the consumer config language; use Russian when no consumer config is present.
 - Keep repo skill instructions and docs in English.
 - Use Linear comments for user review acceptance, not Project Updates.
@@ -196,6 +208,7 @@ Final response after an approved package must include:
 
 - Outcome sentence: handoff is fixed in Linear and whether code was touched.
 - Clickable artifact map, ordered Project -> PRD -> Tech Spec -> Issue(s).
+- Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`.
 - Project status.
 - One-line role for each artifact:
   - Project: top-level product brief and lifecycle container.
@@ -207,6 +220,7 @@ Final response after an approved package must include:
 - Compact "checked / not checked" boundary when review, validation, manual QA, browser checks, or implementation did not run.
 - Next-step options with a recommendation.
 - Offer fresh-agent handoff as a first-class option when the current session is long, the user raised context-quality concerns, or implementation is about to start after substantial discovery.
+- If implementation start was approved, state that `linear-implement` owns Delivery Start and will run next.
 
 Completion example:
 

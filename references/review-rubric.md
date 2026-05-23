@@ -11,6 +11,7 @@ Use this rubric from `linear-review` to inspect Linear Project, PRD, Tech Spec, 
 - Fresh Tech Spec document, when expected.
 - Fresh Issue(s), when expected.
 - Discovery and review context when available.
+- Preflight certificate when running `pre-ship` and one exists.
 - Consumer config for language, team, and configured workflows.
 - Execution quality expectations from `references/execution-quality.md`.
 
@@ -28,7 +29,7 @@ Apply conditionally:
 - Product: problem, operator, workflow, and acceptance are clear enough.
 - Design: UI/product-surface flows, states, and edge cases are represented.
 - Security/data: auth, permissions, privacy, migration, production data, or public API risks exist.
-- Ship: pre-ship review, PR mapping, and closeout state are coherent.
+- Ship: preflight certificate, pre-ship review, PR mapping, and closeout state are coherent.
 - Architecture: deep/risky work has a real seam or stable interface and avoids shallow pass-through abstractions.
 
 ## Checks
@@ -69,6 +70,7 @@ Issue:
 
 Pre-ship:
 
+- Preflight certificate is consumed when present, or missing local readiness is called out.
 - Branch or PR scope still matches Linear artifacts.
 - Bug/perf PRs report original symptom or baseline, fix proof, and regression proof or documented test-seam gap.
 - Material drift is synced or explicitly accepted.
@@ -83,7 +85,7 @@ Each finding must include:
 - Evidence: short quote or artifact section reference.
 - Impact: what goes wrong if ignored.
 - Recommendation: concrete next action.
-- Owner workflow: `linear-handoff`, `linear-ship`, `linear-issue`, `linear-prd`, `linear-spec`, or human decision.
+- Owner workflow: `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, `linear-issue`, `linear-prd`, `linear-spec`, or human decision.
 
 ## Report Shape
 

@@ -43,7 +43,7 @@ Rules:
 - Do not start coding until the Issue is sufficient for another agent.
 - Do not add PR chips before a real PR exists.
 - Do not create Issues from raw discovery plans before Project, PRD, and Tech Spec are current.
-- Do not move the Project to Delivery unless the user has approved execution from this Issue and implementation is ready to begin.
+- Do not move the Project to Delivery from `linear-issue`; Delivery Start belongs to `linear-implement` after the user approves execution from this Issue.
 - Write durable Issues: no line numbers, no brittle implementation choreography, and no "open file X line Y" instructions. File paths are allowed only as stable read-first surfaces.
 
 Before finishing:

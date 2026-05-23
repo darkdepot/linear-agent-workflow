@@ -37,6 +37,7 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 - handoff creates or materially rewrites PRD, Tech Spec, or Issue contracts;
 - pre-ship scope is `standard`, `deep`, or `risky`;
 - pre-ship scope differs from approved Linear artifacts;
+- preflight reports `drift-candidate`;
 - bug or performance work lacks a recorded reproduction, baseline, or feedback-loop expectation;
 - an Issue is marked `AFK` but still contains unresolved human judgment;
 - work touches risky domains;
@@ -60,4 +61,6 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 - `linear-review` reports findings only.
 - `linear-check` reports readiness only.
 - `linear-handoff` applies accepted artifact fixes and records approval comments.
-- `linear-ship` syncs PR/review/merge state and reports pre-ship drift.
+- `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
+- `linear-preflight` owns local branch readiness and emits the preflight certificate.
+- `linear-ship` owns formal pre-ship review/check, accepted pre-ship drift sync, PR/review/merge state, and closeout.

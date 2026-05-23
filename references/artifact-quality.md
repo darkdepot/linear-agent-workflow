@@ -57,6 +57,23 @@ Required quality:
 - Does not include PR chips before a real PR exists.
 - Avoids line numbers and brittle implementation choreography.
 
+## Preflight Certificate
+
+Required quality:
+
+- Starts with the stable marker `linear-preflight certificate` when recorded in Linear.
+- States one status: `ready`, `blocked`, `drift-candidate`, or `needs-human`.
+- Names the Linear Issue(s), branch, and commit state.
+- Summarizes changed files without copying the full diff.
+- Lists local verification commands and outcomes.
+- States self-review status and outcome.
+- Calls out drift candidates against Project, PRD, Tech Spec, and Issue.
+- Includes a compact checked/not-checked boundary for manual QA, browser QA, mobile QA, deploy verification, and user acceptance.
+- Names the next owner workflow: `linear-ship`, `linear-handoff`, or human decision.
+- Is durable in Linear comments or resources so a fresh `linear-ship` agent can recover it.
+
+It must not claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation, merge, deploy, or closeout.
+
 ## Review Findings
 
 Review findings must distinguish:

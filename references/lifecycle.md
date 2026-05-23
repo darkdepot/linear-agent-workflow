@@ -50,6 +50,7 @@ Turn discovery into a Linear-backed execution package.
 Required:
 
 - Project remains in Discovery or an equivalent configured pre-delivery state. If no separate pre-delivery status exists, keep Discovery and record handoff readiness in comments or check output.
+- Artifact intake summary following `references/artifact-intake.md`.
 - Current PRD.
 - Current Tech Spec.
 - Package approval recorded as a Linear comment.
@@ -64,6 +65,7 @@ Forbidden:
 - PR creation during handoff.
 - Implementation before approved Issue(s) exist.
 - Moving the Project to Delivery before approved execution Issue(s) exist.
+- Moving the Project to Delivery from `linear-handoff`; Delivery Start belongs to `linear-implement`.
 
 Gate: `linear-review handoff` when required or advisory, then `linear-check handoff`.
 
@@ -95,7 +97,7 @@ Gate: `linear-check issue`.
 
 ## Delivery
 
-Prepare implementation from approved Linear Issue(s). Delivery starts only after execution Issue(s) exist and implementation is ready to begin.
+Prepare and run implementation from approved Linear Issue(s). Delivery starts through `linear-implement` only after execution Issue(s) exist and implementation is ready to begin.
 
 Required:
 
@@ -106,14 +108,40 @@ Required:
 - Approval covers the current Issue set and explicitly allows implementation start.
 - Required review findings resolved, accepted, or explicitly deferred.
 - Implementation starts from the approved Issue(s), not from raw discovery output.
+- `linear-implement` verifies or obtains implementation-start approval, moves the Project to Delivery, runs or reports `linear-check delivery`, records the start comment, and selects the implementation engine.
+- `linear-implement` exits as `implemented-needs-preflight`, `blocked`, `scope-drift-needs-handoff`, or `needs-human`.
 
 Forbidden:
 
 - Passing delivery readiness with only PRD and Tech Spec.
 - Moving to Delivery when package approval did not authorize implementation start.
 - Starting implementation from a raw `/office-hours`, `/brainstorming`, or review plan.
+- Creating PRs, running pre-ship review/check, landing, deploy, or closeout from `linear-implement`.
 
 Gate: `linear-check delivery`.
+
+## Preflight
+
+Prepare the local implementation branch for ship without taking over PR lifecycle.
+
+Required:
+
+- Approved Linear Issue(s) and implementation output.
+- Branch/worktree state inspected.
+- Local diff compared against Project, PRD, Tech Spec, and Issue.
+- Targeted tests/checks run or explicitly reported as not run.
+- Self-review run or explicitly unavailable/skipped.
+- Commit state reported, with commits created only when safe and configured.
+- Preflight certificate emitted with status `ready`, `blocked`, `drift-candidate`, or `needs-human`.
+
+Forbidden:
+
+- Running or claiming `linear-review pre-ship`.
+- Running or claiming `linear-check pre-ship`.
+- Creating the final PR.
+- Merging, deploying, or closing Linear Issues.
+
+Gate: `linear-preflight` certificate, then `linear-ship`.
 
 ## Ship
 
@@ -121,6 +149,7 @@ Create, stabilize, land, and close out a PR without losing Linear source of trut
 
 Required:
 
+- Read the `linear-preflight` certificate when present. If no recoverable certificate exists, route to `linear-preflight` before continuing.
 - `linear-review pre-ship` when risk is standard, deep, risky, or implementation materially drifted from Linear artifacts.
 - `linear-check pre-ship`.
 - Delegate PR creation to configured ship workflow.

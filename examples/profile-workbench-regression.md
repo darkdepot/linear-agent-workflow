@@ -29,9 +29,12 @@ The fix is stronger artifact construction, not more template bureaucracy.
 - Project remains Discovery after PRD and Tech Spec creation.
 - `linear-handoff` packages Project, PRD, Tech Spec, and proposed Issue slicing
   for user approval.
-- Delivery requires an approved execution Issue.
+- Delivery starts through `linear-implement` and requires an approved execution
+  Issue plus explicit implementation-start approval.
 - Implementation starts from the approved Issue, not from `/office-hours`,
   `/brainstorming`, PRD, Tech Spec, or a local review plan.
+- Local branch readiness is proven by `linear-preflight` before `linear-ship`
+  owns formal pre-ship review/check and PR lifecycle.
 
 ## Good Project Fragment
 

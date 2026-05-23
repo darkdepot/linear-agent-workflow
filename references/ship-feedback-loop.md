@@ -5,6 +5,7 @@
 ## Inputs
 
 - Fresh Linear Issue and Project context.
+- Preflight certificate when present.
 - GitHub PR number and URL.
 - Latest PR head SHA.
 - Review feedback workflow from the consumer config, when configured.
@@ -12,7 +13,7 @@
 
 ## Loop
 
-1. Confirm the PR maps to the Linear Issue and the implemented scope has not materially drifted from Project, PRD, Tech Spec, or Issue.
+1. Confirm the PR maps to the Linear Issue and the implemented scope has not materially drifted from Project, PRD, Tech Spec, Issue, or the latest preflight certificate.
 2. Detect the latest PR head SHA before each wait or resolver run.
 3. Wait for relevant checks and reviews to settle.
 4. Detect Greptile status when available:
@@ -49,6 +50,7 @@ Every exit with a PR must report review state in human terms, not only workflow 
 Include:
 
 - Whether pre-ship review ran, was skipped by gate rules, or was unavailable.
+- Whether preflight ran, was unavailable, or reported `blocked`, `drift-candidate`, or `needs-human`.
 - Whether GitHub review, Greptile, or another configured reviewer ran.
 - Blocking findings, nits, and product/UX/scope questions separately.
 - Fixes applied by the resolver, with the commit SHA when a commit was pushed.

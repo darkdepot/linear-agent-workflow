@@ -67,10 +67,12 @@ Verdicts:
 Owner workflows:
 
 - `linear-handoff`: applies accepted Project, PRD, Tech Spec, and Issue-plan fixes before creating execution Issues.
+- `linear-implement`: owns Delivery Start and implementation-start approval, then executes from approved Issue(s).
+- `linear-preflight`: owns local branch readiness, self-review, targeted verification, commit state, and preflight certificate.
 - `linear-prd`: applies accepted PRD-only fixes when explicitly invoked.
 - `linear-spec`: applies accepted Tech Spec-only fixes when explicitly invoked.
 - `linear-issue`: applies accepted Issue-only fixes when explicitly invoked.
-- `linear-ship`: handles pre-ship drift, PR/review state, and Linear closeout sync.
+- `linear-ship`: handles formal pre-ship review/check, accepted pre-ship drift sync, PR/review state, and Linear closeout sync.
 - Human decision: handles product, UX, business, or scope questions.
 
 Hard boundaries:

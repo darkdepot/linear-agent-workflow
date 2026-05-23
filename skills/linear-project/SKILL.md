@@ -33,7 +33,7 @@ Status policy:
 - Idea: strengthened brief only; no PRD, Tech Spec, or Issue.
 - Discovery: Project plus discovery outputs; durable PRD/Tech Spec may exist and are normally created by `linear-handoff`.
 - Handoff readiness: Project remains in Discovery or an equivalent configured pre-delivery status while PRD, Tech Spec, and proposed or approved Issue slicing are current. Record readiness in comments or check output, not in the Project body.
-- Delivery: Project plus PRD plus Tech Spec or explicit no-spec exception plus approved execution Issue(s), and implementation is ready to begin from those Issue(s).
+- Delivery: `linear-implement` has verified Project plus PRD plus Tech Spec or explicit no-spec exception plus approved execution Issue(s), explicit implementation-start approval, and readiness to begin from those Issue(s).
 - Ship: Issue and PR state are synced by `linear-ship`, not by Project Updates.
 
 Before finishing:

@@ -12,7 +12,9 @@ const EXPECTED_SKILLS = [
   "linear-check",
   "linear-handoff",
   "linear-idea",
+  "linear-implement",
   "linear-issue",
+  "linear-preflight",
   "linear-prd",
   "linear-project",
   "linear-review",
@@ -125,6 +127,28 @@ function writeCompleteConsumerConfig(repo) {
     `# Linear Workflow Consumer Config
 
 This file is local consumer policy for generated \`linear-*\` skills.
+
+- Consumer: Fixture
+- Linear team: Fixture
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Repo docs and code comments language: English
+- Linear is the planning, spec, and task source of truth.
+- GitHub is branch, PR, review, CI, deploy, and merge history only.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\`.
+- Ship workflow: fixture ship
+- Review feedback workflow: None
+- Land workflow: None
+`
+  );
+}
+
+function writeLegacyConsumerConfig(repo) {
+  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, ".agents", "linear-workflow.config.md"),
+    `# Linear Workflow Consumer Config
+
+This fixture intentionally models a complete pre-0.8 consumer config without the optional implementation workflow field.
 
 - Consumer: Fixture
 - Linear team: Fixture
@@ -258,6 +282,10 @@ function validateTemplateSections() {
       "К сведению:",
       "Do not use `PASS`, `FAIL`, or `BLOCKED` as the review status.",
     ],
+    "templates/ship-output.md": [
+      "Preflight: <ready/blocked/drift-candidate/needs-human/not run>",
+      "Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>",
+    ],
   };
 
   for (const [relativePath, sections] of Object.entries(requiredSections)) {
@@ -337,6 +365,13 @@ function validateFreshZeniInstall() {
   try {
     fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Zeni Consumer\n");
     runSyncConsumer(repo, false, "Zeni");
+    const configText = fs.readFileSync(path.join(repo, ".agents", "linear-workflow.config.md"), "utf8");
+    if (!configText.includes("- Implementation workflow: compound-engineering:ce-work")) {
+      fail("Fresh Zeni config must include the configured implementation workflow default");
+    }
+    if (!configText.includes("- Artifact roots: None")) {
+      fail("Fresh Zeni config must include explicit Artifact roots default");
+    }
     runSyncConsumer(repo, true, "Zeni");
     runLocalChecker(repo);
   } finally {
@@ -346,6 +381,27 @@ function validateFreshZeniInstall() {
 
 function validateSyncConsumerBehavior() {
   validateFreshZeniInstall();
+
+  const legacyRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-legacy-"));
+  try {
+    fs.writeFileSync(path.join(legacyRepo, "AGENTS.md"), "# Legacy Consumer\n");
+    writeLegacyConsumerConfig(legacyRepo);
+    runSyncConsumer(legacyRepo);
+    const preservedConfig = fs.readFileSync(
+      path.join(legacyRepo, ".agents", "linear-workflow.config.md"),
+      "utf8"
+    );
+    if (preservedConfig.includes("Implementation workflow")) {
+      fail("sync-consumer must preserve old configs without adding the optional Implementation workflow field");
+    }
+    if (preservedConfig.includes("Artifact roots")) {
+      fail("sync-consumer must preserve old configs without adding the optional Artifact roots field");
+    }
+    runSyncConsumer(legacyRepo, true);
+    runLocalChecker(legacyRepo);
+  } finally {
+    fs.rmSync(legacyRepo, { recursive: true, force: true });
+  }
 
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-validate-"));
   try {
@@ -445,19 +501,43 @@ function validateSyncConsumerBehavior() {
 
 function validateDocsAndExamples() {
   for (const [relativePath, texts] of Object.entries({
-    "README.md": ["linear-review", "node scripts/validate-workflow.mjs", "Review/check split"],
-    "AGENTS.md": ["`linear-review` = report-only quality/risk review", "Keep `linear-review` report-only"],
+    "README.md": [
+      "linear-implement",
+      "linear-preflight",
+      "node scripts/validate-workflow.mjs",
+      "Review/check split",
+      "Delivery bridge",
+    ],
+    "AGENTS.md": [
+      "`linear-review` = report-only quality/risk review",
+      "`linear-implement` = Delivery Start",
+      "`linear-preflight` = local branch readiness",
+      "Keep `linear-review` report-only",
+    ],
     "examples/zeni-dogfood.md": [
       "Risk-Based Review Gate Examples",
       "Correct Risky Handoff Review",
+      "Correct Implement To Preflight To Ship",
       "Correct Tiny Advisory Review",
       "Anti-Example: Required Review Skipped",
       "Anti-Example: Review Mutates Linear",
+      "Anti-Example: Preflight Owns Ship",
+    ],
+    "references/artifact-intake.md": [
+      "Do not perform broad home-directory scans",
+      "Artifact roots",
+      "`read`",
+      "`unavailable`",
+      "`stale_or_ignored`",
+      "`conflicts`",
+      "`decisions_carried_forward`",
+      "`confidence_boundary`",
     ],
     "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:"],
-    "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings"],
+    "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
+    "references/versioning.md": ["`Artifact roots`", "`Implementation workflow`", "documented default selection table"],
   })) {
     if (!exists(relativePath)) {
       fail(`Missing ${relativePath}`);
@@ -477,10 +557,92 @@ function validateAntiPatterns() {
   if (!handoff.includes("Apply accepted review fixes in `linear-handoff`")) {
     fail("linear-handoff must own accepted review fixes");
   }
+  if (!handoff.includes("references/artifact-intake.md")) {
+    fail("linear-handoff must use artifact intake before package synthesis");
+  }
+  for (const required of [
+    "`read`",
+    "`unavailable`",
+    "`stale_or_ignored`",
+    "`conflicts`",
+    "`decisions_carried_forward`",
+    "`confidence_boundary`",
+  ]) {
+    if (!handoff.includes(required)) {
+      fail(`linear-handoff must expose artifact intake field: ${required}`);
+    }
+  }
+  if (!handoff.includes("Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`")) {
+    fail("linear-handoff final response must carry artifact intake summary fields");
+  }
+  if (!handoff.includes("Do not move the Project to Delivery from `linear-handoff`")) {
+    fail("linear-handoff must not own Delivery Start");
+  }
+
+  const implement = read("skills/linear-implement/SKILL.md");
+  for (const required of [
+    "Use this skill to own Delivery Start",
+    "Run or report `linear-check delivery`",
+    "Move the Project to Delivery only after approval and prerequisites are explicit",
+    "after the Project is in Delivery",
+    "missing or `None`",
+    "Implementation workflow",
+    "implemented-needs-preflight",
+    "scope-drift-needs-handoff",
+  ]) {
+    if (!implement.includes(required)) {
+      fail(`linear-implement contract missing: ${required}`);
+    }
+  }
 
   const ship = read("skills/linear-ship/SKILL.md");
   if (!ship.includes("`linear-review` is report-only; `linear-ship` owns accepted pre-ship drift sync")) {
     fail("linear-ship must own accepted pre-ship drift sync");
+  }
+  if (!ship.includes("read the latest `linear-preflight certificate`")) {
+    fail("linear-ship must consume the preflight certificate when present");
+  }
+  if (!ship.includes("If no certificate exists, route to `linear-preflight` before continuing")) {
+    fail("linear-ship must require a preflight certificate before ship");
+  }
+  if (!ship.includes("Linear comments or resources")) {
+    fail("linear-ship must recover the preflight certificate from Linear");
+  }
+
+  const preflight = read("skills/linear-preflight/SKILL.md");
+  for (const required of [
+    "owns local branch readiness only",
+    "`ready`",
+    "`blocked`",
+    "`drift-candidate`",
+    "`needs-human`",
+    "linear-preflight certificate",
+    "Issue(s): <keys>",
+    "Branch: <branch>; commit state: <clean/dirty/committed>",
+    "Changed files: <count/list or summary>",
+    "Local verification: <commands run + outcome>",
+    "Self-review: <run/skipped/unavailable + outcome>",
+    "Drift candidate: <none/summary>",
+    "Not checked: <manual QA/browser/mobile/deploy/etc.>",
+    "Next: <linear-ship | linear-handoff | needs-human>",
+    "Do not run or claim `linear-review pre-ship`",
+    "Do not run or claim `linear-check pre-ship`",
+    "Do not create the final PR",
+    "Preflight certificate shape",
+  ]) {
+    if (!preflight.includes(required)) {
+      fail(`linear-preflight boundary missing: ${required}`);
+    }
+  }
+
+  const shipOutput = read("templates/ship-output.md");
+  if (!shipOutput.includes("Preflight: <ready/blocked/drift-candidate/needs-human/not run>")) {
+    fail("ship output template must preserve preflight status boundary");
+  }
+
+  const check = read("skills/linear-check/SKILL.md");
+  if (!check.includes("local branch readiness is known through a `linear-preflight` certificate")) {
+    fail("linear-check pre-ship must require the preflight certificate");
   }
 
   const spec = read("skills/linear-spec/SKILL.md");
