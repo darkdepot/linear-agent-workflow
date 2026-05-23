@@ -394,6 +394,9 @@ function validateSyncConsumerBehavior() {
     if (preservedConfig.includes("Implementation workflow")) {
       fail("sync-consumer must preserve old configs without adding the optional Implementation workflow field");
     }
+    if (preservedConfig.includes("Artifact roots")) {
+      fail("sync-consumer must preserve old configs without adding the optional Artifact roots field");
+    }
     runSyncConsumer(legacyRepo, true);
     runLocalChecker(legacyRepo);
   } finally {

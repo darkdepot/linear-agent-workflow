@@ -149,7 +149,7 @@ Create, stabilize, land, and close out a PR without losing Linear source of trut
 
 Required:
 
-- Read the `linear-preflight` certificate when present, or route to `linear-preflight` if local readiness is unclear.
+- Read the `linear-preflight` certificate when present. If no recoverable certificate exists, route to `linear-preflight` before continuing.
 - `linear-review pre-ship` when risk is standard, deep, risky, or implementation materially drifted from Linear artifacts.
 - `linear-check pre-ship`.
 - Delegate PR creation to configured ship workflow.
