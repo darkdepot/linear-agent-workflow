@@ -23,7 +23,8 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 - `linear-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
 - `linear-preflight` = local branch readiness, targeted verification, self-review, commit state, and preflight certificate.
-- `linear-ship` = formal pre-ship review/check, PR lifecycle, review feedback loop, landing/deploy delegation, and Linear closeout.
+- `linear-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
+- `linear-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 
 ## Skill Design Rules
 
@@ -34,7 +35,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Do not copy long templates into every skill.
 - Keep `linear-review` report-only and `linear-check` readiness-only.
 - Apply accepted review fixes through `linear-handoff`, explicit atomic skills, or `linear-ship`.
-- Keep `linear-handoff`, `linear-implement`, `linear-preflight`, and `linear-ship` ownership separate; do not collapse them into a monolithic delivery skill.
+- Keep `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
 - Consumer `.agents/skills/linear-*` installs must be full generated skill bodies, not redirect adapters.

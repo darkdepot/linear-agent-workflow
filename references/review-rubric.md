@@ -29,7 +29,7 @@ Apply conditionally:
 - Product: problem, operator, workflow, and acceptance are clear enough.
 - Design: UI/product-surface flows, states, and edge cases are represented.
 - Security/data: auth, permissions, privacy, migration, production data, or public API risks exist.
-- Ship: preflight certificate, pre-ship review, PR mapping, and closeout state are coherent.
+- Ship: preflight certificate, pre-ship review, documentation-before-green, PR mapping, and green certificate state are coherent.
 - Architecture: deep/risky work has a real seam or stable interface and avoids shallow pass-through abstractions.
 
 ## Checks
@@ -75,6 +75,8 @@ Pre-ship:
 - Bug/perf PRs report original symptom or baseline, fix proof, and regression proof or documented test-seam gap.
 - Material drift is synced or explicitly accepted.
 - Review feedback and unresolved decisions are represented.
+- Documentation workflow ran before the final green certificate when configured.
+- Green certificate records the reviewed head SHA and next `linear-deploy`.
 
 ## Finding Format
 
@@ -85,7 +87,7 @@ Each finding must include:
 - Evidence: short quote or artifact section reference.
 - Impact: what goes wrong if ignored.
 - Recommendation: concrete next action.
-- Owner workflow: `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, `linear-issue`, `linear-prd`, `linear-spec`, or human decision.
+- Owner workflow: `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, `linear-deploy`, `linear-issue`, `linear-prd`, `linear-spec`, or human decision.
 
 ## Report Shape
 

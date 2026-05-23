@@ -68,7 +68,7 @@ Mode checks:
 - `issue`: bug/perf Issues include current behavior, desired behavior, reproduction or baseline, and fix-proof expectation, or explicitly say why the original symptom cannot be reproduced yet.
 - `delivery`: Project is in Delivery, PRD is current, Tech Spec or explicit no-spec exception exists, approved execution Issue(s) exist, approval covers the current Issue set and implementation start, required/advisory review-gate record is coherent with the risk classification, and `linear-implement` starts from those Issue(s).
 - `pre-ship`: branch/diff matches Issue, local branch readiness is known through a `linear-preflight` certificate, required `linear-review pre-ship` ran for standard, deep, risky, or materially drifted work, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
-- `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` after merge/user acceptance, and final drift is synced back to Linear.
+- `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` only after verified deploy or explicit accepted delivery policy, deploy evidence is recorded, post-ship drift is synced back to Linear, and learning capture is reported when relevant.
 - `adapter`: generated consumer skills are full executable copies, Claude wrappers point to `.agents`, the consumer lockfile pins an immutable commit plus copied asset hashes, and drift is reported from `scripts/sync-consumer.mjs --repo <consumer> --check` or the generated `.agents/linear-workflow-check.mjs`.
 
 Content-shape checks:

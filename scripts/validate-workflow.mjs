@@ -10,6 +10,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
 const EXPECTED_SKILLS = [
   "linear-check",
+  "linear-deploy",
   "linear-handoff",
   "linear-idea",
   "linear-implement",
@@ -134,10 +135,11 @@ This file is local consumer policy for generated \`linear-*\` skills.
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\`.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
 - Ship workflow: fixture ship
+- Documentation workflow: None
 - Review feedback workflow: None
-- Land workflow: None
+- Deploy workflow: None
 `
   );
 }
@@ -148,7 +150,7 @@ function writeLegacyConsumerConfig(repo) {
     path.join(repo, ".agents", "linear-workflow.config.md"),
     `# Linear Workflow Consumer Config
 
-This fixture intentionally models a complete pre-0.8 consumer config without the optional implementation workflow field.
+This fixture intentionally models a preserved consumer config without the optional implementation workflow and artifact roots fields, but with current deploy naming.
 
 - Consumer: Fixture
 - Linear team: Fixture
@@ -158,8 +160,29 @@ This fixture intentionally models a complete pre-0.8 consumer config without the
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
 - Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
 - Ship workflow: fixture ship
+- Documentation workflow: None
 - Review feedback workflow: None
-- Land workflow: None
+- Deploy workflow: None
+`
+  );
+}
+
+function writeUnsupportedLandConfig(repo) {
+  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, ".agents", "linear-workflow.config.md"),
+    `# Linear Workflow Consumer Config
+
+- Consumer: Fixture
+- Linear team: Fixture
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Repo docs and code comments language: English
+- Linear is the planning, spec, and task source of truth.
+- GitHub is branch, PR, review, CI, deploy, and merge history only.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
+- Ship workflow: fixture ship
+- Review feedback workflow: None
+- Land workflow: fixture land
 `
   );
 }
@@ -286,6 +309,12 @@ function validateTemplateSections() {
       "Preflight: <ready/blocked/drift-candidate/needs-human/not run>",
       "Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>",
     ],
+    "templates/deploy-output.md": [
+      "Deploy status:",
+      "Ship certificate: <found/missing/stale>",
+      "Deploy workflow:",
+      "Learnings recorded:",
+    ],
   };
 
   for (const [relativePath, sections] of Object.entries(requiredSections)) {
@@ -372,6 +401,15 @@ function validateFreshZeniInstall() {
     if (!configText.includes("- Artifact roots: None")) {
       fail("Fresh Zeni config must include explicit Artifact roots default");
     }
+    if (!configText.includes("- Documentation workflow: gstack document-release")) {
+      fail("Fresh Zeni config must include the configured documentation workflow default");
+    }
+    if (!configText.includes("- Deploy workflow: gstack land-and-deploy")) {
+      fail("Fresh Zeni config must include the configured deploy workflow default");
+    }
+    if (configText.includes("Land workflow")) {
+      fail("Fresh Zeni config must not include unsupported Land workflow");
+    }
     runSyncConsumer(repo, true, "Zeni");
     runLocalChecker(repo);
   } finally {
@@ -397,10 +435,32 @@ function validateSyncConsumerBehavior() {
     if (preservedConfig.includes("Artifact roots")) {
       fail("sync-consumer must preserve old configs without adding the optional Artifact roots field");
     }
+    if (!preservedConfig.includes("Deploy workflow: None")) {
+      fail("legacy fixture must preserve deploy workflow field");
+    }
     runSyncConsumer(legacyRepo, true);
     runLocalChecker(legacyRepo);
   } finally {
     fs.rmSync(legacyRepo, { recursive: true, force: true });
+  }
+
+  const landRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-land-"));
+  try {
+    fs.writeFileSync(path.join(landRepo, "AGENTS.md"), "# Land Consumer\n");
+    runSyncConsumer(landRepo);
+    writeUnsupportedLandConfig(landRepo);
+    expectCommandFailure(
+      "sync-consumer --check unsupported Land workflow fixture",
+      () => runSyncConsumer(landRepo, true),
+      "unsupported Land workflow"
+    );
+    expectCommandFailure(
+      "local checker unsupported Land workflow fixture",
+      () => runLocalChecker(landRepo),
+      "unsupported Land workflow"
+    );
+  } finally {
+    fs.rmSync(landRepo, { recursive: true, force: true });
   }
 
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-validate-"));
@@ -504,20 +564,23 @@ function validateDocsAndExamples() {
     "README.md": [
       "linear-implement",
       "linear-preflight",
+      "linear-deploy",
       "node scripts/validate-workflow.mjs",
       "Review/check split",
-      "Delivery bridge",
+      "Delivery ladder",
     ],
     "AGENTS.md": [
       "`linear-review` = report-only quality/risk review",
       "`linear-implement` = Delivery Start",
       "`linear-preflight` = local branch readiness",
+      "`linear-deploy` = deploy workflow delegation",
       "Keep `linear-review` report-only",
     ],
     "examples/zeni-dogfood.md": [
       "Risk-Based Review Gate Examples",
       "Correct Risky Handoff Review",
       "Correct Implement To Preflight To Ship",
+      "Anti-Example: Ship Owns Deploy",
       "Correct Tiny Advisory Review",
       "Anti-Example: Required Review Skipped",
       "Anti-Example: Review Mutates Linear",
@@ -537,7 +600,7 @@ function validateDocsAndExamples() {
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
-    "references/versioning.md": ["`Artifact roots`", "`Implementation workflow`", "documented default selection table"],
+    "references/versioning.md": ["`Artifact roots`", "`Implementation workflow`", "`Documentation workflow`", "`Deploy workflow`", "documented default selection table"],
   })) {
     if (!exists(relativePath)) {
       fail(`Missing ${relativePath}`);
@@ -608,6 +671,37 @@ function validateAntiPatterns() {
   if (!ship.includes("Linear comments or resources")) {
     fail("linear-ship must recover the preflight certificate from Linear");
   }
+  for (const required of [
+    "Documentation workflow",
+    "linear-ship green certificate",
+    "Next: linear-deploy",
+    "Poll interval: 10 minutes",
+  ]) {
+    if (!ship.includes(required) && !read("references/ship-feedback-loop.md").includes(required)) {
+      fail(`linear-ship ladder contract missing: ${required}`);
+    }
+  }
+  if (/Land workflow|configured land workflow|land\/deploy workflow/i.test(ship)) {
+    fail("linear-ship must not reference old Land workflow or own deploy");
+  }
+  if (ship.includes("pr-created")) {
+    fail("linear-ship must not keep pr-created as a terminal ship verdict");
+  }
+
+  const deploy = read("skills/linear-deploy/SKILL.md");
+  for (const required of [
+    "Requires `linear-ship green certificate`",
+    "Deploy workflow",
+    "gstack land-and-deploy",
+    "linear-check post-ship",
+    "gstack-learnings-log",
+    "Do not run `/learn prune`, `/learn export`, `/learn stats`",
+    "Do not accept `Land workflow` as a compatibility alias",
+  ]) {
+    if (!deploy.includes(required)) {
+      fail(`linear-deploy contract missing: ${required}`);
+    }
+  }
 
   const preflight = read("skills/linear-preflight/SKILL.md");
   for (const required of [
@@ -622,6 +716,7 @@ function validateAntiPatterns() {
     "Changed files: <count/list or summary>",
     "Local verification: <commands run + outcome>",
     "Self-review: <run/skipped/unavailable + outcome>",
+    "Review rounds: <0|1|2>; safe fixes applied: <none/list>; residual findings: <none/list>",
     "Drift candidate: <none/summary>",
     "Not checked: <manual QA/browser/mobile/deploy/etc.>",
     "Next: <linear-ship | linear-handoff | needs-human>",
@@ -629,6 +724,8 @@ function validateAntiPatterns() {
     "Do not run or claim `linear-check pre-ship`",
     "Do not create the final PR",
     "Preflight certificate shape",
+    "Do not run more than 2 branch review/fix rounds",
+    "Do not auto-apply `gated_auto`, `manual`, `human`, or release-sensitive findings",
   ]) {
     if (!preflight.includes(required)) {
       fail(`linear-preflight boundary missing: ${required}`);
@@ -638,6 +735,30 @@ function validateAntiPatterns() {
   const shipOutput = read("templates/ship-output.md");
   if (!shipOutput.includes("Preflight: <ready/blocked/drift-candidate/needs-human/not run>")) {
     fail("ship output template must preserve preflight status boundary");
+  }
+  if (shipOutput.includes("pr-created")) {
+    fail("ship output template must stay focused on green/needs-human/blocked/timed-out");
+  }
+  for (const required of [
+    "linear-ship green certificate",
+    "Documentation workflow",
+    "Next: <linear-deploy | needs-human | blocked>",
+  ]) {
+    if (!shipOutput.includes(required)) {
+      fail(`ship output template missing ladder field: ${required}`);
+    }
+  }
+
+  const deployOutput = read("templates/deploy-output.md");
+  for (const required of [
+    "Ship certificate: <found/missing/stale>",
+    "Deploy workflow",
+    "Learnings recorded",
+    "stale certificates",
+  ]) {
+    if (!deployOutput.includes(required)) {
+      fail(`deploy output template missing: ${required}`);
+    }
   }
 
   const check = read("skills/linear-check/SKILL.md");

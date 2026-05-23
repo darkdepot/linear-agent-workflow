@@ -74,6 +74,35 @@ Required quality:
 
 It must not claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation, merge, deploy, or closeout.
 
+## Ship Green Certificate
+
+Required quality:
+
+- Starts with the stable marker `linear-ship green certificate` when recorded in Linear.
+- States `Ship: green`.
+- Names the Linear Issue(s), PR number/URL, and reviewed head SHA.
+- References the preflight certificate and pre-ship review outcome.
+- States whether the Documentation workflow ran and whether it changed the head SHA.
+- Summarizes CI, Greptile, unresolved review threads, and merge state.
+- Includes a compact checked/not-checked boundary for manual QA, browser QA, mobile QA, production smoke, deploy verification, and user acceptance.
+- Names the next owner workflow: `linear-deploy`.
+- Is durable in Linear comments or resources so a fresh `linear-deploy` agent can recover it.
+
+It must not claim merge, deploy, post-ship check, Linear closeout, or production verification.
+
+## Deploy Closeout
+
+Required quality:
+
+- References the `linear-ship green certificate` and reviewed head SHA.
+- Confirms the current PR head SHA matched the certificate before deploy.
+- Names the configured Deploy workflow.
+- Captures merged SHA, deploy target, and deploy verification evidence when available.
+- Reports `linear-check post-ship` outcome or why it could not run.
+- States whether Linear was moved to `Done` and why.
+- Lists durable learnings recorded, or `none`.
+- Includes checked/not-checked boundaries for manual QA, browser QA, mobile QA, and production smoke.
+
 ## Review Findings
 
 Review findings must distinguish:

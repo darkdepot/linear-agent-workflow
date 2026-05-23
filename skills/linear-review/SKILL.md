@@ -32,7 +32,7 @@ Workflow:
 
 1. Fetch fresh Linear Project, PRD, Tech Spec, and Issue state relevant to the mode.
 2. Fetch PR, branch, review, and merge state only when running `pre-ship`.
-3. Read consumer config for Linear-facing language and configured ship/review/land workflows.
+3. Read consumer config for Linear-facing language and configured ship, documentation, review feedback, and deploy workflows.
 4. Classify risk using `references/readiness-gates.md`.
 5. Decide whether the review gate is `required` or `advisory`.
 6. Apply the rubric in `references/review-rubric.md`.
@@ -72,7 +72,8 @@ Owner workflows:
 - `linear-prd`: applies accepted PRD-only fixes when explicitly invoked.
 - `linear-spec`: applies accepted Tech Spec-only fixes when explicitly invoked.
 - `linear-issue`: applies accepted Issue-only fixes when explicitly invoked.
-- `linear-ship`: handles formal pre-ship review/check, accepted pre-ship drift sync, PR/review state, and Linear closeout sync.
+- `linear-ship`: handles formal pre-ship review/check, accepted pre-ship drift sync, PR/review state, documentation-before-green, and green certificate.
+- `linear-deploy`: handles deploy workflow delegation, post-ship check, Linear closeout, and learning capture.
 - Human decision: handles product, UX, business, or scope questions.
 
 Hard boundaries:

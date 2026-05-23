@@ -15,7 +15,7 @@ Repo skill instructions must be in English.
 Source-of-truth policy:
 
 - Linear owns requirements and implementation contracts.
-- GitHub owns PR/review/CI/merge history.
+- GitHub owns PR/review/CI/deploy/merge history.
 - GitHub Issues are not the implementation source of truth.
 - `/office-hours`, `/brainstorming`, `/plan-design-review`, and `/plan-eng-review` outputs are discovery inputs until `linear-handoff` persists them to Linear.
 - Local markdown plans are temporary execution scratch unless explicitly promoted into Linear by `linear-handoff`.
@@ -52,7 +52,8 @@ Review policy:
 - `linear-handoff`, explicit atomic skills, or `linear-ship` apply accepted fixes from a review report.
 - `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
 - `linear-preflight` owns local branch readiness, self-review, targeted verification, commit state, and preflight certificate.
-- `linear-ship` owns formal pre-ship review/check, PR creation, review-loop stabilization, landing/deploy delegation, and closeout.
+- `linear-ship` owns formal pre-ship review/check, PR creation, repo documentation before final green, review-loop stabilization, and the `linear-ship green certificate`.
+- `linear-deploy` owns deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 - Risk-based review gates follow `references/readiness-gates.md`.
 - Tiny PRD-lite or no-spec exceptions may use advisory review only when the exception and reason are recorded.
 - Raw discovery implementation plans must not be approved directly in this workflow; run `linear-handoff` first.

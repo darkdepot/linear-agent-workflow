@@ -10,8 +10,9 @@ Consumer policy:
 - Zeni stores consumer policy in `.agents/linear-workflow.config.md` and repo docs.
 - Zeni's configured implementation workflow is Compound `ce-work`.
 - Zeni's configured ship workflow is gstack `ship`.
+- Zeni's configured documentation workflow is gstack `document-release`.
 - Zeni's configured review feedback workflow is Compound `ce-resolve-pr-feedback`.
-- Zeni's configured land workflow is gstack `land-and-deploy`.
+- Zeni's configured deploy workflow is gstack `land-and-deploy`.
 
 Dogfood order:
 
@@ -24,8 +25,9 @@ Dogfood order:
 7. Create approved execution Issue(s) through handoff.
 8. Use `linear-implement` to start Delivery and implement from the approved Issue(s).
 9. Use `linear-preflight` to prepare the local branch and produce a certificate.
-10. Use `linear-ship` for pre-ship review/check, PR/review loop, land/deploy, and closeout.
-11. Keep Project, PRD, Tech Spec, and Issue current in Linear.
+10. Use `linear-ship` for pre-ship review/check, PR creation, repo docs, review loop, and green certificate.
+11. Use `linear-deploy` for Deploy workflow, post-ship check, Linear closeout, and durable learnings.
+12. Keep Project, PRD, Tech Spec, and Issue current in Linear.
 
 ## Correct Raw Idea Intake
 
@@ -124,8 +126,9 @@ Expected behavior:
 1. `linear-implement` fetches fresh Linear Project, PRD, Tech Spec, Issue, approval, review, and check state.
 2. It starts from approved Issue(s), not raw discovery artifacts or local review plans.
 3. It selects the configured/default implementation engine, implements the approved one-PR slice, and exits as `implemented-needs-preflight` when local implementation is complete.
-4. `linear-preflight` inspects branch/worktree/diff, runs targeted verification and self-review, commits when safe/configured, and emits a preflight certificate.
-5. `linear-ship` consumes the preflight certificate, owns formal `linear-review pre-ship`, owns `linear-check pre-ship`, then delegates PR creation/review/land/closeout to configured workflows.
+4. `linear-preflight` inspects branch/worktree/diff, runs targeted verification and a bounded self-review loop, commits when safe/configured, and emits a preflight certificate.
+5. `linear-ship` consumes the preflight certificate, owns formal `linear-review pre-ship`, owns `linear-check pre-ship`, delegates PR creation to the configured Ship workflow, runs repo docs before final green when configured, stabilizes review/CI, and emits a `linear-ship green certificate`.
+6. `linear-deploy` consumes the green certificate, verifies the current PR head SHA still matches, runs the configured Deploy workflow, runs/reports `linear-check post-ship`, closes Linear, and records durable learnings.
 
 ### Correct Tiny Advisory Review
 
@@ -231,6 +234,20 @@ Why this fails:
 - `linear-preflight` owns local branch readiness only.
 - Formal pre-ship review/check and PR lifecycle remain in `linear-ship`.
 - Local tests do not imply PR review, CI, deploy, production smoke, or Linear closeout.
+
+## Anti-Example: Ship Owns Deploy
+
+FAIL:
+
+1. `linear-ship` gets review and CI green.
+2. It merges/deploys through the configured Deploy workflow.
+3. It moves Linear to `Done` and records release learnings.
+
+Why this fails:
+
+- `linear-ship` stops at a `linear-ship green certificate`.
+- Deploy workflow, post-ship check, Linear closeout, and learnings belong to `linear-deploy`.
+- Repo documentation belongs before the green certificate so doc commits are reviewed before deploy.
 
 ## Anti-Example: Workflow Language In Linear Artifacts
 

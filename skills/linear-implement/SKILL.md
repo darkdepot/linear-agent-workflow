@@ -34,7 +34,7 @@ Do not use:
 
 - Before Project, PRD, Tech Spec or explicit no-spec exception, and approved Issue(s) are current.
 - From raw `/office-hours`, `/brainstorming`, review plans, local markdown plans, or chat history alone.
-- For PR creation, review-loop stabilization, landing, deploy, or closeout. Those belong to `linear-ship`.
+- For PR creation, review-loop stabilization, deploy, or closeout. PR creation/review belongs to `linear-ship`; deploy and closeout belong to `linear-deploy`.
 
 Inputs to gather:
 

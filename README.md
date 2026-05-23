@@ -5,7 +5,7 @@ Reusable Linear workflow skills for AI coding agents.
 The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
-linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> linear-implement -> linear-preflight -> linear-ship
+linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> linear-implement -> linear-preflight -> linear-ship -> linear-deploy
 ```
 
 GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
@@ -22,7 +22,8 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-check`: report-only transition readiness checks.
 - `linear-implement`: Delivery Start and implementation execution from approved Issue(s).
 - `linear-preflight`: local branch readiness, targeted verification, self-review, and preflight certificate.
-- `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
+- `linear-ship`: wrapper around configured project ship, documentation, review feedback, and green certificate workflows.
+- `linear-deploy`: wrapper around configured project deploy, post-ship check, Linear closeout, and learning capture workflows.
 
 The workflow includes an execution quality layer inspired by proven agent-skill
 guardrails: PRDs must cover actor, capability, and benefit; Issues must be
@@ -64,14 +65,24 @@ when final discovery/review plan appears
 
 /linear-preflight
 -> inspect branch/worktree/diff
--> run targeted verification and self-review
+-> run targeted verification and bounded self-review
 -> commit when safe/configured
 -> emit preflight certificate
 
 /linear-ship
 -> consume preflight certificate when present
 -> run pre-ship linear-review and linear-check pre-ship when required
--> PR/review feedback/land/Linear closeout sync
+-> create/sync PR through configured ship workflow
+-> run repo documentation workflow before final green when configured
+-> stabilize review/CI/Greptile
+-> emit linear-ship green certificate
+
+/linear-deploy
+-> consume linear-ship green certificate
+-> verify current PR head SHA still matches
+-> run configured Deploy workflow
+-> run/report linear-check post-ship
+-> close Linear and record durable learnings
 ```
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `linear-handoff` persists the package.
@@ -113,7 +124,7 @@ node .agents/linear-workflow-check.mjs
 
 The checks fail when generated skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, wrapper/checker/lockfile hashes drift, unmanaged Linear skills appear, or installed skills look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
 
-For Zeni, the configured flow defaults implementation to Compound `ce-work`, then uses gstack `ship`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy`.
+For Zeni, the configured flow defaults implementation to Compound `ce-work`, then uses gstack `ship`, gstack `document-release`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy` through `Deploy workflow`.
 
 See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
 
@@ -124,7 +135,7 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Linear first: durable requirements live in Linear.
 - Handoff first: discovery implementation plans must pass through `linear-handoff` before implementation.
 - Artifact intake first: local discovery/review files are scoped evidence, not broad-search source of truth.
-- Delivery bridge: implementation starts through `linear-implement`, branch readiness flows through `linear-preflight`, and PR lifecycle remains in `linear-ship`.
+- Delivery ladder: implementation starts through `linear-implement`, branch readiness flows through `linear-preflight`, PR green certification remains in `linear-ship`, and deploy/closeout belongs to `linear-deploy`.
 - Strong artifacts first: skills and examples carry the workflow contract; scripts are only lightweight smoke guards for known regressions.
 - Product brief Projects: Project bodies cover only five concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 - WHAT/HOW/execution split: PRD defines behavior and acceptance, Tech Spec defines implementation, Issue defines one PR.
