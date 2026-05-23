@@ -10,32 +10,34 @@ Use this wrapper around the consumer repo's configured ship, review feedback, an
 Read first:
 
 1. `AGENTS.md`
-2. `skills/linear-review/SKILL.md`
-3. `skills/linear-check/SKILL.md`
-4. `references/artifact-rules.md`
-5. `references/readiness-gates.md`
-6. `references/execution-quality.md`
-7. `references/install.md`
-8. `references/ship-feedback-loop.md`
-9. `references/human-friendly-output.md`
-10. `templates/ship-output.md`
+2. `skills/linear-preflight/SKILL.md`
+3. `skills/linear-review/SKILL.md`
+4. `skills/linear-check/SKILL.md`
+5. `references/artifact-rules.md`
+6. `references/readiness-gates.md`
+7. `references/execution-quality.md`
+8. `references/install.md`
+9. `references/ship-feedback-loop.md`
+10. `references/human-friendly-output.md`
+11. `templates/ship-output.md`
 
 Workflow:
 
 1. `prepare`: fetch the Linear Issue, Project, PRD, and Tech Spec.
 2. `prepare`: if there is no approved Linear Issue linked to the Project with current PRD/Tech Spec context, stop and route to `linear-handoff`.
-3. `prepare`: classify scope/risk and compare branch or pending PR scope against Linear artifacts.
-4. `prepare`: run or report `linear-review pre-ship` when required by `references/readiness-gates.md`.
-5. `prepare`: apply or request accepted pre-ship Linear sync decisions through `linear-ship` before PR creation or landing.
-6. `prepare`: run or report `linear-check pre-ship`.
-7. `create-pr`: gather Project, PRD, Tech Spec, and Issue context for the configured ship workflow.
-8. `create-pr`: delegate actual PR creation to the configured Ship workflow.
-9. `create-pr`: after PR creation, record PR number, PR URL, and latest head SHA; update the Linear Issue to `In Review` and add a PR chip.
-10. `stabilize-review`: when a Review feedback workflow is configured, run the feedback loop in `references/ship-feedback-loop.md`.
-11. `land-deploy`: when the review loop is green and a Land workflow is configured, delegate merge/deploy to that workflow.
-12. `linear-closeout`: after merge/user acceptance, update the Linear Issue to `Done`.
-13. `linear-closeout`: run or report `linear-check post-ship`.
-14. Return the concise report in `templates/ship-output.md`.
+3. `prepare`: read the latest `linear-preflight certificate` from Linear comments or resources. If no certificate exists, route to `linear-preflight` before continuing.
+4. `prepare`: classify scope/risk and compare branch or pending PR scope against Linear artifacts.
+5. `prepare`: run or report `linear-review pre-ship` when required by `references/readiness-gates.md`.
+6. `prepare`: apply or request accepted pre-ship Linear sync decisions through `linear-ship` before PR creation or landing.
+7. `prepare`: run or report `linear-check pre-ship`.
+8. `create-pr`: gather Project, PRD, Tech Spec, Issue context, and preflight certificate for the configured ship workflow.
+9. `create-pr`: delegate actual PR creation to the configured Ship workflow.
+10. `create-pr`: after PR creation, record PR number, PR URL, and latest head SHA; update the Linear Issue to `In Review` and add a PR chip.
+11. `stabilize-review`: when a Review feedback workflow is configured, run the feedback loop in `references/ship-feedback-loop.md`.
+12. `land-deploy`: when the review loop is green and a Land workflow is configured, delegate merge/deploy to that workflow.
+13. `linear-closeout`: after merge/user acceptance, update the Linear Issue to `Done`.
+14. `linear-closeout`: run or report `linear-check post-ship`.
+15. Return the concise report in `templates/ship-output.md`.
 
 User-facing ship status UX:
 
@@ -60,6 +62,7 @@ Required review status shape when a PR exists:
 
 ```text
 Review status:
+- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <local readiness outcome>.
 - Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
 - Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>.
 - GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
@@ -95,12 +98,15 @@ Rules:
 - Do not fork or reimplement the consumer repo's ship workflow.
 - Do not resolve review feedback directly when a configured resolver exists; delegate to it.
 - Do not merge or deploy directly; delegate to the configured land workflow.
+- Do not perform initial implementation or local branch hygiene; route those to `linear-implement` or `linear-preflight`.
 - Do not start from a raw discovery/review plan, PRD, or Tech Spec; shipping starts from an approved Linear Issue.
 - Do not use GitHub Issues as requirements.
 - Sync material drift back to Linear before claiming completion.
 - Use Linear comments for user review acceptance, not Project Updates.
-- `linear-review` is report-only; `linear-ship` owns accepted pre-ship drift sync and PR/review/merge state updates.
+- `linear-review` is report-only; `linear-ship` owns accepted pre-ship drift sync, `linear-check pre-ship`, and PR/review/merge state updates.
 - Required `linear-review pre-ship` runs for standard, deep, risky, or materially drifted work before PR creation or landing.
+- `linear-preflight` owns local branch readiness and emits a certificate; it must not run or claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation, landing, or closeout.
+- Do not continue into formal pre-ship review/check or PR creation without a recoverable `linear-preflight certificate` in Linear comments or resources.
 - Stop with `needs-human` when required review returns unresolved decisions, missing artifacts, or blocking findings.
 - If both Review feedback workflow and Land workflow are absent, stop after PR creation/status sync with final verdict `pr-created`.
 - If Review feedback workflow is absent but Land workflow is configured, wait for checks/reviews once; stop with `needs-human` if actionable feedback appears, otherwise continue to Land workflow.

@@ -79,21 +79,30 @@ Example shape:
 
 ## Consumer Config
 
-Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, not in generated skill bodies or lockfile metadata. The optional ship-phase fields are:
+Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, not in generated skill bodies or lockfile metadata.
+
+Required workflow field:
 
 - `Ship workflow`: creates the branch/PR through the consumer repo's normal ship command.
+
+Optional fields:
+
+- `Artifact roots`: narrow repo-relative or explicit absolute paths for local discovery/review artifacts. Use `None` when no scoped roots exist.
+- `Implementation workflow`: starts and runs implementation from approved Linear Issue(s) when a consumer wants a fixed engine.
 - `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
 - `Land workflow`: merges and verifies/deploys the PR after the review loop is green.
 
 Example Zeni policy:
 
 ```markdown
+- Artifact roots: None
+- Implementation workflow: compound-engineering:ce-work
 - Ship workflow: gstack ship
 - Review feedback workflow: compound-engineering:ce-resolve-pr-feedback
 - Land workflow: gstack land-and-deploy
 ```
 
-`Review feedback workflow` and `Land workflow` are optional. When absent, `linear-ship` keeps backward-compatible behavior: it delegates PR creation, records the PR in Linear, and stops with a clear report instead of inventing a resolver or merge path.
+`Artifact roots`, `Implementation workflow`, `Review feedback workflow`, and `Land workflow` are optional. When `Artifact roots` is absent, artifact intake reports scoped local roots as unavailable instead of scanning broadly. When `Implementation workflow` is absent, `linear-implement` keeps backward-compatible behavior and uses the documented default selection table. When review feedback or land workflows are absent, `linear-ship` delegates PR creation, records the PR in Linear, and stops with a clear report instead of inventing a resolver or merge path.
 
 Every placeholder value in `.agents/linear-workflow.config.md` must be resolved
 before the consumer install is ready. For optional workflows, write an explicit

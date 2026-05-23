@@ -28,6 +28,9 @@ Translate workflow statuses before showing them to the user:
 - `pr-created`: "The PR exists and Linear is synced, but configured review/landing has not completed."
 - `green`: "The PR is stable after review/checks, but it has not been merged or deployed by this workflow."
 - `merged`: "The PR was merged/deployed and Linear closeout ran."
+- `implemented-needs-preflight`: "Implementation finished locally and needs preflight before PR/ship."
+- `scope-drift-needs-handoff`: "Implementation found material scope drift that should be reflected in Linear before continuing."
+- `drift-candidate`: "Local changes may differ from approved Linear scope; ship should run formal pre-ship review/check before PR or landing."
 - `needs-human`: never leave this raw. Say which human decision is needed:
   - "Ready to land, waiting for merge/deploy approval."
   - "Decision needed on review feedback."
@@ -36,7 +39,7 @@ Translate workflow statuses before showing them to the user:
 
 ## Checked / Not Checked
 
-For any handoff, review, check, ship, blocked, or timed-out final, include a compact confidence boundary:
+For any handoff, implement, preflight, review, check, ship, blocked, or timed-out final, include a compact confidence boundary:
 
 ```text
 Проверено:

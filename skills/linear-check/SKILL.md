@@ -66,8 +66,8 @@ Mode checks:
 - `handoff`: PASS when Project, PRD, Tech Spec, and proposed or created Issue slicing are current; Project body is a concise product brief; package approval is recorded as a Linear comment; required `linear-review handoff` ran or a tiny advisory exception is recorded; and implementation has not started from raw `/office-hours`, `/brainstorming`, or review plan. Return `BLOCKED` when the package is otherwise valid but approval is pending.
 - `issue`: Issue belongs to the Project, is a one-PR contract, has required sections, includes `Прочитать сначала` / Read first context, `AFK` or `HITL` readiness, dependencies/blockers, Project/PRD/Tech Spec chips plus context snapshot, adds PRD/Tech Spec as resources/links when available, has coherent review-gate status and disposition, and has no attached PRD/Tech Spec docs.
 - `issue`: bug/perf Issues include current behavior, desired behavior, reproduction or baseline, and fix-proof expectation, or explicitly say why the original symptom cannot be reproduced yet.
-- `delivery`: Project is in Delivery, PRD is current, Tech Spec or explicit no-spec exception exists, approved execution Issue(s) exist, approval covers the current Issue set and implementation start, required/advisory review-gate record is coherent with the risk classification, and implementation starts from those Issue(s).
-- `pre-ship`: branch/diff matches Issue, required `linear-review pre-ship` ran for standard, deep, risky, or materially drifted work, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
+- `delivery`: Project is in Delivery, PRD is current, Tech Spec or explicit no-spec exception exists, approved execution Issue(s) exist, approval covers the current Issue set and implementation start, required/advisory review-gate record is coherent with the risk classification, and `linear-implement` starts from those Issue(s).
+- `pre-ship`: branch/diff matches Issue, local branch readiness is known through a `linear-preflight` certificate, required `linear-review pre-ship` ran for standard, deep, risky, or materially drifted work, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
 - `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` after merge/user acceptance, and final drift is synced back to Linear.
 - `adapter`: generated consumer skills are full executable copies, Claude wrappers point to `.agents`, the consumer lockfile pins an immutable commit plus copied asset hashes, and drift is reported from `scripts/sync-consumer.mjs --repo <consumer> --check` or the generated `.agents/linear-workflow-check.mjs`.
 
@@ -86,6 +86,7 @@ Hard FAIL examples:
 - PRD, Tech Spec, or Issue was created during Idea without explicit repair context.
 - Code implementation started before approved Linear Issue(s) existed.
 - Project moved to Delivery with PRD and Tech Spec but no approved execution Issue or no implementation-start approval.
+- Project moved to Delivery outside `linear-implement` without an explicit implementation-start approval record.
 - Durable Project, PRD, Tech Spec, or Issue body contains workflow mechanics such as `linear-check`, `Skill contracts`, lifecycle gates, or agent-only instructions.
 - Standard, deep, risky, or materially drifted work moved forward without the required `linear-review` gate.
 - A no-spec exception was used for non-tiny work without `linear-review`.

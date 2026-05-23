@@ -51,9 +51,12 @@ Add or preserve a short consumer repo instruction:
 
 - Linear Project, PRD, Tech Spec, and Issue are source of truth.
 - GitHub is PR/review/CI/deploy/merge history only.
-- Use `linear-idea`, `linear-handoff`, `linear-review`, approved Linear Issue(s), `linear-check`, and `linear-ship` for the main workflow.
+- Use `linear-idea`, discovery/reviews, `linear-handoff`, approved Linear Issue(s), `linear-implement`, `linear-preflight`, and `linear-ship` for the main workflow.
 - Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
+- Configure `Artifact roots` only when the repo has narrow, intentional discovery/review artifact directories. Use `None` otherwise.
+- Configure the implementation workflow used by `linear-implement` when the default selection table is not enough.
 - Configure the ship, review feedback, and land/deploy workflows used by `linear-ship`.
+- Existing configs without `Implementation workflow` remain valid; `linear-implement` uses the documented default selection table.
 - Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while any `<...>` placeholder remains, including optional workflows. Write an explicit workflow name or `None` for optional entries.
 - Keep Issues agent-ready: mark `AFK` or `HITL`, name dependencies, and capture bug/perf feedback-loop proof when relevant.
 
@@ -101,6 +104,7 @@ The check fails when:
 - Zeni `.agents/skills/linear-*` should be generated full copies from upstream.
 - Zeni `.claude/skills/linear-*` should remain tiny discovery wrappers to `.agents`.
 - Zeni-specific policy belongs in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting docs.
+- Zeni implementation workflow defaults to Compound `ce-work`.
 - Zeni ship workflow is gstack `ship`.
 - Zeni review feedback workflow is Compound `ce-resolve-pr-feedback`.
 - Zeni land workflow is gstack `land-and-deploy`.
@@ -111,4 +115,6 @@ The check fails when:
 - Do not hand-edit generated `.agents/skills/linear-*` files in a consumer repo.
 - Do not use `.claude/skills/linear-*` as the executable source of truth.
 - Do not let `linear-review` mutate Linear artifacts; accepted fixes belong to `linear-handoff`, explicit atomic skills, or `linear-ship`.
+- Do not let `linear-handoff` move the Project to Delivery; Delivery Start belongs to `linear-implement`.
+- Do not let `linear-preflight` run pre-ship review/check or create/land the final PR by default; those belong to `linear-ship`.
 - Do not make Project Updates a required gate; record user review acceptance as a Linear comment.

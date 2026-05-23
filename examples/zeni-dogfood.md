@@ -8,6 +8,7 @@ Consumer policy:
 - Zeni `.agents/skills/linear-*` contains generated full copies from upstream.
 - Zeni `.claude/skills/linear-*` contains tiny discovery wrappers to `.agents`.
 - Zeni stores consumer policy in `.agents/linear-workflow.config.md` and repo docs.
+- Zeni's configured implementation workflow is Compound `ce-work`.
 - Zeni's configured ship workflow is gstack `ship`.
 - Zeni's configured review feedback workflow is Compound `ce-resolve-pr-feedback`.
 - Zeni's configured land workflow is gstack `land-and-deploy`.
@@ -21,8 +22,10 @@ Dogfood order:
 5. Use `linear-handoff` before implementation.
 6. Use `linear-review` as a risk-based gate before Issue creation or pre-ship when required.
 7. Create approved execution Issue(s) through handoff.
-8. Start implementation from the approved Issue(s).
-9. Keep Project, PRD, Tech Spec, and Issue current in Linear.
+8. Use `linear-implement` to start Delivery and implement from the approved Issue(s).
+9. Use `linear-preflight` to prepare the local branch and produce a certificate.
+10. Use `linear-ship` for pre-ship review/check, PR/review loop, land/deploy, and closeout.
+11. Keep Project, PRD, Tech Spec, and Issue current in Linear.
 
 ## Correct Raw Idea Intake
 
@@ -54,11 +57,12 @@ Expected behavior:
 2. User optionally runs `/plan-design-review` and `/plan-eng-review`.
 3. When a discovery/review implementation plan appears, user runs `/linear-handoff` instead of `linear-prd -> linear-spec -> linear-issue` or direct implementation.
 4. `linear-handoff` produces a handoff exit-plan if still in Plan Mode.
-5. `linear-handoff` previews the package for approval before durable writes; after approval, it updates Project, PRD, and Tech Spec in Linear, creates Issue(s), and only hands off to implementation after the delivery gate passes.
+5. `linear-handoff` performs artifact intake, previews the package for approval before durable writes, and after approval updates Project, PRD, and Tech Spec in Linear and creates Issue(s).
 6. `linear-handoff` runs or reports the required/advisory `linear-review handoff` gate before Issue creation.
 7. Accepted review fixes are applied by `linear-handoff`, not by `linear-review`.
 8. PRD and Tech Spec creation keeps the Project in Discovery or an equivalent pre-delivery state.
-9. The Project moves to Delivery only after approved execution Issue(s) exist and implementation is ready to begin.
+9. If the user explicitly approves implementation start, `linear-handoff` routes to `linear-implement`.
+10. The Project moves to Delivery only through `linear-implement` after approved execution Issue(s) exist, delivery readiness is checked, and implementation-start approval is explicit.
 
 ## Correct Project Body Shape
 
@@ -104,7 +108,24 @@ Expected behavior:
 3. `linear-review handoff` reports `needs-fixes` if actors, flows, requirement trace, validation, or rollout are weak.
 4. User accepts or rejects proposed fixes.
 5. `linear-handoff` applies accepted artifact fixes and records acceptance as a Linear comment.
-6. `linear-check handoff`, `linear-check delivery`, and `linear-check issue` run or are reported before implementation starts.
+6. `linear-check handoff` and `linear-check issue` run or are reported before implementation can start.
+7. `linear-implement` verifies implementation-start approval, moves the Project to Delivery after prerequisites are explicit, then runs or reports `linear-check delivery`.
+
+### Correct Implement To Preflight To Ship
+
+Input:
+
+```text
+Implement the approved Issue from the current Linear package.
+```
+
+Expected behavior:
+
+1. `linear-implement` fetches fresh Linear Project, PRD, Tech Spec, Issue, approval, review, and check state.
+2. It starts from approved Issue(s), not raw discovery artifacts or local review plans.
+3. It selects the configured/default implementation engine, implements the approved one-PR slice, and exits as `implemented-needs-preflight` when local implementation is complete.
+4. `linear-preflight` inspects branch/worktree/diff, runs targeted verification and self-review, commits when safe/configured, and emits a preflight certificate.
+5. `linear-ship` consumes the preflight certificate, owns formal `linear-review pre-ship`, owns `linear-check pre-ship`, then delegates PR creation/review/land/closeout to configured workflows.
 
 ### Correct Tiny Advisory Review
 
@@ -187,14 +208,29 @@ FAIL:
 
 1. PRD is created.
 2. Tech Spec is created.
-3. Project is moved to Delivery.
-4. No approved execution Issue exists.
+3. Project is moved to Delivery from `linear-handoff` or an atomic artifact skill.
+4. No approved execution Issue exists, or no implementation-start approval is recorded.
 
 Why this fails:
 
 - PRD and Tech Spec belong to Discovery or Handoff.
-- Delivery requires approved execution Issue(s).
+- Delivery requires approved execution Issue(s) and explicit implementation-start approval.
+- Delivery Start belongs to `linear-implement`.
 - `linear-check delivery` must report FAIL.
+
+## Anti-Example: Preflight Owns Ship
+
+FAIL:
+
+1. `linear-preflight` sees local tests pass.
+2. It claims `linear-review pre-ship` and `linear-check pre-ship` passed.
+3. It creates or lands the final PR without `linear-ship`.
+
+Why this fails:
+
+- `linear-preflight` owns local branch readiness only.
+- Formal pre-ship review/check and PR lifecycle remain in `linear-ship`.
+- Local tests do not imply PR review, CI, deploy, production smoke, or Linear closeout.
 
 ## Anti-Example: Workflow Language In Linear Artifacts
 

@@ -9,7 +9,9 @@ PR: [#<number>](<url>)
 Linear Issue: `<key>` - <current Linear status>
 
 Review status:
+- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <local readiness outcome>.
 - Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
+- Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>.
 - GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
 - Fixes applied: <none or concise list with commit SHA>.
 - Unresolved review threads: <count/status>.

@@ -41,7 +41,7 @@ Rules:
 - Directional pseudo-code and diagrams are allowed when they clarify architecture. Do not include copy-paste implementation code or shell choreography.
 - Do not write historical repair language.
 - Keep workflow mechanics internal. Do not embed `linear-check`, lifecycle, readiness criteria, or agent-contract instructions into the Linear Tech Spec body.
-- Do not move the Project to Delivery; Tech Spec creation belongs to Discovery or Handoff until approved execution Issue(s) exist and implementation is ready to begin.
+- Do not move the Project to Delivery; Tech Spec creation belongs to Discovery or Handoff. Delivery Start belongs to `linear-implement`.
 - Do not create PRs.
 - Do not start implementation.
 

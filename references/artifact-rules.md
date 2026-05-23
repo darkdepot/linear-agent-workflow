@@ -19,6 +19,7 @@ Source-of-truth policy:
 - GitHub Issues are not the implementation source of truth.
 - `/office-hours`, `/brainstorming`, `/plan-design-review`, and `/plan-eng-review` outputs are discovery inputs until `linear-handoff` persists them to Linear.
 - Local markdown plans are temporary execution scratch unless explicitly promoted into Linear by `linear-handoff`.
+- Artifact intake follows `references/artifact-intake.md`: local discovery files are scoped evidence, not broad-search source of truth.
 
 Document policy:
 
@@ -43,11 +44,15 @@ Review policy:
 - User review acceptance is recorded as a Linear comment.
 - Package approval authorizes durable Project/PRD/Tech Spec updates and Issue creation from the previewed package. The approval comment should name the approved package, PRD/Tech Spec links or intended titles, approved Issue slice titles or ids, and whether implementation may start.
 - If approval is missing, rejected, changes are requested, or the approval comment cannot be recorded, do not create execution Issues, do not move the Project to Delivery, and return `BLOCKED` or `INCOMPLETE` with current links.
+- Implementation-start approval is owned by `linear-implement`. `linear-handoff` may record that implementation may start, but `linear-implement` verifies or obtains that approval before moving the Project to Delivery.
 - Project Updates are not a required gate.
 - `linear-review` is report-only. It returns findings, proposed fixes, decisions, FYI notes, verdict, risk, and next workflow.
 - `linear-check` reports drift; it does not silently fix it.
 - `linear-check` owns `PASS`, `FAIL`, and `BLOCKED`; `linear-review` must not use those as its main status.
 - `linear-handoff`, explicit atomic skills, or `linear-ship` apply accepted fixes from a review report.
+- `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
+- `linear-preflight` owns local branch readiness, self-review, targeted verification, commit state, and preflight certificate.
+- `linear-ship` owns formal pre-ship review/check, PR creation, review-loop stabilization, landing/deploy delegation, and closeout.
 - Risk-based review gates follow `references/readiness-gates.md`.
 - Tiny PRD-lite or no-spec exceptions may use advisory review only when the exception and reason are recorded.
 - Raw discovery implementation plans must not be approved directly in this workflow; run `linear-handoff` first.

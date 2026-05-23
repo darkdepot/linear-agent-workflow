@@ -434,7 +434,9 @@ For optional workflows, write a workflow name or \`None\`.
 - Repo docs and code comments language: English
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\`.
+- Artifact roots: None
+- Implementation workflow: ${isZeni ? "compound-engineering:ce-work" : "None"}
 - Ship workflow: ${isZeni ? "gstack ship" : "<set consumer ship workflow>"}
 - Review feedback workflow: ${isZeni ? "compound-engineering:ce-resolve-pr-feedback" : "<optional review feedback workflow>"}
 - Land workflow: ${isZeni ? "gstack land-and-deploy" : "<optional land/deploy workflow>"}

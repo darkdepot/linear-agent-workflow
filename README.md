@@ -5,7 +5,7 @@ Reusable Linear workflow skills for AI coding agents.
 The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text
-linear-idea -> discovery/reviews -> linear-handoff -> linear-review gate -> approved Issue(s) -> implementation/ship
+linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> linear-implement -> linear-preflight -> linear-ship
 ```
 
 GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Linear owns the Project, PRD, Tech Spec, Issue contract, review acceptance, and drift notes.
@@ -20,6 +20,8 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-issue`: internal/advanced one-PR Issue create/update helper.
 - `linear-review`: report-only artifact quality and risk review.
 - `linear-check`: report-only transition readiness checks.
+- `linear-implement`: Delivery Start and implementation execution from approved Issue(s).
+- `linear-preflight`: local branch readiness, targeted verification, self-review, and preflight certificate.
 - `linear-ship`: wrapper around configured project ship, review feedback, land/deploy, and Linear closeout workflows.
 
 The workflow includes an execution quality layer inspired by proven agent-skill
@@ -45,16 +47,30 @@ when final discovery/review plan appears
 
 /linear-handoff
 -> if still in Plan Mode: produce handoff exit-plan
+-> inspect scoped discovery/review artifacts through artifact intake
 -> draft package and ask package approval before durable writes
 -> after approval: update Linear artifacts
 -> run required/advisory linear-review gate
 -> apply accepted artifact fixes
 -> create Linear Issue(s)
--> run delivery gate before implementation starts
--> implementation starts from approved Issues only
+-> stop with approved Issue(s), or route explicit implementation-start approval to linear-implement
+
+/linear-implement
+-> verify implementation-start approval
+-> move Project to Delivery when ready
+-> run/report linear-check delivery
+-> select implementation engine and implement from approved Issue(s)
+-> exit to linear-preflight
+
+/linear-preflight
+-> inspect branch/worktree/diff
+-> run targeted verification and self-review
+-> commit when safe/configured
+-> emit preflight certificate
 
 /linear-ship
--> run pre-ship linear-review when standard, deep, risky, or drifted
+-> consume preflight certificate when present
+-> run pre-ship linear-review and linear-check pre-ship when required
 -> PR/review feedback/land/Linear closeout sync
 ```
 
@@ -64,7 +80,7 @@ Do not use the direct user-facing chain `linear-prd -> linear-spec -> linear-iss
 
 Use `linear-handoff` for post-discovery packaging, scope changes, or any state where Project, PRD, Tech Spec, and execution Issues are not current together. Use atomic helpers only for explicit targeted repair, reviewer-feedback updates, drift sync, or maintaining an already-approved package without changing execution scope. If an atomic helper is invoked as the normal post-discovery route, stop and route to `linear-handoff`.
 
-PRD and Tech Spec creation does not mean Delivery. A Project should move to Delivery only after approved execution Issue(s) exist and implementation is ready to begin from those Issue(s).
+PRD and Tech Spec creation does not mean Delivery. A Project should move to Delivery only through `linear-implement` after approved execution Issue(s) exist and implementation-start approval is explicit.
 
 ## Install In A Consumer Repo
 
@@ -81,7 +97,7 @@ The script generates a reviewable local install:
 - `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
 - `.agents/linear-workflow-check.mjs`: generated read-only local install checker for the consumer repo.
 - `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated skill/wrapper paths and hashes, checker hash, and copied reference/template hashes.
-- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, and ship workflow. Existing config is preserved.
+- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, implementation workflow, and ship workflow. Existing config is preserved.
 
 Check an install without writing:
 
@@ -97,7 +113,7 @@ node .agents/linear-workflow-check.mjs
 
 The checks fail when generated skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, wrapper/checker/lockfile hashes drift, unmanaged Linear skills appear, or installed skills look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
 
-For Zeni, the configured flow is gstack `ship`, Compound `ce-resolve-pr-feedback`, then gstack `land-and-deploy`.
+For Zeni, the configured flow defaults implementation to Compound `ce-work`, then uses gstack `ship`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy`.
 
 See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
 
@@ -107,6 +123,8 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Full local install: consumer `.agents/skills/linear-*` files are executable generated copies, not redirect stubs.
 - Linear first: durable requirements live in Linear.
 - Handoff first: discovery implementation plans must pass through `linear-handoff` before implementation.
+- Artifact intake first: local discovery/review files are scoped evidence, not broad-search source of truth.
+- Delivery bridge: implementation starts through `linear-implement`, branch readiness flows through `linear-preflight`, and PR lifecycle remains in `linear-ship`.
 - Strong artifacts first: skills and examples carry the workflow contract; scripts are only lightweight smoke guards for known regressions.
 - Product brief Projects: Project bodies cover only five concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 - WHAT/HOW/execution split: PRD defines behavior and acceptance, Tech Spec defines implementation, Issue defines one PR.

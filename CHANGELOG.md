@@ -6,6 +6,22 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-23
+
+### Added
+
+- Add `linear-implement` as the Delivery Start owner that verifies implementation-start approval, moves Projects to Delivery, runs or reports `linear-check delivery`, selects an implementation engine, and exits to preflight.
+- Add `linear-preflight` as the local branch readiness owner for worktree/diff inspection, targeted verification, self-review, commit state, and a preflight certificate consumed by `linear-ship`.
+- Add `references/artifact-intake.md` for scoped discovery/review artifact intake with source precedence, freshness/conflict rules, and required confidence-boundary fields.
+- Add optional consumer config field `Implementation workflow`, with backward-compatible default selection when absent.
+
+### Changed
+
+- Make the lifecycle explicit: `linear-idea -> discovery/reviews -> linear-handoff -> approved Issue(s) -> linear-implement -> linear-preflight -> linear-ship`.
+- Update `linear-handoff` to run artifact intake before package synthesis and route explicit start-now approval to `linear-implement` instead of owning Delivery Start.
+- Clarify that `linear-ship` consumes preflight output when present and remains sole owner of formal pre-ship review/check, PR creation/stabilization, review feedback, land/deploy delegation, and Linear closeout.
+- Extend consumer sync and workflow validation to include the Delivery Bridge Trio skills and copied references/templates.
+
 ## [0.7.0] - 2026-05-19
 
 ### Added
