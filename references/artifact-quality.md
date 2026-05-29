@@ -66,7 +66,7 @@ Required quality:
 - Names the Linear Issue(s), branch, and commit state.
 - Summarizes changed files without copying the full diff.
 - Lists local verification commands and outcomes.
-- States the `autoreview` command, loop outcome, final clean result, fixes applied from accepted findings, and any residual actionable findings. `ready` requires no residual actionable findings.
+- States the final branch/PR `autoreview` command, loop outcome, final clean result, fixes applied from accepted findings, and any residual actionable findings. `ready` requires no residual actionable findings.
 - Calls out drift candidates against Project, PRD, Tech Spec, and Issue.
 - Includes a compact checked/not-checked boundary for manual QA, browser QA, mobile QA, deploy verification, and user acceptance.
 - Names the next owner workflow: `linear-ship`, `linear-handoff`, or human decision.

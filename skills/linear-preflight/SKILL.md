@@ -51,14 +51,15 @@ Workflow:
    - Invoke the installed `autoreview` skill/helper. Do not substitute Compound `ce-code-review`, built-in `/review`, ad hoc self-review, reviewer panels, or a hand-written summary for this gate.
    - Resolve the concrete helper path before running it. Use the consumer-installed helper at `.agents/skills/autoreview/scripts/autoreview` only when that repo explicitly installs it; otherwise use an installed global helper such as `~/.codex/skills/autoreview/scripts/autoreview` or the path documented by the installed `autoreview` skill. This workflow does not vendor `autoreview` into generated consumer installs; if no helper is available, stop with `blocked`. Record the exact command in the certificate.
    - Choose the helper target using the `autoreview` contract:
-     - Dirty local work: `<autoreview-helper> --mode local`.
-     - Branch or PR work: `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
+     - Dirty local work: first run `<autoreview-helper> --mode local` only for the staged/unstaged/untracked tail, then apply accepted fixes and commit or intentionally leave the branch dirty with `blocked`/`needs-human`.
+     - Branch or PR work: run `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
      - Already-landed or single-commit work: `<autoreview-helper> --mode commit --commit <ref>`.
    - Leave the engine/model unchanged unless the user explicitly configured it. Codex remains the default engine when no engine is set.
    - Treat helper exit 0 plus the clean result (`autoreview clean: no accepted/actionable findings reported`) as the only successful review outcome.
    - Treat nonzero helper exit with accepted/actionable findings as not clean. Verify every finding against the real code, reject only unsupported findings with evidence, and apply small fixes for accepted/actionable findings at the right ownership boundary.
    - After any review-triggered code change, re-run the relevant targeted verification and re-run `autoreview`.
    - Keep looping until `autoreview` exits clean, or stop with `blocked`/`needs-human` if the helper is unavailable, cannot determine scope, repeatedly fails for tooling/capacity reasons, or still reports actionable findings that require a human decision.
+   - Before emitting `ready`, run one final clean branch/PR review with `<autoreview-helper> --mode branch --base <resolved-base-ref>` after all review-triggered fixes are committed. A clean local dirty-work review alone is not sufficient when the branch has committed changes.
    - Do not mark preflight `ready` while `autoreview` is unavailable, skipped, replaced by another reviewer, or still reporting accepted/actionable findings.
 6. Commit via Compound `ce-commit` or repo convention when the branch is safe and the commit workflow is configured. If not safe, leave a precise next action.
 7. Record the full preflight certificate as a Linear comment or resource with the stable marker `linear-preflight certificate`.
@@ -80,7 +81,7 @@ Issue(s): <keys>
 Branch: <branch>; commit state: <clean/dirty/committed>
 Changed files: <count/list or summary>
 Local verification: <commands run + outcome>
-Autoreview: <clean|blocked|needs-human|unavailable>; command: <helper command>; clean result: <exit 0 + clean line or none>
+Autoreview: <clean|blocked|needs-human|unavailable>; final command: <branch/PR helper command>; clean result: <exit 0 + clean line or none>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
 Not checked: <manual QA/browser/mobile/deploy/etc.>
@@ -112,7 +113,7 @@ Issue(s): <keys>
 Branch: <branch>; commit state: <clean/dirty/committed>
 Changed files: <count/list or summary>
 Local verification: <commands run + outcome>
-Autoreview: <clean|blocked|needs-human|unavailable>; command: <helper command>; clean result: <exit 0 + clean line or none>
+Autoreview: <clean|blocked|needs-human|unavailable>; final command: <branch/PR helper command>; clean result: <exit 0 + clean line or none>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
 Not checked: <manual QA/browser/mobile/deploy/etc.>
