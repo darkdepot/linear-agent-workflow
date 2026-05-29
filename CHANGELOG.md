@@ -6,6 +6,13 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-05-29
+
+### Changed
+
+- Pre-v1.0 workflow behavior change: make `linear-preflight` use the installed `autoreview` helper as a mandatory clean gate instead of the previous bounded Compound `ce-code-review` loop.
+- Record `Autoreview helper` as an explicit consumer prerequisite; generated workflow installs do not vendor the external `autoreview` helper and preflight blocks when it is unavailable.
+
 ## [0.9.0] - 2026-05-23
 
 ### Added

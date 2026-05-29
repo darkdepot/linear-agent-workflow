@@ -22,7 +22,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - GitHub = branch, PR, review, CI, deploy, and merge history only.
 - `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 - `linear-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
-- `linear-preflight` = local branch readiness, targeted verification, self-review, commit state, and preflight certificate.
+- `linear-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate, commit state, and preflight certificate.
 - `linear-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
 - `linear-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 

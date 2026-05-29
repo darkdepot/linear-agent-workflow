@@ -84,6 +84,7 @@ Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, 
 Required workflow field:
 
 - `Ship workflow`: creates the branch/PR through the consumer repo's normal ship command.
+- `Autoreview helper`: records the external `autoreview` skill/helper prerequisite required by `linear-preflight`.
 
 Optional fields:
 
@@ -93,10 +94,13 @@ Optional fields:
 - `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
 - `Deploy workflow`: merges and verifies/deploys the PR after `linear-ship` records a green certificate.
 
+`Autoreview helper` is required, not optional. When the field is absent, consumer install checks fail with a missing prerequisite error. When the field is present but the helper is unavailable in the agent runtime, `linear-preflight` stops `blocked` instead of replacing the review gate.
+
 Example Zeni policy:
 
 ```markdown
 - Artifact roots: None
+- Autoreview helper: Required installed `autoreview` skill/helper in the agent runtime, or explicit consumer helper at `.agents/skills/autoreview/scripts/autoreview`; `linear-preflight` blocks if unavailable.
 - Implementation workflow: compound-engineering:ce-work
 - Ship workflow: gstack ship
 - Documentation workflow: gstack document-release

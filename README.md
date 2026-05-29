@@ -21,7 +21,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-review`: report-only artifact quality and risk review.
 - `linear-check`: report-only transition readiness checks.
 - `linear-implement`: Delivery Start and implementation execution from approved Issue(s).
-- `linear-preflight`: local branch readiness, targeted verification, self-review, and preflight certificate.
+- `linear-preflight`: local branch readiness, targeted verification, mandatory `autoreview` clean gate, and preflight certificate.
 - `linear-ship`: wrapper around configured project ship, documentation, review feedback, and green certificate workflows.
 - `linear-deploy`: wrapper around configured project deploy, post-ship check, Linear closeout, and learning capture workflows.
 
@@ -65,7 +65,7 @@ when final discovery/review plan appears
 
 /linear-preflight
 -> inspect branch/worktree/diff
--> run targeted verification and bounded self-review
+-> run targeted verification and mandatory autoreview until clean
 -> commit when safe/configured
 -> emit preflight certificate
 
@@ -108,7 +108,9 @@ The script generates a reviewable local install:
 - `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
 - `.agents/linear-workflow-check.mjs`: generated read-only local install checker for the consumer repo.
 - `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated skill/wrapper paths and hashes, checker hash, and copied reference/template hashes.
-- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, implementation workflow, and ship workflow. Existing config is preserved.
+- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, `autoreview` helper prerequisite, implementation workflow, and ship workflow. Existing config is preserved.
+
+`linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime, or an explicitly installed consumer helper at `.agents/skills/autoreview/scripts/autoreview`. The generated workflow records this prerequisite but does not vendor `autoreview`; preflight blocks when the helper is missing.
 
 Check an install without writing:
 
@@ -127,6 +129,32 @@ The checks fail when generated skills are missing, stale, edited, too small to b
 For Zeni, the configured flow defaults implementation to Compound `ce-work`, then uses gstack `ship`, gstack `document-release`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy` through `Deploy workflow`.
 
 See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
+
+## Documentation Map
+
+- `CHANGELOG.md`: released workflow behavior changes.
+- `examples/profile-workbench-regression.md`: regression example for handoff-first artifact quality.
+- `examples/zeni-dogfood.md`: first consumer dogfood flow and anti-examples.
+- `references/artifact-intake.md`: scoped discovery and review artifact intake.
+- `references/artifact-quality.md`: quality bar for Project, PRD, Tech Spec, Issue, preflight, ship, deploy, and review artifacts.
+- `references/artifact-rules.md`: source-of-truth and Linear-facing artifact rules.
+- `references/execution-quality.md`: PRD, Issue, bug/perf, and architecture guardrails.
+- `references/human-friendly-output.md`: user-facing status and confidence-boundary wording.
+- `references/install.md`: upstream and consumer install guide.
+- `references/lifecycle.md`: idea, discovery, handoff, delivery, preflight, ship, and deploy lifecycle.
+- `references/questioning.md`: when workflow skills should ask humans.
+- `references/readiness-gates.md`: risk classes, review policy, and owner boundaries.
+- `references/review-rubric.md`: `linear-review` inspection rubric.
+- `references/ship-feedback-loop.md`: `linear-ship` green-certificate loop.
+- `references/versioning.md`: SemVer and consumer adapter contract.
+- `templates/check-output.md`: `linear-check` output template.
+- `templates/deploy-output.md`: `linear-deploy` output template.
+- `templates/issue.md`: Linear Issue template.
+- `templates/prd.md`: Linear PRD template.
+- `templates/project.md`: Linear Project body template.
+- `templates/review-output.md`: `linear-review` output template.
+- `templates/ship-output.md`: `linear-ship` output template.
+- `templates/tech-spec.md`: Linear Tech Spec template.
 
 ## Principles
 
