@@ -130,6 +130,32 @@ For Zeni, the configured flow defaults implementation to Compound `ce-work`, the
 
 See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
 
+## Documentation Map
+
+- `CHANGELOG.md`: released workflow behavior changes.
+- `examples/profile-workbench-regression.md`: regression example for handoff-first artifact quality.
+- `examples/zeni-dogfood.md`: first consumer dogfood flow and anti-examples.
+- `references/artifact-intake.md`: scoped discovery and review artifact intake.
+- `references/artifact-quality.md`: quality bar for Project, PRD, Tech Spec, Issue, preflight, ship, deploy, and review artifacts.
+- `references/artifact-rules.md`: source-of-truth and Linear-facing artifact rules.
+- `references/execution-quality.md`: PRD, Issue, bug/perf, and architecture guardrails.
+- `references/human-friendly-output.md`: user-facing status and confidence-boundary wording.
+- `references/install.md`: upstream and consumer install guide.
+- `references/lifecycle.md`: idea, discovery, handoff, delivery, preflight, ship, and deploy lifecycle.
+- `references/questioning.md`: when workflow skills should ask humans.
+- `references/readiness-gates.md`: risk classes, review policy, and owner boundaries.
+- `references/review-rubric.md`: `linear-review` inspection rubric.
+- `references/ship-feedback-loop.md`: `linear-ship` green-certificate loop.
+- `references/versioning.md`: SemVer and consumer adapter contract.
+- `templates/check-output.md`: `linear-check` output template.
+- `templates/deploy-output.md`: `linear-deploy` output template.
+- `templates/issue.md`: Linear Issue template.
+- `templates/prd.md`: Linear PRD template.
+- `templates/project.md`: Linear Project body template.
+- `templates/review-output.md`: `linear-review` output template.
+- `templates/ship-output.md`: `linear-ship` output template.
+- `templates/tech-spec.md`: Linear Tech Spec template.
+
 ## Principles
 
 - Reusable first: consumer repos should receive generated workflow copies, not hand-maintained forks.
