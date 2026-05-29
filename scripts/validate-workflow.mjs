@@ -190,6 +190,26 @@ function writeUnsupportedLandConfig(repo) {
   );
 }
 
+function writeMissingAutoreviewHelperConfig(repo) {
+  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, ".agents", "linear-workflow.config.md"),
+    `# Linear Workflow Consumer Config
+
+- Consumer: Fixture
+- Linear team: Fixture
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Repo docs and code comments language: English
+- Linear is the planning, spec, and task source of truth.
+- GitHub is branch, PR, review, CI, deploy, and merge history only.
+- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
+- Ship workflow: fixture ship
+- Review feedback workflow: None
+- Deploy workflow: None
+`
+  );
+}
+
 function expectCommandFailure(label, callback, expectedText) {
   try {
     callback();
@@ -467,6 +487,25 @@ function validateSyncConsumerBehavior() {
     );
   } finally {
     fs.rmSync(landRepo, { recursive: true, force: true });
+  }
+
+  const missingAutoreviewRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-no-autoreview-"));
+  try {
+    fs.writeFileSync(path.join(missingAutoreviewRepo, "AGENTS.md"), "# Missing Autoreview Consumer\n");
+    runSyncConsumer(missingAutoreviewRepo);
+    writeMissingAutoreviewHelperConfig(missingAutoreviewRepo);
+    expectCommandFailure(
+      "sync-consumer --check missing Autoreview helper fixture",
+      () => runSyncConsumer(missingAutoreviewRepo, true),
+      "missing Autoreview helper prerequisite"
+    );
+    expectCommandFailure(
+      "local checker missing Autoreview helper fixture",
+      () => runLocalChecker(missingAutoreviewRepo),
+      "missing Autoreview helper prerequisite"
+    );
+  } finally {
+    fs.rmSync(missingAutoreviewRepo, { recursive: true, force: true });
   }
 
   const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-validate-"));

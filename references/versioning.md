@@ -94,6 +94,8 @@ Optional fields:
 - `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
 - `Deploy workflow`: merges and verifies/deploys the PR after `linear-ship` records a green certificate.
 
+`Autoreview helper` is required, not optional. When the field is absent, consumer install checks fail with a missing prerequisite error. When the field is present but the helper is unavailable in the agent runtime, `linear-preflight` stops `blocked` instead of replacing the review gate.
+
 Example Zeni policy:
 
 ```markdown
@@ -106,7 +108,7 @@ Example Zeni policy:
 - Deploy workflow: gstack land-and-deploy
 ```
 
-`Artifact roots`, `Implementation workflow`, `Documentation workflow`, `Review feedback workflow`, and `Deploy workflow` are optional. When `Artifact roots` is absent, artifact intake reports scoped local roots as unavailable instead of scanning broadly. When `Implementation workflow` is absent, `linear-implement` keeps backward-compatible behavior and uses the documented default selection table. When Documentation workflow is absent or `None`, `linear-ship` skips repo documentation sync and says so. When Review feedback workflow is absent or `None`, `linear-ship` waits for checks/reviews once and stops if actionable feedback appears. When Deploy workflow is absent or `None`, `linear-deploy` stops with a clear blocked report instead of inventing a merge/deploy path. When `Autoreview helper` is absent or the helper is unavailable in the agent runtime, `linear-preflight` stops `blocked` instead of replacing the review gate.
+`Artifact roots`, `Implementation workflow`, `Documentation workflow`, `Review feedback workflow`, and `Deploy workflow` are optional. When `Artifact roots` is absent, artifact intake reports scoped local roots as unavailable instead of scanning broadly. When `Implementation workflow` is absent, `linear-implement` keeps backward-compatible behavior and uses the documented default selection table. When Documentation workflow is absent or `None`, `linear-ship` skips repo documentation sync and says so. When Review feedback workflow is absent or `None`, `linear-ship` waits for checks/reviews once and stops if actionable feedback appears. When Deploy workflow is absent or `None`, `linear-deploy` stops with a clear blocked report instead of inventing a merge/deploy path.
 
 `Land workflow` is not a supported compatibility alias. Consumers must rename it to `Deploy workflow` in the same update that installs `linear-deploy`.
 
