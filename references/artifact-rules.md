@@ -51,7 +51,7 @@ Review policy:
 - `linear-check` owns `PASS`, `FAIL`, and `BLOCKED`; `linear-review` must not use those as its main status.
 - `linear-handoff`, explicit atomic skills, or `linear-ship` apply accepted fixes from a review report.
 - `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
-- `linear-preflight` owns local branch readiness, self-review, targeted verification, commit state, and preflight certificate.
+- `linear-preflight` owns local branch readiness, targeted verification, the mandatory `autoreview` clean gate, commit state, and preflight certificate.
 - `linear-ship` owns formal pre-ship review/check, PR creation, repo documentation before final green, review-loop stabilization, and the `linear-ship green certificate`.
 - `linear-deploy` owns deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 - Risk-based review gates follow `references/readiness-gates.md`.

@@ -126,7 +126,7 @@ Expected behavior:
 1. `linear-implement` fetches fresh Linear Project, PRD, Tech Spec, Issue, approval, review, and check state.
 2. It starts from approved Issue(s), not raw discovery artifacts or local review plans.
 3. It selects the configured/default implementation engine, implements the approved one-PR slice, and exits as `implemented-needs-preflight` when local implementation is complete.
-4. `linear-preflight` inspects branch/worktree/diff, runs targeted verification and a bounded self-review loop, commits when safe/configured, and emits a preflight certificate.
+4. `linear-preflight` inspects branch/worktree/diff, runs targeted verification and mandatory `autoreview` until it reports clean, commits when safe/configured, and emits a preflight certificate.
 5. `linear-ship` consumes the preflight certificate, owns formal `linear-review pre-ship`, owns `linear-check pre-ship`, delegates PR creation to the configured Ship workflow, runs repo docs before final green when configured, stabilizes review/CI, and emits a `linear-ship green certificate`.
 6. `linear-deploy` consumes the green certificate, verifies the current PR head SHA still matches, runs the configured Deploy workflow, runs/reports `linear-check post-ship`, closes Linear, and records durable learnings.
 

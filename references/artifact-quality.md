@@ -66,13 +66,13 @@ Required quality:
 - Names the Linear Issue(s), branch, and commit state.
 - Summarizes changed files without copying the full diff.
 - Lists local verification commands and outcomes.
-- States self-review status and outcome.
+- States the `autoreview` command, loop outcome, final clean result, fixes applied from accepted findings, and any residual actionable findings. `ready` requires no residual actionable findings.
 - Calls out drift candidates against Project, PRD, Tech Spec, and Issue.
 - Includes a compact checked/not-checked boundary for manual QA, browser QA, mobile QA, deploy verification, and user acceptance.
 - Names the next owner workflow: `linear-ship`, `linear-handoff`, or human decision.
 - Is durable in Linear comments or resources so a fresh `linear-ship` agent can recover it.
 
-It must not claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation, merge, deploy, or closeout.
+It must not claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation, merge, deploy, closeout, or readiness from a review path that replaced/skipped `autoreview`.
 
 ## Ship Green Certificate
 

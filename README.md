@@ -21,7 +21,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-review`: report-only artifact quality and risk review.
 - `linear-check`: report-only transition readiness checks.
 - `linear-implement`: Delivery Start and implementation execution from approved Issue(s).
-- `linear-preflight`: local branch readiness, targeted verification, self-review, and preflight certificate.
+- `linear-preflight`: local branch readiness, targeted verification, mandatory `autoreview` clean gate, and preflight certificate.
 - `linear-ship`: wrapper around configured project ship, documentation, review feedback, and green certificate workflows.
 - `linear-deploy`: wrapper around configured project deploy, post-ship check, Linear closeout, and learning capture workflows.
 
@@ -65,7 +65,7 @@ when final discovery/review plan appears
 
 /linear-preflight
 -> inspect branch/worktree/diff
--> run targeted verification and bounded self-review
+-> run targeted verification and mandatory autoreview until clean
 -> commit when safe/configured
 -> emit preflight certificate
 
@@ -108,7 +108,9 @@ The script generates a reviewable local install:
 - `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
 - `.agents/linear-workflow-check.mjs`: generated read-only local install checker for the consumer repo.
 - `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated skill/wrapper paths and hashes, checker hash, and copied reference/template hashes.
-- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, implementation workflow, and ship workflow. Existing config is preserved.
+- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, `autoreview` helper prerequisite, implementation workflow, and ship workflow. Existing config is preserved.
+
+`linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime, or an explicitly installed consumer helper at `.agents/skills/autoreview/scripts/autoreview`. The generated workflow records this prerequisite but does not vendor `autoreview`; preflight blocks when the helper is missing.
 
 Check an install without writing:
 

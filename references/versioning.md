@@ -84,6 +84,7 @@ Consumer-specific workflow choices live in `.agents/linear-workflow.config.md`, 
 Required workflow field:
 
 - `Ship workflow`: creates the branch/PR through the consumer repo's normal ship command.
+- `Autoreview helper`: records the external `autoreview` skill/helper prerequisite required by `linear-preflight`.
 
 Optional fields:
 
@@ -97,6 +98,7 @@ Example Zeni policy:
 
 ```markdown
 - Artifact roots: None
+- Autoreview helper: Required installed `autoreview` skill/helper in the agent runtime, or explicit consumer helper at `.agents/skills/autoreview/scripts/autoreview`; `linear-preflight` blocks if unavailable.
 - Implementation workflow: compound-engineering:ce-work
 - Ship workflow: gstack ship
 - Documentation workflow: gstack document-release
@@ -104,7 +106,7 @@ Example Zeni policy:
 - Deploy workflow: gstack land-and-deploy
 ```
 
-`Artifact roots`, `Implementation workflow`, `Documentation workflow`, `Review feedback workflow`, and `Deploy workflow` are optional. When `Artifact roots` is absent, artifact intake reports scoped local roots as unavailable instead of scanning broadly. When `Implementation workflow` is absent, `linear-implement` keeps backward-compatible behavior and uses the documented default selection table. When Documentation workflow is absent or `None`, `linear-ship` skips repo documentation sync and says so. When Review feedback workflow is absent or `None`, `linear-ship` waits for checks/reviews once and stops if actionable feedback appears. When Deploy workflow is absent or `None`, `linear-deploy` stops with a clear blocked report instead of inventing a merge/deploy path.
+`Artifact roots`, `Implementation workflow`, `Documentation workflow`, `Review feedback workflow`, and `Deploy workflow` are optional. When `Artifact roots` is absent, artifact intake reports scoped local roots as unavailable instead of scanning broadly. When `Implementation workflow` is absent, `linear-implement` keeps backward-compatible behavior and uses the documented default selection table. When Documentation workflow is absent or `None`, `linear-ship` skips repo documentation sync and says so. When Review feedback workflow is absent or `None`, `linear-ship` waits for checks/reviews once and stops if actionable feedback appears. When Deploy workflow is absent or `None`, `linear-deploy` stops with a clear blocked report instead of inventing a merge/deploy path. When `Autoreview helper` is absent or the helper is unavailable in the agent runtime, `linear-preflight` stops `blocked` instead of replacing the review gate.
 
 `Land workflow` is not a supported compatibility alias. Consumers must rename it to `Deploy workflow` in the same update that installs `linear-deploy`.
 

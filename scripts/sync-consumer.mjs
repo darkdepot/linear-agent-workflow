@@ -215,7 +215,11 @@ function compareCopiedAssets(installedDir, label, expectedAssets, failures) {
 
 function validateConsumerConfigText(configText, relativePath, failures) {
   const lines = configText.split("\n");
+  let hasAutoreviewHelper = false;
   for (const [index, line] of lines.entries()) {
+    if (/^\s*-\s*Autoreview helper\s*:/.test(line)) {
+      hasAutoreviewHelper = true;
+    }
     const match = line.match(CONFIG_PLACEHOLDER_PATTERN);
     if (match) {
       failures.push(
@@ -227,6 +231,11 @@ function validateConsumerConfigText(configText, relativePath, failures) {
         `Consumer config uses unsupported Land workflow in ${relativePath}:${index + 1}; rename it to Deploy workflow`
       );
     }
+  }
+  if (!hasAutoreviewHelper) {
+    failures.push(
+      `Consumer config missing Autoreview helper prerequisite in ${relativePath}; linear-preflight requires the installed autoreview skill/helper`
+    );
   }
 }
 
@@ -335,7 +344,11 @@ function checkConsumerConfig() {
   }
 
   const lines = fs.readFileSync(configPath, "utf8").split("\\n");
+  let hasAutoreviewHelper = false;
   for (const [index, line] of lines.entries()) {
+    if (/^\\s*-\\s*Autoreview helper\\s*:/.test(line)) {
+      hasAutoreviewHelper = true;
+    }
     const match = line.match(CONFIG_PLACEHOLDER_PATTERN);
     if (match) {
       failures.push(
@@ -352,6 +365,11 @@ function checkConsumerConfig() {
           "; rename it to Deploy workflow"
       );
     }
+  }
+  if (!hasAutoreviewHelper) {
+    failures.push(
+      "Consumer config missing Autoreview helper prerequisite in .agents/linear-workflow.config.md; linear-preflight requires the installed autoreview skill/helper"
+    );
   }
 }
 
@@ -447,6 +465,7 @@ For optional workflows, write a workflow name or \`None\`.
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
 - Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
+- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
 - Artifact roots: None
 - Implementation workflow: ${isZeni ? "compound-engineering:ce-work" : "None"}
 - Ship workflow: ${isZeni ? "gstack ship" : "<set consumer ship workflow>"}

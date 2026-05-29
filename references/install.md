@@ -33,6 +33,8 @@ The command writes:
 - `.agents/linear-workflow.lock.json`
 - `.agents/linear-workflow.config.md` when it does not already exist
 
+`linear-preflight` has one external runtime prerequisite: the agent runtime must have the `autoreview` skill/helper installed, for example `~/.codex/skills/autoreview/scripts/autoreview`, or the consumer repo must explicitly provide `.agents/skills/autoreview/scripts/autoreview`. The sync command does not vendor `autoreview` because it is an external review engine helper, not a `linear-*` workflow skill. Generated config records this prerequisite, and preflight must exit `blocked` when the helper is unavailable.
+
 Generated `.agents/skills/linear-*` files include a header like:
 
 ```markdown
@@ -58,6 +60,7 @@ Add or preserve a short consumer repo instruction:
 - Configure the ship and review feedback workflows used by `linear-ship`.
 - Configure the documentation workflow used by `linear-ship` before final green certification.
 - Configure the deploy workflow used by `linear-deploy`.
+- Keep the `Autoreview helper` prerequisite accurate. `linear-preflight` requires this helper and must block when it is missing.
 - Existing configs without `Implementation workflow` remain valid; `linear-implement` uses the documented default selection table.
 - Existing configs with `Land workflow` are not valid in this release; rename that field to `Deploy workflow`.
 - Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while any `<...>` placeholder remains, including optional workflows. Write an explicit workflow name or `None` for optional entries.
@@ -100,6 +103,7 @@ The check fails when:
 - an unmanaged `linear-*` skill or wrapper appears in `.agents` or `.claude`;
 - installed skill bodies contain redirect-stub patterns.
 - `.agents/linear-workflow.config.md` is missing or still contains unresolved `<...>` placeholders.
+- `.agents/linear-workflow.config.md` does not record the `Autoreview helper` prerequisite required by `linear-preflight`.
 
 ## Zeni Consumer Notes
 

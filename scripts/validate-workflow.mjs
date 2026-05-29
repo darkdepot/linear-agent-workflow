@@ -136,6 +136,7 @@ This file is local consumer policy for generated \`linear-*\` skills.
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
 - Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
+- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
 - Ship workflow: fixture ship
 - Documentation workflow: None
 - Review feedback workflow: None
@@ -159,6 +160,7 @@ This fixture intentionally models a preserved consumer config without the option
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
 - Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
+- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
 - Ship workflow: fixture ship
 - Documentation workflow: None
 - Review feedback workflow: None
@@ -180,6 +182,7 @@ function writeUnsupportedLandConfig(repo) {
 - Linear is the planning, spec, and task source of truth.
 - GitHub is branch, PR, review, CI, deploy, and merge history only.
 - Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
+- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
 - Ship workflow: fixture ship
 - Review feedback workflow: None
 - Land workflow: fixture land
@@ -407,6 +410,9 @@ function validateFreshZeniInstall() {
     if (!configText.includes("- Deploy workflow: gstack land-and-deploy")) {
       fail("Fresh Zeni config must include the configured deploy workflow default");
     }
+    if (!configText.includes("- Autoreview helper: Required installed `autoreview` skill/helper")) {
+      fail("Fresh Zeni config must include the autoreview helper prerequisite");
+    }
     if (configText.includes("Land workflow")) {
       fail("Fresh Zeni config must not include unsupported Land workflow");
     }
@@ -565,6 +571,7 @@ function validateDocsAndExamples() {
       "linear-implement",
       "linear-preflight",
       "linear-deploy",
+      "autoreview",
       "node scripts/validate-workflow.mjs",
       "Review/check split",
       "Delivery ladder",
@@ -573,6 +580,7 @@ function validateDocsAndExamples() {
       "`linear-review` = report-only quality/risk review",
       "`linear-implement` = Delivery Start",
       "`linear-preflight` = local branch readiness",
+      "mandatory `autoreview` clean gate",
       "`linear-deploy` = deploy workflow delegation",
       "Keep `linear-review` report-only",
     ],
@@ -600,7 +608,8 @@ function validateDocsAndExamples() {
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
-    "references/versioning.md": ["`Artifact roots`", "`Implementation workflow`", "`Documentation workflow`", "`Deploy workflow`", "documented default selection table"],
+    "references/install.md": ["Autoreview helper", "does not vendor `autoreview`"],
+    "references/versioning.md": ["`Autoreview helper`", "`Artifact roots`", "`Implementation workflow`", "`Documentation workflow`", "`Deploy workflow`", "documented default selection table"],
   })) {
     if (!exists(relativePath)) {
       fail(`Missing ${relativePath}`);
@@ -715,8 +724,8 @@ function validateAntiPatterns() {
     "Branch: <branch>; commit state: <clean/dirty/committed>",
     "Changed files: <count/list or summary>",
     "Local verification: <commands run + outcome>",
-    "Self-review: <run/skipped/unavailable + outcome>",
-    "Review rounds: <0|1|2>; safe fixes applied: <none/list>; residual findings: <none/list>",
+    "Autoreview: <clean|blocked|needs-human|unavailable>; command: <helper command>; clean result: <exit 0 + clean line or none>",
+    "Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>",
     "Drift candidate: <none/summary>",
     "Not checked: <manual QA/browser/mobile/deploy/etc.>",
     "Next: <linear-ship | linear-handoff | needs-human>",
@@ -724,8 +733,12 @@ function validateAntiPatterns() {
     "Do not run or claim `linear-check pre-ship`",
     "Do not create the final PR",
     "Preflight certificate shape",
-    "Do not run more than 2 branch review/fix rounds",
-    "Do not auto-apply `gated_auto`, `manual`, `human`, or release-sensitive findings",
+    "Invoke the installed `autoreview` skill/helper",
+    "Do not substitute Compound `ce-code-review`, built-in `/review`, ad hoc self-review, reviewer panels, or a hand-written summary",
+    "Treat helper exit 0 plus the clean result",
+    "Do not cap the review loop at an arbitrary round count",
+    "Do not call Compound `ce-code-review` for this gate",
+    "Do not silently reject a repeated `autoreview` finding and mark `ready`",
   ]) {
     if (!preflight.includes(required)) {
       fail(`linear-preflight boundary missing: ${required}`);

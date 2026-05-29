@@ -130,7 +130,7 @@ Required:
 - Branch/worktree state inspected.
 - Local diff compared against Project, PRD, Tech Spec, and Issue.
 - Targeted tests/checks run or explicitly reported as not run.
-- Self-review run or explicitly unavailable/skipped.
+- Installed `autoreview` helper run until it reports clean, or preflight exits `blocked`/`needs-human`.
 - Commit state reported, with commits created only when safe and configured.
 - Preflight certificate emitted with status `ready`, `blocked`, `drift-candidate`, or `needs-human`.
 
@@ -140,6 +140,7 @@ Forbidden:
 - Running or claiming `linear-check pre-ship`.
 - Creating the final PR.
 - Merging, deploying, or closing Linear Issues.
+- Replacing `autoreview` with Compound `ce-code-review`, built-in `/review`, ad hoc review, or a hand-written self-review.
 
 Gate: `linear-preflight` certificate, then `linear-ship`.
 
