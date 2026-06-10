@@ -53,7 +53,7 @@ Example shape:
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
   "upstreamDirty": false,
   "installedAt": "2026-06-10T00:00:00.000Z",
-  "skillsRoot": "/Users/sasha/.codex/skills",
+  "skillsRoot": "$HOME/.codex/skills",
   "assets": {
     "agents": "...",
     "references": [{ "path": "artifact-quality.md", "sha256": "..." }],
