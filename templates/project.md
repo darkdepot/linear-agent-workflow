@@ -1,7 +1,7 @@
 # Project Template
 
-Use the consumer config language for Linear Project body. Use Russian when no
-consumer config is present.
+Use the project config language for Linear Project body. Use Russian when no
+project config is present.
 
 Required concerns:
 

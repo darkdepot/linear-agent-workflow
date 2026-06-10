@@ -6,6 +6,22 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-10
+
+### Added
+
+- Add `scripts/install-local.mjs` for installing/updating the workflow as a local `~/.codex/skills/linear-*` skill pack.
+- Add `scripts/project-config.mjs` for creating, migrating, checking, and cleaning project-level `.agents/linear-workflow.config.json`.
+
+### Changed
+
+- Pre-v1.0 packaging contract change: project repos must no longer vendor generated `linear-*` skills, wrappers, lockfiles, local checkers, or updater CI.
+- Replace generated project install validation with local skill-pack validation plus project JSON config validation.
+
+### Removed
+
+- Remove `scripts/sync-consumer.mjs` and the generated full-copy project install contract.
+
 ## [0.10.0] - 2026-05-29
 
 ### Changed

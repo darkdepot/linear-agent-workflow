@@ -1,8 +1,8 @@
 # Install Guide
 
-Install this workflow into a consumer repo as a reusable workflow with full local skill bodies.
-
-Consumer `.agents/skills/linear-*` files must be directly executable after opening `SKILL.md`. They must not be thin adapters that send the agent to an env var, sibling checkout, GitHub URL, or `main`.
+Install this workflow as a local skill pack. Project repos must not contain
+workflow skill bodies, generated wrappers, workflow lockfiles, local workflow
+checkers, or updater CI.
 
 ## Source Of Truth
 
@@ -11,66 +11,111 @@ Canonical workflow truth stays in `linear-agent-workflow`:
 - `skills/linear-*/SKILL.md`
 - `references/*`
 - `templates/*`
-- `scripts/sync-consumer.mjs`
+- `scripts/install-local.mjs`
+- `scripts/project-config.mjs`
 
-Consumer repos receive generated, reviewable copies. Those generated files are not the place to edit workflow behavior by hand.
+Project-specific policy lives in `.agents/linear-workflow.config.json`.
 
-## Consumer Install
+## Local Skill Pack
 
-Run the sync command from the upstream checkout:
+Run the installer from this upstream checkout:
 
 ```bash
-node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name Zeni
+node scripts/install-local.mjs --remove-stale
 ```
 
 The command writes:
 
-- `.agents/skills/linear-*/SKILL.md`
-- `.agents/skills/linear-*/references/*`
-- `.agents/skills/linear-*/templates/*`
-- `.claude/skills/linear-*/SKILL.md`
-- `.agents/linear-workflow-check.mjs`
-- `.agents/linear-workflow.lock.json`
-- `.agents/linear-workflow.config.md` when it does not already exist
+- `~/.codex/skills/linear-*/SKILL.md`
+- `~/.codex/skills/linear-*/AGENTS.md`
+- `~/.codex/skills/linear-*/references/*`
+- `~/.codex/skills/linear-*/templates/*`
+- `~/.codex/skills/.linear-agent-workflow.lock.json`
 
-`linear-preflight` has one external runtime prerequisite: the agent runtime must have the `autoreview` skill/helper installed, for example `~/.codex/skills/autoreview/scripts/autoreview`, or the consumer repo must explicitly provide `.agents/skills/autoreview/scripts/autoreview`. The sync command does not vendor `autoreview` because it is an external review engine helper, not a `linear-*` workflow skill. Generated config records this prerequisite, and preflight must exit `blocked` when the helper is unavailable.
+Use an alternate skills root only for tests or runtimes that do not read
+`~/.codex/skills`:
 
-Generated `.agents/skills/linear-*` files include a header like:
-
-```markdown
-<!-- Generated from darkdepot/linear-agent-workflow @ <commit-sha>. Do not edit manually. -->
+```bash
+node scripts/install-local.mjs --skills-root /path/to/skills --remove-stale
 ```
 
-The generated `.claude` files are discovery wrappers only. They point the agent to the executable `.agents` copy in the consumer repo.
+Check the local install without writing:
 
-The generated `.agents/linear-workflow-check.mjs` file is a read-only checker that can run inside the consumer repo without an upstream checkout. It verifies generated skill bodies, Claude wrappers, copied `references/` and `templates/`, redirect-stub patterns, unmanaged Linear skill directories, and lockfile hashes.
+```bash
+node scripts/install-local.mjs --check
+```
 
-## Consumer Policy
+`linear-preflight` has one external runtime prerequisite: the agent runtime
+must have the `autoreview` skill/helper installed, for example
+`~/.codex/skills/autoreview/scripts/autoreview`. This workflow does not vendor `autoreview`; preflight must exit `blocked` when the helper is unavailable.
 
-Keep consumer-specific policy in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting repo docs, not in redirect adapters.
+## Project Config
 
-Add or preserve a short consumer repo instruction:
+Create, migrate, or check a project config from this upstream checkout:
 
-- Linear Project, PRD, Tech Spec, and Issue are source of truth.
-- GitHub is PR/review/CI/deploy/merge history only.
-- Use `linear-idea`, discovery/reviews, `linear-handoff`, approved Linear Issue(s), `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` for the main workflow.
-- Use `linear-project`, `linear-prd`, `linear-spec`, and `linear-issue` only as internal/advanced atomic helpers for repair or targeted artifact maintenance.
-- Configure `Artifact roots` only when the repo has narrow, intentional discovery/review artifact directories. Use `None` otherwise.
-- Configure the implementation workflow used by `linear-implement` when the default selection table is not enough.
-- Configure the ship and review feedback workflows used by `linear-ship`.
-- Configure the documentation workflow used by `linear-ship` before final green certification.
-- Configure the deploy workflow used by `linear-deploy`.
-- Keep the `Autoreview helper` prerequisite accurate. `linear-preflight` requires this helper and must block when it is missing.
-- Existing configs without `Implementation workflow` remain valid; `linear-implement` uses the documented default selection table.
-- Existing configs with `Land workflow` are not valid in this release; rename that field to `Deploy workflow`.
-- Fill every placeholder in `.agents/linear-workflow.config.md`; generated install checks fail while any `<...>` placeholder remains, including optional workflows. Write an explicit workflow name or `None` for optional entries.
-- Keep Issues agent-ready: mark `AFK` or `HITL`, name dependencies, and capture bug/perf feedback-loop proof when relevant.
+```bash
+node scripts/project-config.mjs --repo /path/to/project --project-name Zeni --write --clean
+node scripts/project-config.mjs --repo /path/to/project --check
+node scripts/project-config.mjs --repo /path/to/project --clean --check
+```
 
-## Updates
+The project config is JSON:
 
-Update a consumer repo by rerunning the same sync command from the desired upstream checkout. Do it on a normal branch and review the generated diff before merging it.
+```json
+{
+  "schemaVersion": 1,
+  "projectName": "Zeni",
+  "linearTeam": "Zeni",
+  "languages": {
+    "linear": "Russian",
+    "repo": "English"
+  },
+  "artifactRoots": [],
+  "workflows": {
+    "implementation": "compound-engineering:ce-work",
+    "ship": "gstack ship",
+    "documentation": "gstack document-release",
+    "reviewFeedback": "compound-engineering:ce-resolve-pr-feedback",
+    "deploy": "gstack land-and-deploy"
+  },
+  "prerequisites": {
+    "autoreviewHelper": true
+  }
+}
+```
 
-The sync command rewrites generated Linear skill copies, generated Claude wrappers, copied `references/` and `templates/`, and lockfile metadata. It preserves `.agents/linear-workflow.config.md` when that file already exists.
+Use `null` for optional workflows that are not configured. Use an empty
+`artifactRoots` array when no narrow local discovery/review artifact roots
+exist.
+
+`--clean` removes legacy generated project installs:
+
+- `.agents/skills/linear-*`
+- `.claude/skills/linear-*`
+- `.agents/linear-workflow-check.mjs`
+- `.agents/linear-workflow.lock.json`
+- `.agents/linear-workflow.config.md`
+- `.github/workflows/update-linear-workflow.yml`
+- `.github/workflows/update-linear-agent-workflow.yml`
+
+## Project Policy
+
+Keep project-specific policy in `.agents/linear-workflow.config.json`,
+`AGENTS.md`, or supporting repo docs.
+
+The JSON config should record:
+
+- `projectName`: product/repo display name.
+- `linearTeam`: Linear team name.
+- `languages.linear`: Linear-facing Project, PRD, Tech Spec, Issue, and comment language.
+- `languages.repo`: repo docs and code comments language.
+- `artifactRoots`: narrow repo-relative or absolute discovery/review artifact roots.
+- `workflows.implementation`: implementation workflow for `linear-implement`, or `null`.
+- `workflows.ship`: ship workflow for `linear-ship`, or `null` only when ship is intentionally unconfigured.
+- `workflows.documentation`: documentation workflow for `linear-ship`, or `null`.
+- `workflows.reviewFeedback`: review feedback workflow for `linear-ship`, or `null`.
+- `workflows.deploy`: deploy workflow for `linear-deploy`, or `null`.
+- `prerequisites.autoreviewHelper`: must be `true`; `linear-preflight` blocks if the helper is unavailable.
 
 ## Checks
 
@@ -80,51 +125,37 @@ Validate the upstream workflow contract:
 node scripts/validate-workflow.mjs
 ```
 
-Verify a consumer repo without writing:
+Verify the local skill pack:
 
 ```bash
-node scripts/sync-consumer.mjs --repo /path/to/consumer --check
+node scripts/install-local.mjs --check
 ```
 
-Verify from inside a generated consumer repo without the upstream checkout:
+Verify a project repo:
 
 ```bash
-node .agents/linear-workflow-check.mjs
+node scripts/project-config.mjs --repo /path/to/project --check
 ```
 
-The check fails when:
+The project check fails when:
 
-- installed `.agents/skills/linear-*` files are missing, stale, edited, or too small to be executable;
-- generated metadata is missing near the top of an installed skill;
-- copied `references/` or `templates/` are missing, stale, edited, or have unexpected extra files beside a generated skill;
-- `.claude/skills/linear-*` wrappers are missing or stale;
-- `.agents/linear-workflow-check.mjs` is missing or stale when checked from upstream;
-- `.agents/linear-workflow.lock.json` is missing, corrupted, or has stale hashes/paths for skills, wrappers, copied assets, or the checker;
-- an unmanaged `linear-*` skill or wrapper appears in `.agents` or `.claude`;
-- installed skill bodies contain redirect-stub patterns.
-- `.agents/linear-workflow.config.md` is missing or still contains unresolved `<...>` placeholders.
-- `.agents/linear-workflow.config.md` does not record the `Autoreview helper` prerequisite required by `linear-preflight`.
-
-## Zeni Consumer Notes
-
-- Zeni should keep its existing project-specific skills.
-- Zeni `.agents/skills/linear-*` should be generated full copies from upstream.
-- Zeni `.claude/skills/linear-*` should remain tiny discovery wrappers to `.agents`.
-- Zeni-specific policy belongs in `.agents/linear-workflow.config.md`, `AGENTS.md`, or supporting docs.
-- Zeni implementation workflow defaults to Compound `ce-work`.
-- Zeni ship workflow is gstack `ship`.
-- Zeni documentation workflow is gstack `document-release`.
-- Zeni review feedback workflow is Compound `ce-resolve-pr-feedback`.
-- Zeni deploy workflow is gstack `land-and-deploy`.
+- `.agents/linear-workflow.config.json` is missing or invalid JSON;
+- required config fields are missing;
+- any value still contains an unresolved `<...>` placeholder;
+- `prerequisites.autoreviewHelper` is not `true`;
+- legacy generated workflow project files or updater CI are present.
 
 ## Anti-Patterns
 
-- Do not install consumer skills as env-var, sibling-checkout, GitHub URL, or `main` redirects.
-- Do not hand-edit generated `.agents/skills/linear-*` files in a consumer repo.
-- Do not use `.claude/skills/linear-*` as the executable source of truth.
+- Do not install Linear workflow skills into a project repo.
+- Do not create `.claude/skills/linear-*` wrappers in a project repo.
+- Do not keep `.agents/linear-workflow-check.mjs` or `.agents/linear-workflow.lock.json` in a project repo.
+- Do not keep `.github/workflows/update-linear-workflow.yml` in a project repo.
+- Do not keep `.github/workflows/update-linear-agent-workflow.yml` in a project repo.
+- Do not hand-edit local generated skills under `~/.codex/skills/linear-*`; edit this upstream repo and rerun `scripts/install-local.mjs`.
 - Do not let `linear-review` mutate Linear artifacts; accepted fixes belong to `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Do not let `linear-handoff` move the Project to Delivery; Delivery Start belongs to `linear-implement`.
 - Do not let `linear-preflight` run pre-ship review/check or create/land the final PR by default; those belong to `linear-ship`.
 - Do not let `linear-ship` merge, deploy, run post-ship checks, close Linear as shipped, or record deploy learnings; those belong to `linear-deploy`.
-- Do not keep `Land workflow` in consumer config; use `Deploy workflow`.
+- Do not keep `Land workflow`; use `workflows.deploy`.
 - Do not make Project Updates a required gate; record user review acceptance as a Linear comment.

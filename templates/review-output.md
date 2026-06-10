@@ -1,6 +1,6 @@
 # Review Output Template
 
-Use Russian for Linear-facing review comments or summaries when no consumer config overrides language.
+Use Russian for Linear-facing review comments or summaries when no project config overrides language.
 
 ```text
 Ревью Linear: <ready|advisory-ready|needs-fixes|blocked>

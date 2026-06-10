@@ -38,7 +38,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Keep `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
-- Consumer `.agents/skills/linear-*` installs must be full generated skill bodies, not redirect adapters.
+- Project repos must keep only `.agents/linear-workflow.config.json` for this workflow. Do not install, generate, or vendor `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local checkers, or updater CI into project repos.
 
 ## Validation
 

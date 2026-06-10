@@ -41,7 +41,7 @@ Inputs to gather:
 - Fresh Linear Project, PRD, Tech Spec, approved Issue(s), resources, comments, and review/check state.
 - Handoff artifact intake summary when recorded in Linear comments, resources, or package notes.
 - Package approval comment and implementation-start approval, if already recorded.
-- Consumer config, including optional `Implementation workflow`.
+- Project config, including optional `Implementation workflow`.
 - Minimal repo context needed to understand commands, conventions, and validation.
 - Current git branch, worktree state, and remote/base branch status.
 
@@ -95,7 +95,7 @@ Rules:
 - Do not create PRs directly from `linear-implement`.
 - Do not run or claim `linear-review pre-ship` or `linear-check pre-ship`; those belong to `linear-ship`.
 - If material drift appears, stop as `scope-drift-needs-handoff`.
-- Keep Linear-facing comments in the consumer config language; use Russian when no consumer config is present.
+- Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 
 Implementation-start comment shape:
 

@@ -25,7 +25,7 @@ Read first:
 
 Workflow:
 
-1. `prepare`: fetch fresh Linear Issue, Project, PRD, Tech Spec, PR, and consumer config.
+1. `prepare`: fetch fresh Linear Issue, Project, PRD, Tech Spec, PR, and project config.
 2. `prepare`: read the latest `linear-ship green certificate` from Linear comments or resources. If no certificate exists, route to `linear-ship`.
 3. `prepare`: verify the PR URL/number and current PR head SHA match the certificate. If the head changed, route back to `linear-ship` for review stabilization.
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
@@ -39,9 +39,9 @@ Workflow:
 
 Deploy workflow config:
 
-- Read `Deploy workflow` from `.agents/linear-workflow.config.md` when present.
+- Read `workflows.deploy` from `.agents/linear-workflow.config.json` when present.
 - Treat missing, placeholder, or `None` Deploy workflow as `blocked`; do not invent a merge/deploy path.
-- Do not accept `Land workflow` as a compatibility alias. Consumers must migrate to `Deploy workflow`.
+- Do not accept `Land workflow` as a compatibility alias. Projects must migrate to `workflows.deploy`.
 
 Learning capture:
 
@@ -82,9 +82,9 @@ Rules:
 - Do not merge or deploy without a current `linear-ship green certificate`.
 - Do not deploy if the current PR head SHA differs from the certificate head SHA.
 - Do not run repo documentation workflow here; repo documentation must happen in `linear-ship` before final green certification.
-- Do not close Linear as `Done` before deploy evidence exists, unless the consumer policy explicitly says merge is delivery and that acceptance is recorded.
+- Do not close Linear as `Done` before deploy evidence exists, unless the project policy explicitly says merge is delivery and that acceptance is recorded.
 - Do not use Project Updates as a required gate; record closeout in Linear comments/resources and status.
-- Keep Linear-facing comments in the consumer config language; use Russian when no consumer config is present.
+- Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include checked/not-checked boundaries. Deploy success does not imply manual browser QA, mobile QA, or production smoke unless those actually ran.
 
 Final response must include:

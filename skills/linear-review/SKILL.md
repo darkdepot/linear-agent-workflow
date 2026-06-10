@@ -32,7 +32,7 @@ Workflow:
 
 1. Fetch fresh Linear Project, PRD, Tech Spec, and Issue state relevant to the mode.
 2. Fetch PR, branch, review, and merge state only when running `pre-ship`.
-3. Read consumer config for Linear-facing language and configured ship, documentation, review feedback, and deploy workflows.
+3. Read project config for Linear-facing language and configured ship, documentation, review feedback, and deploy workflows.
 4. Classify risk using `references/readiness-gates.md`.
 5. Decide whether the review gate is `required` or `advisory`.
 6. Apply the rubric in `references/review-rubric.md`.
@@ -47,7 +47,7 @@ Rules:
 - Do not record Linear comments.
 - Do not create Issues or PRs.
 - Do not replace `linear-check`; run or recommend `linear-check` for readiness status after accepted fixes land.
-- Keep Linear-facing report content in the consumer config language; use Russian when no consumer config is present.
+- Keep Linear-facing report content in the project config language; use Russian when no project config is present.
 - Keep repo skill instructions and docs in English.
 - Treat Project, PRD, Tech Spec, and Issue as source of truth.
 - Treat GitHub as PR, review, CI, deploy, and merge history only.
@@ -78,7 +78,7 @@ Owner workflows:
 
 Hard boundaries:
 
-- If the only issue is install or generated-skill drift, recommend `linear-check adapter`; use `scripts/sync-consumer.mjs --repo <consumer> --check` from upstream or `node .agents/linear-workflow-check.mjs` inside a generated consumer install.
+- If the only issue is project config or legacy vendored workflow drift, recommend `linear-check project-config`; use `node scripts/project-config.mjs --repo <project> --check` from upstream when available.
 - If the package is missing a required artifact, report `blocked` or `needs-fixes`; do not create it.
 - If a review is advisory because the work is tiny, say why it is advisory and what would make it required.
 - If scope is standard, deep, or risky, missing `linear-review` should be treated by `linear-check` as a readiness problem until review runs or an explicit exception is recorded.

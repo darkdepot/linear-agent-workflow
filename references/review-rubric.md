@@ -12,7 +12,7 @@ Use this rubric from `linear-review` to inspect Linear Project, PRD, Tech Spec, 
 - Fresh Issue(s), when expected.
 - Discovery and review context when available.
 - Preflight certificate when running `pre-ship` and one exists.
-- Consumer config for language, team, and configured workflows.
+- Project config for language, team, and configured workflows.
 - Execution quality expectations from `references/execution-quality.md`.
 
 ## Persona Lenses

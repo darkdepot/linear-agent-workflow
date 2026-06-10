@@ -17,7 +17,7 @@ Read first:
 
 Rules:
 
-- Keep Project body in the consumer config language; use Russian when no consumer config is present.
+- Keep Project body in the project config language; use Russian when no project config is present.
 - Keep Project overview-level; do not inline the PRD or Tech Spec.
 - Keep Project body to five product-brief concerns: what, why, target outcome, in scope, and out of scope. Default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 - Do not include active docs, active issues, status bookkeeping, lifecycle notes, or workflow mechanics in the Project body.

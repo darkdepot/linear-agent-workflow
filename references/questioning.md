@@ -7,7 +7,7 @@ Rules:
 - Ask one question at a time.
 - Prefer answer options with one recommended default when the choice is bounded.
 - Frame questions in outcome terms, not implementation jargon.
-- Do not ask about facts that can be discovered by reading repo, Linear, GitHub, or configured consumer policy.
+- Do not ask about facts that can be discovered by reading repo, Linear, GitHub, or configured project policy.
 - Do not ask permission for report-only checks.
 - Do not ask the user to choose routine implementation details such as file layout, helper naming, or parser mechanics.
 

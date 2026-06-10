@@ -12,7 +12,7 @@ Inspect sources in this order:
 1. Explicit user-provided artifact paths and Linear resources.
 2. Fresh Linear Project, PRD, Tech Spec, Issues, comments, and review reports.
 3. Current conversation decisions.
-4. Configured consumer artifact roots, if the consumer config names any.
+4. Configured project artifact roots, if the project config names any.
 5. Local gstack artifacts only when scoped by project slug, current branch or
    session, or explicit filename match.
 
@@ -21,14 +21,14 @@ report local artifacts as unavailable instead of guessing.
 
 ## Configured Artifact Roots
 
-Consumer config may define optional artifact roots:
+Project config may define optional artifact roots:
 
 ```markdown
 - Artifact roots: None
 ```
 
 When configured, accept repo-relative paths or explicit absolute paths supplied
-by the consumer. Roots must be narrow enough to inspect intentionally, such as a
+by the project. Roots must be narrow enough to inspect intentionally, such as a
 repo docs folder or a project-scoped gstack artifact directory. Do not treat
 home directories, broad project parents, or unrelated worktree folders as valid
 roots.

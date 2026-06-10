@@ -1,8 +1,8 @@
 # Linear Artifact Rules
 
-Linear-facing content must follow the consumer config language policy.
+Linear-facing content must follow the project config language policy.
 
-If no consumer config is present, use Russian for:
+If no project config is present, use Russian for:
 
 - Project summary/body
 - PRD
@@ -24,7 +24,7 @@ Source-of-truth policy:
 Document policy:
 
 - Active Project document types for this MVP are PRD and Tech Spec.
-- Project body is a concise product brief with only five concerns: what, why, target outcome, in scope, and out of scope. Render headings in the consumer config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
+- Project body is a concise product brief with only five concerns: what, why, target outcome, in scope, and out of scope. Render headings in the project config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 - Do not put active docs, active issues, lifecycle bookkeeping, status tracking, or workflow mechanics in the Project body.
 - PRD is the WHAT artifact. It defines operator, problem, target workflow, requirements, acceptance examples, success criteria, and non-goals.
 - Tech Spec is the HOW artifact. It defines architecture, contracts, boundaries, risks, files/surfaces, validation, rollout, and rollback against the approved PRD.

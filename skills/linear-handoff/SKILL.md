@@ -145,7 +145,7 @@ Execution-mode workflow:
    - Inspect explicit user-provided artifact paths and Linear resources first.
    - Inspect fresh Linear Project, PRD, Tech Spec, Issues, comments, and review reports.
    - Inspect current conversation decisions.
-   - Inspect configured consumer artifact roots when present.
+   - Inspect configured project artifact roots when present.
    - Inspect local gstack artifacts only when scoped by project slug, branch/session, or explicit filename match.
    - Do not perform broad home-directory scans.
    - Produce `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`.
@@ -169,7 +169,7 @@ Execution-mode workflow:
 5. Present the draft package summary to the user for package approval before durable writes.
 6. If approval is missing, rejected, or changes are requested, do not create Issue(s), do not move the Project to Delivery, revise and re-present or stop as `BLOCKED / INCOMPLETE` with current links.
 7. After package approval, create or update PRD and Tech Spec in Linear.
-8. Update the Project body with only the product brief concerns: what, why, target outcome, in scope, and out of scope. Render headings in the consumer config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
+8. Update the Project body with only the product brief concerns: what, why, target outcome, in scope, and out of scope. Render headings in the project config language; default Russian headings are `Что`, `Зачем`, `Образ результата`, `Что входит`, and `Что не входит`.
 9. Record approval as a Linear comment. The comment should identify the approved package, PRD/Tech Spec links or intended titles, approved Issue slice titles or ids, and whether implementation may start.
 10. Run or report `linear-review handoff` when the gate is required or advisory.
 11. Present review verdict, blocking findings, proposed fixes, and decisions to the user before Issue creation.
@@ -193,7 +193,7 @@ Rules:
 - Keep Project descriptions free of active-doc lists, active-issue lists, lifecycle bookkeeping, and workflow mechanics.
 - Keep PRD/Spec bodies free of review-readiness dashboards, next-skill instructions, lint/check instructions, and lifecycle bookkeeping.
 - Do not create PRs directly; implementation and branch readiness must pass through `linear-implement` and `linear-preflight` before the configured ship workflow.
-- Keep Linear-facing Project, PRD, Tech Spec, Issue descriptions, and comments in the consumer config language; use Russian when no consumer config is present.
+- Keep Linear-facing Project, PRD, Tech Spec, Issue descriptions, and comments in the project config language; use Russian when no project config is present.
 - Keep repo skill instructions and docs in English.
 - Use Linear comments for user review acceptance, not Project Updates.
 - Split Issues only when one PR is truly too large; split into vertical slices with explicit dependencies.

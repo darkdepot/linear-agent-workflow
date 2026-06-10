@@ -120,5 +120,5 @@ Rules:
 - Do not start implementation.
 - Do not treat the raw idea as shaped requirements.
 - Do not let local docs, gstack artifacts, or chat plans become durable source of truth during Idea.
-- Repo skill instructions and local repo docs remain English unless the consumer config says otherwise.
-- Keep Linear-facing output in the consumer config language; use Russian when no consumer config is present.
+- Repo skill instructions and local repo docs remain English unless the project config says otherwise.
+- Keep Linear-facing output in the project config language; use Russian when no project config is present.

@@ -93,60 +93,79 @@ Use `linear-handoff` for post-discovery packaging, scope changes, or any state w
 
 PRD and Tech Spec creation does not mean Delivery. A Project should move to Delivery only through `linear-implement` after approved execution Issue(s) exist and implementation-start approval is explicit.
 
-## Install In A Consumer Repo
+## Install Locally
 
-Run the sync script from this upstream checkout:
-
-```bash
-node scripts/sync-consumer.mjs --repo /path/to/consumer --consumer-name Zeni
-```
-
-The script generates a reviewable local install:
-
-- `.agents/skills/linear-*`: full executable skill copies generated from upstream.
-- `.agents/skills/linear-*/references` and `.agents/skills/linear-*/templates`: copied beside each generated skill for progressive disclosure.
-- `.claude/skills/linear-*`: tiny discovery wrappers that point to the generated `.agents` skills.
-- `.agents/linear-workflow-check.mjs`: generated read-only local install checker for the consumer repo.
-- `.agents/linear-workflow.lock.json`: upstream repo, version, immutable commit, generated skill/wrapper paths and hashes, checker hash, and copied reference/template hashes.
-- `.agents/linear-workflow.config.md`: consumer policy such as Linear team, language, `autoreview` helper prerequisite, implementation workflow, and ship workflow. Existing config is preserved.
-
-`linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime, or an explicitly installed consumer helper at `.agents/skills/autoreview/scripts/autoreview`. The generated workflow records this prerequisite but does not vendor `autoreview`; preflight blocks when the helper is missing.
-
-Check an install without writing:
+Install or update the workflow as a local skill pack from this upstream checkout:
 
 ```bash
-node scripts/sync-consumer.mjs --repo /path/to/consumer --check
+node scripts/install-local.mjs --remove-stale
 ```
 
-Inside a generated consumer repo, run the self-contained local checker:
+The installer writes the executable `linear-*` skills into `~/.codex/skills` by default:
+
+- `~/.codex/skills/linear-*`: executable local skill bodies generated from upstream.
+- `~/.codex/skills/linear-*/references` and `~/.codex/skills/linear-*/templates`: copied beside each local skill for progressive disclosure.
+- `~/.codex/skills/.linear-agent-workflow.lock.json`: upstream repo, version, commit, dirty flag, installed skill paths, and copied asset hashes.
+
+`linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime. This workflow does not vendor `autoreview`; preflight blocks when the helper is missing.
+
+Check the local skill pack without writing:
 
 ```bash
-node .agents/linear-workflow-check.mjs
+node scripts/install-local.mjs --check
 ```
 
-The checks fail when generated skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, wrapper/checker/lockfile hashes drift, unmanaged Linear skills appear, or installed skills look like redirect stubs. Consumer installs must not resolve workflow logic from an env var, sibling checkout, GitHub URL, or `main`.
+Use a different skill root only for testing or alternate runtimes:
 
-For Zeni, the configured flow defaults implementation to Compound `ce-work`, then uses gstack `ship`, gstack `document-release`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy` through `Deploy workflow`.
+```bash
+node scripts/install-local.mjs --skills-root /path/to/skills --remove-stale
+```
 
-See `references/install.md` for install details and `references/versioning.md` for the release contract and breaking-change policy.
+The checks fail when local skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, or lockfile hashes drift.
+
+## Project Config
+
+Project repos must not vendor this workflow. They should contain only a repo-specific JSON config:
+
+```bash
+node scripts/project-config.mjs --repo /path/to/project --project-name Zeni --write --clean
+node scripts/project-config.mjs --repo /path/to/project --check
+node scripts/project-config.mjs --repo /path/to/project --clean --check
+```
+
+The config path is `.agents/linear-workflow.config.json`. It records project policy such as Linear team, Linear-facing language, artifact roots, `autoreview` prerequisite, implementation workflow, ship workflow, documentation workflow, review feedback workflow, and deploy workflow.
+
+`--clean` removes legacy generated project installs:
+
+- `.agents/skills/linear-*`
+- `.claude/skills/linear-*`
+- `.agents/linear-workflow-check.mjs`
+- `.agents/linear-workflow.lock.json`
+- `.agents/linear-workflow.config.md`
+- `.github/workflows/update-linear-workflow.yml`
+- `.github/workflows/update-linear-agent-workflow.yml`
+
+For Zeni, the configured flow can set implementation to Compound `ce-work`, then use gstack `ship`, gstack `document-release`, Compound `ce-resolve-pr-feedback`, and gstack `land-and-deploy` through `Deploy workflow`.
+
+See `references/install.md` for install details and `references/versioning.md` for the local skill pack and project config contract.
 
 ## Documentation Map
 
 - `CHANGELOG.md`: released workflow behavior changes.
 - `examples/profile-workbench-regression.md`: regression example for handoff-first artifact quality.
-- `examples/zeni-dogfood.md`: first consumer dogfood flow and anti-examples.
+- `examples/zeni-dogfood.md`: first Zeni dogfood flow and anti-examples.
 - `references/artifact-intake.md`: scoped discovery and review artifact intake.
 - `references/artifact-quality.md`: quality bar for Project, PRD, Tech Spec, Issue, preflight, ship, deploy, and review artifacts.
 - `references/artifact-rules.md`: source-of-truth and Linear-facing artifact rules.
 - `references/execution-quality.md`: PRD, Issue, bug/perf, and architecture guardrails.
 - `references/human-friendly-output.md`: user-facing status and confidence-boundary wording.
-- `references/install.md`: upstream and consumer install guide.
+- `references/install.md`: local install and project config guide.
 - `references/lifecycle.md`: idea, discovery, handoff, delivery, preflight, ship, and deploy lifecycle.
 - `references/questioning.md`: when workflow skills should ask humans.
 - `references/readiness-gates.md`: risk classes, review policy, and owner boundaries.
 - `references/review-rubric.md`: `linear-review` inspection rubric.
 - `references/ship-feedback-loop.md`: `linear-ship` green-certificate loop.
-- `references/versioning.md`: SemVer and consumer adapter contract.
+- `references/versioning.md`: SemVer, local skill pack, and project config contract.
 - `templates/check-output.md`: `linear-check` output template.
 - `templates/deploy-output.md`: `linear-deploy` output template.
 - `templates/issue.md`: Linear Issue template.
@@ -158,8 +177,8 @@ See `references/install.md` for install details and `references/versioning.md` f
 
 ## Principles
 
-- Reusable first: consumer repos should receive generated workflow copies, not hand-maintained forks.
-- Full local install: consumer `.agents/skills/linear-*` files are executable generated copies, not redirect stubs.
+- Reusable first: the workflow lives in this repo and is installed as a local skill pack, not copied into project repos.
+- Config-only projects: project repos keep only `.agents/linear-workflow.config.json` for repo-specific policy.
 - Linear first: durable requirements live in Linear.
 - Handoff first: discovery implementation plans must pass through `linear-handoff` before implementation.
 - Artifact intake first: local discovery/review files are scoped evidence, not broad-search source of truth.
@@ -178,11 +197,12 @@ See `references/install.md` for install details and `references/versioning.md` f
 
 ```bash
 git diff --check
-node --check scripts/sync-consumer.mjs
+node --check scripts/install-local.mjs
+node --check scripts/project-config.mjs
 node --check scripts/lint-linear-artifacts.mjs
 node scripts/lint-linear-artifacts.mjs
 node --check scripts/validate-workflow.mjs
 node scripts/validate-workflow.mjs
-node scripts/sync-consumer.mjs --repo /path/to/consumer --check
-node /path/to/consumer/.agents/linear-workflow-check.mjs
+node scripts/install-local.mjs --check
+node scripts/project-config.mjs --repo /path/to/project --check
 ```
