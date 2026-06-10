@@ -259,6 +259,12 @@ function validateReviewCheckBoundary() {
 function validateLocalInstallBehavior() {
   const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-skills-"));
   try {
+    expectCommandFailure(
+      "install-local --check --remove-stale conflict",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check", "--remove-stale"]),
+      "--remove-stale has no effect in --check mode"
+    );
+
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--remove-stale"]);
 
     for (const skill of EXPECTED_SKILLS) {

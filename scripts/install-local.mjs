@@ -43,6 +43,10 @@ function parseArgs(argv) {
   }
 
   if (!args.skillsRoot) usage();
+  if (args.check && args.removeStale) {
+    console.error("--remove-stale has no effect in --check mode; run without --check to sync and remove stale skills.");
+    process.exit(2);
+  }
   args.skillsRoot = path.resolve(args.skillsRoot);
   return args;
 }
