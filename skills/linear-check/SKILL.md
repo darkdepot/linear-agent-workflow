@@ -32,7 +32,7 @@ Modes:
 - `handoff`
 - `pre-ship`
 - `post-ship`
-- `adapter`
+- `project-config`
 
 Rules:
 
@@ -52,9 +52,9 @@ Rules:
 - Treat `linear-review` as a risk-based quality gate and `linear-check` as the readiness status reporter.
 - For standard, deep, or risky work, return `FAIL` if the required `linear-review` gate is missing, unresolved, or replaced by an unrecorded exception.
 - For tiny advisory work, allow skipped `linear-review` only when the advisory reason is recorded in the relevant Project or Issue review-gate field.
-- When checking adapter status in an upstream checkout, run or report `scripts/sync-consumer.mjs --repo <consumer> --check` output.
-- When checking adapter status inside a generated consumer install, run or report `node .agents/linear-workflow-check.mjs` output.
-- Do not install, update, or rewrite generated skills from `linear-check`.
+- When checking project config status in an upstream checkout, run or report `node scripts/project-config.mjs --repo <project> --check` output.
+- When checking project config status from inside a project repo, inspect `.agents/linear-workflow.config.json` and verify legacy vendored workflow files are absent, or route to the upstream `scripts/project-config.mjs --repo <project> --check`.
+- Do not install, update, remove, or rewrite workflow skills from `linear-check`.
 - Include a compact "checked / not checked" boundary. `PASS` must not imply uninspected manual QA, browser QA, production smoke, deploy verification, or user acceptance.
 
 Mode checks:
@@ -69,7 +69,7 @@ Mode checks:
 - `delivery`: Project is in Delivery, PRD is current, Tech Spec or explicit no-spec exception exists, approved execution Issue(s) exist, approval covers the current Issue set and implementation start, required/advisory review-gate record is coherent with the risk classification, and `linear-implement` starts from those Issue(s).
 - `pre-ship`: branch/diff matches Issue, local branch readiness is known through a `linear-preflight` certificate, required `linear-review pre-ship` ran for standard, deep, risky, or materially drifted work, Linear artifacts are not stale, scope drift is reflected or accepted, and no durable body contains obsolete PR chips or raw PR URLs.
 - `post-ship`: Issue has PR chip/status, `In Review` after PR creation, `Done` only after verified deploy or explicit accepted delivery policy, deploy evidence is recorded, post-ship drift is synced back to Linear, and learning capture is reported when relevant.
-- `adapter`: generated consumer skills are full executable copies, Claude wrappers point to `.agents`, the consumer lockfile pins an immutable commit plus copied asset hashes, and drift is reported from `scripts/sync-consumer.mjs --repo <consumer> --check` or the generated `.agents/linear-workflow-check.mjs`.
+- `project-config`: the project repo has `.agents/linear-workflow.config.json`, required config fields are present, `prerequisites.autoreviewHelper` is `true`, no unresolved placeholders remain, and no legacy `.agents/skills/linear-*`, `.claude/skills/linear-*`, `.agents/linear-workflow-check.mjs`, `.agents/linear-workflow.lock.json`, `.agents/linear-workflow.config.md`, `.github/workflows/update-linear-workflow.yml`, or `.github/workflows/update-linear-agent-workflow.yml` files remain.
 
 Content-shape checks:
 
@@ -90,7 +90,7 @@ Hard FAIL examples:
 - Durable Project, PRD, Tech Spec, or Issue body contains workflow mechanics such as `linear-check`, `Skill contracts`, lifecycle gates, or agent-only instructions.
 - Standard, deep, risky, or materially drifted work moved forward without the required `linear-review` gate.
 - A no-spec exception was used for non-tiny work without `linear-review`.
-- Installed consumer `.agents/skills/linear-*` files are redirect adapters instead of full executable skill bodies.
+- A project repo still vendors `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local workflow checkers, or updater CI for this workflow.
 
 Output:
 

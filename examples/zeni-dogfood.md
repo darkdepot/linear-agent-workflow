@@ -2,12 +2,13 @@
 
 Zeni is the first consumer repo for this workflow.
 
-Consumer policy:
+Project policy:
 
 - Zeni keeps its existing project-specific skills.
-- Zeni `.agents/skills/linear-*` contains generated full copies from upstream.
-- Zeni `.claude/skills/linear-*` contains tiny discovery wrappers to `.agents`.
-- Zeni stores consumer policy in `.agents/linear-workflow.config.md` and repo docs.
+- Zeni keeps only `.agents/linear-workflow.config.json` for this workflow.
+- Zeni must not vendor `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local checkers, or updater CI for this workflow.
+- Use the local skill pack installed from this upstream repo through `scripts/install-local.mjs`.
+- Zeni stores project policy in `.agents/linear-workflow.config.json` and repo docs.
 - Zeni's configured implementation workflow is Compound `ce-work`.
 - Zeni's configured ship workflow is gstack `ship`.
 - Zeni's configured documentation workflow is gstack `document-release`.
@@ -17,17 +18,18 @@ Consumer policy:
 Dogfood order:
 
 1. Ship the reusable workflow MVP.
-2. Install generated full skills into Zeni.
-3. Use `linear-idea` for raw idea intake.
-4. Use discovery/review skills in Plan Mode when helpful.
-5. Use `linear-handoff` before implementation.
-6. Use `linear-review` as a risk-based gate before Issue creation or pre-ship when required.
-7. Create approved execution Issue(s) through handoff.
-8. Use `linear-implement` to start Delivery and implement from the approved Issue(s).
-9. Use `linear-preflight` to prepare the local branch and produce a certificate.
-10. Use `linear-ship` for pre-ship review/check, PR creation, repo docs, review loop, and green certificate.
-11. Use `linear-deploy` for Deploy workflow, post-ship check, Linear closeout, and durable learnings.
-12. Keep Project, PRD, Tech Spec, and Issue current in Linear.
+2. Install/update the local skill pack from this upstream repo.
+3. Write or migrate Zeni's `.agents/linear-workflow.config.json` and clean legacy project installs.
+4. Use `linear-idea` for raw idea intake.
+5. Use discovery/review skills in Plan Mode when helpful.
+6. Use `linear-handoff` before implementation.
+7. Use `linear-review` as a risk-based gate before Issue creation or pre-ship when required.
+8. Create approved execution Issue(s) through handoff.
+9. Use `linear-implement` to start Delivery and implement from the approved Issue(s).
+10. Use `linear-preflight` to prepare the local branch and produce a certificate.
+11. Use `linear-ship` for pre-ship review/check, PR creation, repo docs, review loop, and green certificate.
+12. Use `linear-deploy` for Deploy workflow, post-ship check, Linear closeout, and durable learnings.
+13. Keep Project, PRD, Tech Spec, and Issue current in Linear.
 
 ## Correct Raw Idea Intake
 
@@ -171,25 +173,23 @@ Why this fails:
 - `linear-review` is report-only.
 - Accepted fixes must be applied by `linear-handoff`, an explicit atomic skill, or `linear-ship`.
 
-## Anti-Example: Thin Adapter Install
+## Anti-Example: Vendored Project Install
 
 FAIL:
 
 ```markdown
-This Zeni project skill is a thin adapter for the reusable Linear Agent Workflow.
-
-Resolve and follow the reusable workflow source in this order:
-
-1. `$LINEAR_AGENT_WORKFLOW_HOME/skills/linear-idea/SKILL.md`
-2. `../linear-agent-workflow/skills/linear-idea/SKILL.md`
-3. `https://github.com/darkdepot/linear-agent-workflow/blob/main/skills/linear-idea/SKILL.md`
+.agents/skills/linear-idea/SKILL.md
+.claude/skills/linear-idea/SKILL.md
+.agents/linear-workflow-check.mjs
+.agents/linear-workflow.lock.json
+.github/workflows/update-linear-workflow.yml
 ```
 
 Why this fails:
 
-- The repo-scoped skill is not directly executable after opening `SKILL.md`.
-- The operational contract can be skipped or weakened by host/runtime behavior.
-- `linear-check` should report this install as FAIL.
+- Project repos should not contain workflow skill bodies, discovery wrappers, workflow lockfiles, local checkers, or updater CI.
+- The local skill pack is updated from the upstream repo, while project repos keep only `.agents/linear-workflow.config.json`.
+- `linear-check project-config` should report this install as FAIL.
 
 ## Anti-Example: Direct Discovery Plan Approval
 

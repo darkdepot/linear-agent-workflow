@@ -47,7 +47,7 @@ Rules:
 - Use actor -> capability -> benefit as a coverage check for scenarios and requirements. Do not add a long user-story section by default; make sure each meaningful requirement has a clear operator, capability, and reason.
 - Lightweight PRD-lite may use plain bullets when there are only 1-3 obvious requirements.
 - Requirements must be observable or structural with an explicit reason.
-- Use acceptance examples when behavior depends on state or sequence. In default Russian output, use: `AE1. Покрывает R1, R2. Дано ..., когда ..., тогда ...`. Adapt the wording to the consumer config language.
+- Use acceptance examples when behavior depends on state or sequence. In default Russian output, use: `AE1. Покрывает R1, R2. Дано ..., когда ..., тогда ...`. Adapt the wording to the project config language.
 - `Намерение проверки поведения` names the user-visible behaviors that Tech Spec and Issue validation must prove. It must not include commands, file paths, test filenames, or implementation details.
 - Success criteria should cover both the human/operator outcome and handoff quality, so Tech Spec and Issue slicing can proceed without inventing product behavior.
 - Scope boundaries must prevent downstream agents from inventing adjacent product behavior.

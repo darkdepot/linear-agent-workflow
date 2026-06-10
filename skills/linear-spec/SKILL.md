@@ -22,7 +22,7 @@ Read first:
 
 Rules:
 
-- Write Linear Tech Spec content and section headings in the consumer config language; use Russian when no consumer config is present. Keep code identifiers, file paths, commands, product labels, and UI copy in their native language.
+- Write Linear Tech Spec content and section headings in the project config language; use Russian when no project config is present. Keep code identifiers, file paths, commands, product labels, and UI copy in their native language.
 - Tech Spec defines HOW, not product discovery.
 - Use Project and PRD as the source documents.
 - When PRD requirement IDs exist, trace important HOW decisions back to `R` or `AE` IDs. If a decision is cross-cutting technical support, say so explicitly.

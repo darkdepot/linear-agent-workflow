@@ -1,6 +1,6 @@
 # Ship Feedback Loop
 
-`linear-ship` owns orchestration only. It must not reimplement the consumer ship workflow, documentation workflow, review feedback resolver, or deploy workflow.
+`linear-ship` owns orchestration only. It must not reimplement the project ship workflow, documentation workflow, review feedback resolver, or deploy workflow.
 
 The loop goal is a deploy-ready PR and a durable `linear-ship green certificate`. Merge, deploy, post-ship check, Linear closeout, and learning capture belong to `linear-deploy`.
 
@@ -10,8 +10,8 @@ The loop goal is a deploy-ready PR and a durable `linear-ship green certificate`
 - Preflight certificate when present.
 - GitHub PR number and URL.
 - Latest PR head SHA.
-- Documentation workflow from the consumer config, when configured.
-- Review feedback workflow from the consumer config, when configured.
+- Documentation workflow from the project config, when configured.
+- Review feedback workflow from the project config, when configured.
 
 ## Loop
 

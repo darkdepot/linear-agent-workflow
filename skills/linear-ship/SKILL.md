@@ -5,7 +5,7 @@ description: Use when shipping a Linear-tracked change through PR creation, repo
 
 # Linear Ship
 
-Use this wrapper around the consumer repo's configured ship, documentation, and review feedback workflows.
+Use this wrapper around the project repo's configured ship, documentation, and review feedback workflows.
 
 `linear-ship` owns the PR lifecycle up to a deploy-ready green certificate. It does not merge, deploy, close Linear Issues as shipped, or run the deploy workflow. Those belong to `linear-deploy`.
 
@@ -118,7 +118,7 @@ Next: linear-deploy
 Rules:
 
 - Do not create PRs directly.
-- Do not fork or reimplement the consumer repo's ship workflow.
+- Do not fork or reimplement the project repo's ship workflow.
 - Do not resolve review feedback directly when a configured resolver exists; delegate to it.
 - Do not merge or deploy directly; route green PRs to `linear-deploy`.
 - Do not close Linear Issues as shipped; `linear-deploy` owns verified delivery closeout.

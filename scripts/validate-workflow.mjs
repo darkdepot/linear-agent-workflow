@@ -37,9 +37,7 @@ function fail(message) {
 
 function assertIncludes(relativePath, text, label = text) {
   const body = read(relativePath);
-  if (!body.includes(text)) {
-    fail(`${relativePath} missing ${label}`);
-  }
+  if (!body.includes(text)) fail(`${relativePath} missing ${label}`);
 }
 
 function listSkillNames() {
@@ -79,9 +77,7 @@ function extractReadFirstEntries(text) {
     }
     started = true;
     const backtickedPaths = [...match[1].matchAll(/`([^`]+)`/g)].map((pathMatch) => pathMatch[1]);
-    if (backtickedPaths.length === 0) {
-      malformedLines.push(line.trim());
-    }
+    if (backtickedPaths.length === 0) malformedLines.push(line.trim());
     paths.push(...backtickedPaths);
   }
 
@@ -93,9 +89,7 @@ function validateReadFirstPath(referencedPath) {
   if (/^(https?:|\/)/.test(referencedPath)) return false;
   if (/[$<>]/.test(referencedPath)) return false;
   if (referencedPath.startsWith("./") || referencedPath.startsWith("../")) return false;
-  if (/^(skills|references|templates|scripts)\//.test(referencedPath)) {
-    return exists(referencedPath);
-  }
+  if (/^(skills|references|templates|scripts)\//.test(referencedPath)) return exists(referencedPath);
   return false;
 }
 
@@ -106,108 +100,6 @@ function runNode(args, options = {}) {
     stdio: ["ignore", "pipe", "pipe"],
     ...options,
   });
-}
-
-function runSyncConsumer(repo, check = false, consumerName = "Fixture") {
-  const args = ["scripts/sync-consumer.mjs", "--repo", repo, "--consumer-name", consumerName];
-  if (check) args.push("--check");
-  return runNode(args);
-}
-
-function runLocalChecker(repo) {
-  return execFileSync(process.execPath, [path.join(repo, ".agents", "linear-workflow-check.mjs")], {
-    cwd: repo,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-}
-
-function writeCompleteConsumerConfig(repo) {
-  fs.writeFileSync(
-    path.join(repo, ".agents", "linear-workflow.config.md"),
-    `# Linear Workflow Consumer Config
-
-This file is local consumer policy for generated \`linear-*\` skills.
-
-- Consumer: Fixture
-- Linear team: Fixture
-- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
-- Repo docs and code comments language: English
-- Linear is the planning, spec, and task source of truth.
-- GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
-- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
-- Ship workflow: fixture ship
-- Documentation workflow: None
-- Review feedback workflow: None
-- Deploy workflow: None
-`
-  );
-}
-
-function writeLegacyConsumerConfig(repo) {
-  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
-  fs.writeFileSync(
-    path.join(repo, ".agents", "linear-workflow.config.md"),
-    `# Linear Workflow Consumer Config
-
-This fixture intentionally models a preserved consumer config without the optional implementation workflow and artifact roots fields, but with current deploy naming.
-
-- Consumer: Fixture
-- Linear team: Fixture
-- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
-- Repo docs and code comments language: English
-- Linear is the planning, spec, and task source of truth.
-- GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> risk-based \`linear-review\` gate -> approved Issue(s) -> implementation/ship.
-- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
-- Ship workflow: fixture ship
-- Documentation workflow: None
-- Review feedback workflow: None
-- Deploy workflow: None
-`
-  );
-}
-
-function writeUnsupportedLandConfig(repo) {
-  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
-  fs.writeFileSync(
-    path.join(repo, ".agents", "linear-workflow.config.md"),
-    `# Linear Workflow Consumer Config
-
-- Consumer: Fixture
-- Linear team: Fixture
-- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
-- Repo docs and code comments language: English
-- Linear is the planning, spec, and task source of truth.
-- GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
-- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime, or explicit consumer helper at \`.agents/skills/autoreview/scripts/autoreview\`; \`linear-preflight\` blocks if unavailable.
-- Ship workflow: fixture ship
-- Review feedback workflow: None
-- Land workflow: fixture land
-`
-  );
-}
-
-function writeMissingAutoreviewHelperConfig(repo) {
-  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
-  fs.writeFileSync(
-    path.join(repo, ".agents", "linear-workflow.config.md"),
-    `# Linear Workflow Consumer Config
-
-- Consumer: Fixture
-- Linear team: Fixture
-- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
-- Repo docs and code comments language: English
-- Linear is the planning, spec, and task source of truth.
-- GitHub is branch, PR, review, CI, deploy, and merge history only.
-- Main workflow: \`linear-idea\` -> discovery/reviews -> \`linear-handoff\` -> approved Issue(s) -> \`linear-implement\` -> \`linear-preflight\` -> \`linear-ship\` -> \`linear-deploy\`.
-- Ship workflow: fixture ship
-- Review feedback workflow: None
-- Deploy workflow: None
-`
-  );
 }
 
 function expectCommandFailure(label, callback, expectedText) {
@@ -227,21 +119,16 @@ function validateSkills() {
   const skillSet = new Set(skills);
 
   for (const expectedSkill of EXPECTED_SKILLS) {
-    if (!skillSet.has(expectedSkill)) {
-      fail(`Missing expected core skill: ${expectedSkill}`);
-    }
+    if (!skillSet.has(expectedSkill)) fail(`Missing expected core skill: ${expectedSkill}`);
   }
 
   for (const skill of skills) {
-    if (!EXPECTED_SKILLS.includes(skill)) {
-      fail(`Unexpected linear skill: ${skill}`);
-    }
+    if (!EXPECTED_SKILLS.includes(skill)) fail(`Unexpected linear skill: ${skill}`);
   }
 
   for (const skill of skills) {
     const relativePath = `skills/${skill}/SKILL.md`;
-    const absolutePath = path.join(root, relativePath);
-    if (!fs.existsSync(absolutePath)) {
+    if (!exists(relativePath)) {
       fail(`Missing ${relativePath}`);
       continue;
     }
@@ -251,17 +138,13 @@ function validateSkills() {
     if (!frontmatter) {
       fail(`${relativePath} must start with YAML frontmatter`);
     } else {
-      if (frontmatter.name !== skill) {
-        fail(`${relativePath} frontmatter name must be ${skill}`);
-      }
+      if (frontmatter.name !== skill) fail(`${relativePath} frontmatter name must be ${skill}`);
       if (!frontmatter.description || frontmatter.description.length < 20) {
         fail(`${relativePath} needs a useful frontmatter description`);
       }
     }
 
-    if (!text.includes("Read first:")) {
-      fail(`${relativePath} missing Read first section`);
-    }
+    if (!text.includes("Read first:")) fail(`${relativePath} missing Read first section`);
 
     const { paths: readFirstPaths, malformedLines } = extractReadFirstEntries(text);
     for (const malformedLine of malformedLines) {
@@ -277,9 +160,7 @@ function validateSkills() {
       fail(`${relativePath} looks like a redirect adapter`);
     }
 
-    if (text.length < 900) {
-      fail(`${relativePath} looks too small to be an executable source skill`);
-    }
+    if (text.length < 900) fail(`${relativePath} looks too small to be an executable source skill`);
   }
 }
 
@@ -345,9 +226,7 @@ function validateTemplateSections() {
       fail(`Missing template: ${relativePath}`);
       continue;
     }
-    for (const section of sections) {
-      assertIncludes(relativePath, section);
-    }
+    for (const section of sections) assertIncludes(relativePath, section);
   }
 }
 
@@ -361,243 +240,150 @@ function validateReviewCheckBoundary() {
     "Do not use `PASS`, `FAIL`, or `BLOCKED`",
     "`linear-review` is report-only",
   ]) {
-    if (!review.includes(required)) {
-      fail(`linear-review skill boundary missing: ${required}`);
-    }
+    if (!review.includes(required)) fail(`linear-review skill boundary missing: ${required}`);
   }
 
-  if (
-    check.includes("templates/review-output.md") ||
-    check.includes("Linear review:") ||
-    check.includes("Ревью Linear:")
-  ) {
+  if (check.includes("templates/review-output.md") || check.includes("Linear review:") || check.includes("Ревью Linear:")) {
     fail("linear-check must not use the review output template");
   }
 
-  if (!check.includes("Do not emit review findings")) {
-    fail("linear-check must explicitly avoid review findings");
-  }
-
+  if (!check.includes("Do not emit review findings")) fail("linear-check must explicitly avoid review findings");
   if (!check.includes("Never edit Project, documents, or Issues from `linear-check`")) {
     fail("linear-check must be strictly readiness-only");
   }
-
   if (!check.includes("return `FAIL` if the required `linear-review` gate is missing")) {
     fail("linear-check must fail missing required review gates");
   }
 }
 
-function validateGeneratedReadFirstPaths(repo) {
-  const skillsRoot = path.join(repo, ".agents", "skills");
-  for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory() || !entry.name.startsWith("linear-")) continue;
-    const skillDir = path.join(skillsRoot, entry.name);
-    const skillPath = path.join(skillDir, "SKILL.md");
-    const text = fs.readFileSync(skillPath, "utf8");
-    const { paths: readFirstPaths, malformedLines } = extractReadFirstEntries(text);
-    for (const malformedLine of malformedLines) {
-      fail(`Generated ${entry.name} has malformed Read first entry: ${malformedLine}`);
-    }
-    for (const referencedPath of readFirstPaths) {
-      if (/^(https?:|\/)/.test(referencedPath) || /[$<>]/.test(referencedPath)) {
-        fail(`Generated ${entry.name} has non-local Read first path: ${referencedPath}`);
+function validateLocalInstallBehavior() {
+  const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-skills-"));
+  try {
+    expectCommandFailure(
+      "install-local --check --remove-stale conflict",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check", "--remove-stale"]),
+      "--remove-stale has no effect in --check mode"
+    );
+
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--remove-stale"]);
+
+    for (const skill of EXPECTED_SKILLS) {
+      const skillPath = path.join(skillsRoot, skill, "SKILL.md");
+      if (!fs.existsSync(skillPath)) {
+        fail(`Local install missing ${skill}`);
         continue;
       }
-      const resolved = path.resolve(skillDir, referencedPath);
-      const relativeToRepo = path.relative(repo, resolved);
-      if (relativeToRepo.startsWith("..") || path.isAbsolute(relativeToRepo) || !fs.existsSync(resolved)) {
-        fail(`Generated ${entry.name} has broken Read first path: ${referencedPath}`);
+      const skillText = fs.readFileSync(skillPath, "utf8");
+      if (!skillText.includes("Installed from darkdepot/linear-agent-workflow")) {
+        fail(`Local install ${skill} missing generated metadata`);
+      }
+      if (!skillText.includes("`.agents/linear-workflow.config.json`")) {
+        fail(`Local install ${skill} missing project config note`);
+      }
+      if (/`skills\/linear-/.test(skillText)) {
+        fail(`Local install ${skill} kept repo-root peer skill paths`);
       }
     }
-  }
-}
 
-function validateFreshZeniInstall() {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-zeni-"));
-  try {
-    fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Zeni Consumer\n");
-    runSyncConsumer(repo, false, "Zeni");
-    const configText = fs.readFileSync(path.join(repo, ".agents", "linear-workflow.config.md"), "utf8");
-    if (!configText.includes("- Implementation workflow: compound-engineering:ce-work")) {
-      fail("Fresh Zeni config must include the configured implementation workflow default");
-    }
-    if (!configText.includes("- Artifact roots: None")) {
-      fail("Fresh Zeni config must include explicit Artifact roots default");
-    }
-    if (!configText.includes("- Documentation workflow: gstack document-release")) {
-      fail("Fresh Zeni config must include the configured documentation workflow default");
-    }
-    if (!configText.includes("- Deploy workflow: gstack land-and-deploy")) {
-      fail("Fresh Zeni config must include the configured deploy workflow default");
-    }
-    if (!configText.includes("- Autoreview helper: Required installed `autoreview` skill/helper")) {
-      fail("Fresh Zeni config must include the autoreview helper prerequisite");
-    }
-    if (configText.includes("Land workflow")) {
-      fail("Fresh Zeni config must not include unsupported Land workflow");
-    }
-    runSyncConsumer(repo, true, "Zeni");
-    runLocalChecker(repo);
-  } finally {
-    fs.rmSync(repo, { recursive: true, force: true });
-  }
-}
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
 
-function validateSyncConsumerBehavior() {
-  validateFreshZeniInstall();
-
-  const legacyRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-legacy-"));
-  try {
-    fs.writeFileSync(path.join(legacyRepo, "AGENTS.md"), "# Legacy Consumer\n");
-    writeLegacyConsumerConfig(legacyRepo);
-    runSyncConsumer(legacyRepo);
-    const preservedConfig = fs.readFileSync(
-      path.join(legacyRepo, ".agents", "linear-workflow.config.md"),
-      "utf8"
-    );
-    if (preservedConfig.includes("Implementation workflow")) {
-      fail("sync-consumer must preserve old configs without adding the optional Implementation workflow field");
-    }
-    if (preservedConfig.includes("Artifact roots")) {
-      fail("sync-consumer must preserve old configs without adding the optional Artifact roots field");
-    }
-    if (!preservedConfig.includes("Deploy workflow: None")) {
-      fail("legacy fixture must preserve deploy workflow field");
-    }
-    runSyncConsumer(legacyRepo, true);
-    runLocalChecker(legacyRepo);
-  } finally {
-    fs.rmSync(legacyRepo, { recursive: true, force: true });
-  }
-
-  const landRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-land-"));
-  try {
-    fs.writeFileSync(path.join(landRepo, "AGENTS.md"), "# Land Consumer\n");
-    runSyncConsumer(landRepo);
-    writeUnsupportedLandConfig(landRepo);
+    fs.appendFileSync(path.join(skillsRoot, "linear-review", "SKILL.md"), "\nBROKEN\n");
     expectCommandFailure(
-      "sync-consumer --check unsupported Land workflow fixture",
-      () => runSyncConsumer(landRepo, true),
-      "unsupported Land workflow"
-    );
-    expectCommandFailure(
-      "local checker unsupported Land workflow fixture",
-      () => runLocalChecker(landRepo),
-      "unsupported Land workflow"
-    );
-  } finally {
-    fs.rmSync(landRepo, { recursive: true, force: true });
-  }
-
-  const missingAutoreviewRepo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-no-autoreview-"));
-  try {
-    fs.writeFileSync(path.join(missingAutoreviewRepo, "AGENTS.md"), "# Missing Autoreview Consumer\n");
-    runSyncConsumer(missingAutoreviewRepo);
-    writeMissingAutoreviewHelperConfig(missingAutoreviewRepo);
-    expectCommandFailure(
-      "sync-consumer --check missing Autoreview helper fixture",
-      () => runSyncConsumer(missingAutoreviewRepo, true),
-      "missing Autoreview helper prerequisite"
-    );
-    expectCommandFailure(
-      "local checker missing Autoreview helper fixture",
-      () => runLocalChecker(missingAutoreviewRepo),
-      "missing Autoreview helper prerequisite"
-    );
-  } finally {
-    fs.rmSync(missingAutoreviewRepo, { recursive: true, force: true });
-  }
-
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-validate-"));
-  try {
-    fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Fixture Consumer\n");
-    runSyncConsumer(repo);
-    writeCompleteConsumerConfig(repo);
-    runSyncConsumer(repo, true);
-    runLocalChecker(repo);
-    validateGeneratedReadFirstPaths(repo);
-
-    fs.appendFileSync(path.join(repo, ".agents", "linear-workflow-check.mjs"), "\n// BROKEN\n");
-    expectCommandFailure(
-      "sync-consumer --check edited local checker fixture",
-      () => runSyncConsumer(repo, true),
-      "Local install checker is stale or edited"
-    );
-    expectCommandFailure(
-      "local checker edited local checker fixture",
-      () => runLocalChecker(repo),
-      "Stale or edited local install checker"
-    );
-
-    runSyncConsumer(repo);
-    fs.appendFileSync(
-      path.join(repo, ".agents", "skills", "linear-review", "references", "review-rubric.md"),
-      "\nBROKEN\n"
-    );
-    expectCommandFailure(
-      "sync-consumer --check edited copied reference fixture",
-      () => runSyncConsumer(repo, true),
-      "stale or edited"
-    );
-    expectCommandFailure(
-      "local checker edited copied reference fixture",
-      () => runLocalChecker(repo),
+      "install-local --check edited skill fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
       "stale or edited"
     );
 
-    runSyncConsumer(repo);
-    fs.rmSync(path.join(repo, ".agents", "skills", "linear-review", "templates", "prd.md"));
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    fs.appendFileSync(path.join(skillsRoot, "linear-review", "references", "review-rubric.md"), "\nBROKEN\n");
     expectCommandFailure(
-      "sync-consumer --check missing copied template fixture",
-      () => runSyncConsumer(repo, true),
-      "Missing copied templates"
+      "install-local --check edited reference fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "stale or edited"
     );
-    expectCommandFailure(
-      "local checker missing copied template fixture",
-      () => runLocalChecker(repo),
-      "Missing copied templates"
-    );
+  } finally {
+    fs.rmSync(skillsRoot, { recursive: true, force: true });
+  }
+}
 
-    runSyncConsumer(repo);
-    fs.writeFileSync(path.join(repo, ".agents", "skills", "linear-review", "templates", "extra.md"), "extra\n");
-    expectCommandFailure(
-      "sync-consumer --check extra copied template fixture",
-      () => runSyncConsumer(repo, true),
-      "Unexpected copied templates"
-    );
-    expectCommandFailure(
-      "local checker extra copied template fixture",
-      () => runLocalChecker(repo),
-      "Unexpected copied templates"
-    );
+function writeLegacyProjectConfig(repo) {
+  fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repo, ".agents", "linear-workflow.config.md"),
+    `# Linear Workflow Consumer Config
 
-    runSyncConsumer(repo);
-    fs.appendFileSync(path.join(repo, ".agents", "skills", "linear-review", "SKILL.md"), "\nthin adapter\n");
-    expectCommandFailure(
-      "sync-consumer --check redirect-stub fixture",
-      () => runSyncConsumer(repo, true),
-      "Redirect-stub pattern"
-    );
-    expectCommandFailure(
-      "local checker redirect-stub fixture",
-      () => runLocalChecker(repo),
-      "Redirect-stub pattern"
-    );
+- Consumer: Fixture
+- Linear team: Fixture
+- Linear-facing Project, PRD, Tech Spec, Issue, and comment language: Russian
+- Repo docs and code comments language: English
+- Autoreview helper: Required installed \`autoreview\` skill/helper in the agent runtime.
+- Artifact roots: docs/discovery, docs/reviews
+- Implementation workflow: compound-engineering:ce-work
+- Ship workflow: gstack ship
+- Documentation workflow: None
+- Review feedback workflow: compound-engineering:ce-resolve-pr-feedback
+- Deploy workflow: gstack land-and-deploy
+`
+  );
+}
 
-    runSyncConsumer(repo);
-    fs.writeFileSync(
-      path.join(repo, ".agents", "linear-workflow.config.md"),
-      "- Linear team: <set team name>\n"
-    );
+function validateProjectConfigBehavior() {
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-project-"));
+  try {
+    fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Fixture Project\n");
+    writeLegacyProjectConfig(repo);
+    fs.mkdirSync(path.join(repo, ".agents", "skills", "linear-review"), { recursive: true });
+    fs.writeFileSync(path.join(repo, ".agents", "skills", "linear-review", "SKILL.md"), "legacy\n");
+    fs.mkdirSync(path.join(repo, ".claude", "skills", "linear-review"), { recursive: true });
+    fs.writeFileSync(path.join(repo, ".claude", "skills", "linear-review", "SKILL.md"), "legacy\n");
+    fs.writeFileSync(path.join(repo, ".agents", "linear-workflow-check.mjs"), "legacy\n");
+    fs.writeFileSync(path.join(repo, ".agents", "linear-workflow.lock.json"), "{}\n");
+    fs.mkdirSync(path.join(repo, ".github", "workflows"), { recursive: true });
+    fs.writeFileSync(path.join(repo, ".github", "workflows", "update-linear-workflow.yml"), "legacy\n");
+    fs.writeFileSync(path.join(repo, ".github", "workflows", "update-linear-agent-workflow.yml"), "legacy\n");
+
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--write", "--clean"]);
+
+    const configPath = path.join(repo, ".agents", "linear-workflow.config.json");
+    if (!fs.existsSync(configPath)) fail("project-config must write JSON config");
+    const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+    if (config.projectName !== "Fixture") fail("project-config must preserve legacy Consumer as projectName");
+    if (config.linearTeam !== "Fixture") fail("project-config must preserve legacy Linear team");
+    if (JSON.stringify(config.artifactRoots) !== JSON.stringify(["docs/discovery", "docs/reviews"])) {
+      fail("project-config must migrate legacy Artifact roots");
+    }
+    if (config.workflows.ship !== "gstack ship") fail("project-config must migrate Ship workflow");
+    if (config.workflows.deploy !== "gstack land-and-deploy") fail("project-config must migrate Deploy workflow");
+
+    for (const removed of [
+      ".agents/linear-workflow.config.md",
+      ".agents/linear-workflow-check.mjs",
+      ".agents/linear-workflow.lock.json",
+      ".agents/skills/linear-review",
+      ".claude/skills/linear-review",
+      ".github/workflows/update-linear-workflow.yml",
+      ".github/workflows/update-linear-agent-workflow.yml",
+    ]) {
+      if (fs.existsSync(path.join(repo, removed))) fail(`project-config --clean did not remove ${removed}`);
+    }
+
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
+    fs.mkdirSync(path.join(repo, ".agents", "skills", "linear-idea"), { recursive: true });
+    fs.writeFileSync(path.join(repo, ".agents", "skills", "linear-idea", "SKILL.md"), "legacy\n");
     expectCommandFailure(
-      "sync-consumer --check placeholder config fixture",
-      () => runSyncConsumer(repo, true),
-      "Consumer config has unresolved placeholder"
+      "project-config --check vendored skill fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "Legacy Linear workflow project install file must be removed"
     );
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--clean", "--check"]);
+
+    config.projectName = "<set project>";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
     expectCommandFailure(
-      "local checker placeholder config fixture",
-      () => runLocalChecker(repo),
-      "Consumer config has unresolved placeholder"
+      "project-config --check placeholder fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "unresolved"
     );
   } finally {
     fs.rmSync(repo, { recursive: true, force: true });
@@ -611,7 +397,8 @@ function validateDocsAndExamples() {
       "linear-preflight",
       "linear-deploy",
       "autoreview",
-      "node scripts/validate-workflow.mjs",
+      "node scripts/install-local.mjs",
+      "node scripts/project-config.mjs",
       "Review/check split",
       "Delivery ladder",
     ],
@@ -622,12 +409,16 @@ function validateDocsAndExamples() {
       "mandatory `autoreview` clean gate",
       "`linear-deploy` = deploy workflow delegation",
       "Keep `linear-review` report-only",
+      "Project repos must keep only `.agents/linear-workflow.config.json`",
     ],
     "examples/zeni-dogfood.md": [
       "Risk-Based Review Gate Examples",
+      "Zeni keeps only `.agents/linear-workflow.config.json`",
+      "Use the local skill pack installed from this upstream repo",
       "Correct Risky Handoff Review",
       "Correct Implement To Preflight To Ship",
       "Anti-Example: Ship Owns Deploy",
+      "Anti-Example: Vendored Project Install",
       "Correct Tiny Advisory Review",
       "Anti-Example: Required Review Skipped",
       "Anti-Example: Review Mutates Linear",
@@ -647,8 +438,15 @@ function validateDocsAndExamples() {
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
-    "references/install.md": ["Autoreview helper", "does not vendor `autoreview`"],
-    "references/versioning.md": ["`Autoreview helper`", "`Artifact roots`", "`Implementation workflow`", "`Documentation workflow`", "`Deploy workflow`", "documented default selection table"],
+    "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
+    "references/versioning.md": [
+      "`Autoreview helper`",
+      "`Artifact roots`",
+      "`Implementation workflow`",
+      "`Documentation workflow`",
+      "`Deploy workflow`",
+      "project config",
+    ],
   })) {
     if (!exists(relativePath)) {
       fail(`Missing ${relativePath}`);
@@ -679,9 +477,7 @@ function validateAntiPatterns() {
     "`decisions_carried_forward`",
     "`confidence_boundary`",
   ]) {
-    if (!handoff.includes(required)) {
-      fail(`linear-handoff must expose artifact intake field: ${required}`);
-    }
+    if (!handoff.includes(required)) fail(`linear-handoff must expose artifact intake field: ${required}`);
   }
   if (!handoff.includes("Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`")) {
     fail("linear-handoff final response must carry artifact intake summary fields");
@@ -701,9 +497,7 @@ function validateAntiPatterns() {
     "implemented-needs-preflight",
     "scope-drift-needs-handoff",
   ]) {
-    if (!implement.includes(required)) {
-      fail(`linear-implement contract missing: ${required}`);
-    }
+    if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
   }
 
   const ship = read("skills/linear-ship/SKILL.md");
@@ -719,12 +513,7 @@ function validateAntiPatterns() {
   if (!ship.includes("Linear comments or resources")) {
     fail("linear-ship must recover the preflight certificate from Linear");
   }
-  for (const required of [
-    "Documentation workflow",
-    "linear-ship green certificate",
-    "Next: linear-deploy",
-    "Poll interval: 10 minutes",
-  ]) {
+  for (const required of ["Documentation workflow", "linear-ship green certificate", "Next: linear-deploy", "Poll interval: 10 minutes"]) {
     if (!ship.includes(required) && !read("references/ship-feedback-loop.md").includes(required)) {
       fail(`linear-ship ladder contract missing: ${required}`);
     }
@@ -732,9 +521,7 @@ function validateAntiPatterns() {
   if (/Land workflow|configured land workflow|land\/deploy workflow/i.test(ship)) {
     fail("linear-ship must not reference old Land workflow or own deploy");
   }
-  if (ship.includes("pr-created")) {
-    fail("linear-ship must not keep pr-created as a terminal ship verdict");
-  }
+  if (ship.includes("pr-created")) fail("linear-ship must not keep pr-created as a terminal ship verdict");
 
   const deploy = read("skills/linear-deploy/SKILL.md");
   for (const required of [
@@ -746,9 +533,7 @@ function validateAntiPatterns() {
     "Do not run `/learn prune`, `/learn export`, `/learn stats`",
     "Do not accept `Land workflow` as a compatibility alias",
   ]) {
-    if (!deploy.includes(required)) {
-      fail(`linear-deploy contract missing: ${required}`);
-    }
+    if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }
 
   const preflight = read("skills/linear-preflight/SKILL.md");
@@ -781,69 +566,61 @@ function validateAntiPatterns() {
     "Do not call Compound `ce-code-review` for this gate",
     "Do not silently reject a repeated `autoreview` finding and mark `ready`",
   ]) {
-    if (!preflight.includes(required)) {
-      fail(`linear-preflight boundary missing: ${required}`);
-    }
+    if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
   }
 
   const shipOutput = read("templates/ship-output.md");
   if (!shipOutput.includes("Preflight: <ready/blocked/drift-candidate/needs-human/not run>")) {
     fail("ship output template must preserve preflight status boundary");
   }
-  if (shipOutput.includes("pr-created")) {
-    fail("ship output template must stay focused on green/needs-human/blocked/timed-out");
-  }
-  for (const required of [
-    "linear-ship green certificate",
-    "Documentation workflow",
-    "Next: <linear-deploy | needs-human | blocked>",
-  ]) {
-    if (!shipOutput.includes(required)) {
-      fail(`ship output template missing ladder field: ${required}`);
-    }
+  if (shipOutput.includes("pr-created")) fail("ship output template must stay focused on green/needs-human/blocked/timed-out");
+  for (const required of ["linear-ship green certificate", "Documentation workflow", "Next: <linear-deploy | needs-human | blocked>"]) {
+    if (!shipOutput.includes(required)) fail(`ship output template missing ladder field: ${required}`);
   }
 
   const deployOutput = read("templates/deploy-output.md");
-  for (const required of [
-    "Ship certificate: <found/missing/stale>",
-    "Deploy workflow",
-    "Learnings recorded",
-    "stale certificates",
-  ]) {
-    if (!deployOutput.includes(required)) {
-      fail(`deploy output template missing: ${required}`);
-    }
+  for (const required of ["Ship certificate: <found/missing/stale>", "Deploy workflow", "Learnings recorded", "stale certificates"]) {
+    if (!deployOutput.includes(required)) fail(`deploy output template missing: ${required}`);
   }
 
   const check = read("skills/linear-check/SKILL.md");
   if (!check.includes("local branch readiness is known through a `linear-preflight` certificate")) {
     fail("linear-check pre-ship must require the preflight certificate");
   }
+  if (!check.includes("project-config")) fail("linear-check must expose project-config mode");
+  if (check.includes("generated consumer skills are full executable copies")) {
+    fail("linear-check must not enforce the removed generated consumer install contract");
+  }
+
+  const dogfood = read("examples/zeni-dogfood.md");
+  for (const banned of [
+    "Zeni `.agents/skills/linear-*` contains generated full copies from upstream",
+    "Zeni `.claude/skills/linear-*` contains tiny discovery wrappers to `.agents`",
+    "Zeni stores consumer policy in `.agents/linear-workflow.config.md`",
+    "Install generated full skills into Zeni",
+  ]) {
+    if (dogfood.includes(banned)) fail(`Zeni dogfood example preserves removed install contract: ${banned}`);
+  }
 
   const spec = read("skills/linear-spec/SKILL.md");
-  if (spec.includes("linear-review design")) {
-    fail("linear-spec must not reference unsupported linear-review design mode");
-  }
+  if (spec.includes("linear-review design")) fail("linear-spec must not reference unsupported linear-review design mode");
 
   const projectTemplate = read("templates/project.md");
   for (const banned of ["# Lifecycle", "# Документы", "# План задач", "# Ревью-гейт", "# Текущий статус"]) {
-    if (projectTemplate.includes(banned)) {
-      fail(`Project template must not expose workflow dashboard section: ${banned}`);
-    }
+    if (projectTemplate.includes(banned)) fail(`Project template must not expose workflow dashboard section: ${banned}`);
   }
 
   const techSpecTemplate = read("templates/tech-spec.md");
   for (const banned of ["## Skill contracts", "## linear-check design", "## Дизайн linear-check", "## Дизайн linear-review"]) {
-    if (techSpecTemplate.includes(banned)) {
-      fail(`Tech Spec template must not expose workflow mechanics section: ${banned}`);
-    }
+    if (techSpecTemplate.includes(banned)) fail(`Tech Spec template must not expose workflow mechanics section: ${banned}`);
   }
 }
 
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
-validateSyncConsumerBehavior();
+validateLocalInstallBehavior();
+validateProjectConfigBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
 

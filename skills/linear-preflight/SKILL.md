@@ -38,7 +38,7 @@ Inputs to gather:
 - Fresh Linear Project, PRD, Tech Spec, and Issue context.
 - Current branch, worktree status, staged/unstaged changes, and commit state.
 - Local diff against the intended base branch.
-- Consumer config and repo validation commands from `AGENTS.md` or project docs.
+- Project config and repo validation commands from `AGENTS.md` or project docs.
 - Any implementation-start or preflight Linear comments already present.
 
 Workflow:
@@ -49,7 +49,7 @@ Workflow:
 4. Run targeted tests/checks appropriate to the diff. If a check cannot run, report it under `Not checked`.
 5. Run the mandatory `autoreview` gate:
    - Invoke the installed `autoreview` skill/helper. Do not substitute Compound `ce-code-review`, built-in `/review`, ad hoc self-review, reviewer panels, or a hand-written summary for this gate.
-   - Resolve the concrete helper path before running it. Use the consumer-installed helper at `.agents/skills/autoreview/scripts/autoreview` only when that repo explicitly installs it; otherwise use an installed global helper such as `~/.codex/skills/autoreview/scripts/autoreview` or the path documented by the installed `autoreview` skill. This workflow does not vendor `autoreview` into generated consumer installs; if no helper is available, stop with `blocked`. Record the exact command in the certificate.
+   - Resolve the concrete helper path before running it. Use an installed global helper such as `~/.codex/skills/autoreview/scripts/autoreview` or the path documented by the installed `autoreview` skill. This workflow does not vendor `autoreview`; if no helper is available, stop with `blocked`. Record the exact command in the certificate.
    - Choose the helper target using the `autoreview` contract:
      - Dirty local work: first run `<autoreview-helper> --mode local` only for the staged/unstaged/untracked tail, then apply accepted fixes and commit or intentionally leave the branch dirty with `blocked`/`needs-human`.
      - Branch or PR work: run `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
@@ -100,7 +100,7 @@ Rules:
 - Do not call Compound `ce-code-review` for this gate. It is not an acceptable replacement for `autoreview` inside `linear-preflight`.
 - Do not auto-apply broad rewrites, release-sensitive changes, or fixes that the agent cannot defend after reading the relevant code and contracts.
 - Do not silently reject a repeated `autoreview` finding and mark `ready`. If `autoreview` does not return clean, the certificate must be `blocked` or `needs-human`.
-- Keep Linear-facing comments in the consumer config language; use Russian when no consumer config is present.
+- Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include a checked/not-checked boundary. Local tests do not imply browser QA, production smoke, mobile QA, deploy verification, or user acceptance.
 - Do not summarize the certificate away in Linear. A fresh `linear-ship` agent must be able to recover the full certificate from Linear comments or resources.
 

@@ -22,7 +22,7 @@ Read first:
 
 Rules:
 
-- Write Linear Issue content in the consumer config language; use Russian when no consumer config is present.
+- Write Linear Issue content in the project config language; use Russian when no project config is present.
 - Create one Issue by default.
 - Build the Issue from Project plus PRD plus Tech Spec, or explicit no-spec exception.
 - Include a `Прочитать сначала` / Read first section with Project, PRD, Tech Spec, and supporting docs or code paths.
