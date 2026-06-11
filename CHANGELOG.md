@@ -6,6 +6,21 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-06-12
+
+### Added
+
+- `linear-orchestrate`: control-plane orchestrator skill — one session per product drives Linear projects and Issues through delegated worker sessions (`linear-implement` → `linear-preflight` → `linear-ship` per Issue), answers worker technical questions autonomously, and escalates only product decisions (scope, design, product risk, deploy approval per `deployApproval`) to the user as prepared decision briefs.
+- `references/orchestration.md`: orchestration policy — roles, stage ownership, decision authority, worker transports (Claude Code Desktop chips, Codex threads, background-subagent fallback), mailbox and ledger contract, monitoring protocol, and resume procedure.
+- `templates/orchestrator-dispatch.md` (worker spawn prompt with context snapshot and AFK contract), `templates/orchestrator-brief.md` (Russian decision-brief and status-update shapes), `templates/orchestrator-report.md` (mailbox report JSON and ledger entry shapes).
+- Orchestrated-mode routing: `references/questioning.md` gains a `linear-orchestrate` question stage and an `## Orchestrated Mode` section; `references/lifecycle.md` gains an `## Orchestration` section with explicit Required/Forbidden lists.
+- Validator pins for all new contracts in `scripts/validate-workflow.mjs` (now 13 skills checked), including the strict single-Linear-writer rule: workers never write to Linear and queue every stage-required mutation through `linear_mutations_pending`.
+- Design spec `docs/superpowers/specs/2026-06-11-linear-orchestrate-design.md` and executor plan `plans/011-linear-orchestrate.md`.
+
+### Changed
+
+- `README.md` and `AGENTS.md` document the orchestrator role and the control-plane-only design rule; stage ownership of existing skills is unchanged.
+
 ## [0.13.0] - 2026-06-11
 
 ### Added
