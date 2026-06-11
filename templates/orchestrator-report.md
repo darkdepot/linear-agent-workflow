@@ -1,7 +1,9 @@
 # Worker Report And Ledger Shapes
 
-Machine-facing shapes for the `linear-orchestrate` mailbox. English only; no
-secrets in either shape.
+Machine-facing shapes for the `linear-orchestrate` mailbox. The worker report
+JSON is English only. Ledger entries are English except the fixed domain term
+«Решил сам:» / `решил сам` from `references/orchestration.md`. No secrets in
+either shape.
 
 ## Worker Report
 
@@ -11,7 +13,7 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
 {
   "issue": "<ISSUE-KEY>",
   "stage": "<linear-implement | linear-preflight | linear-ship>",
-  "status": "<implemented-needs-preflight | ready | green | blocked | needs-decision | scope-drift-needs-handoff>",
+  "status": "<implemented-needs-preflight | ready | green | blocked | needs-decision | needs-human | drift-candidate | timed-out | scope-drift-needs-handoff>",
   "branch": "<branch>",
   "changed_files": ["<path>"],
   "tests": { "run": "<commands>", "result": "<outcome>" },
@@ -25,12 +27,15 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
 
 Status semantics:
 
-- Stage-terminal statuses reuse the stage skill's exit statuses:
+- Stage-terminal statuses reuse the stage skill's exit statuses verbatim:
   `implemented-needs-preflight` (implement), `ready` (preflight), `green`
-  (ship green certificate), `blocked`, `scope-drift-needs-handoff`.
-- `needs-decision` is mailbox-only: the worker is paused on a question and has
-  included its own recommendation. The orchestrator answers (technical) or
-  escalates (Always-ask) and then continues the same worker.
+  (ship green certificate), `blocked`, `needs-human`, `drift-candidate`
+  (preflight), `timed-out` (ship), `scope-drift-needs-handoff`. Report the
+  stage's own status — the orchestrator decides whether to answer, escalate
+  to the user, or respawn.
+- `needs-decision` is mailbox-only: the worker is paused mid-stage on a
+  question and has included its own recommendation. The orchestrator answers
+  (technical) or escalates (Always-ask) and then continues the same worker.
 
 ## Ledger Entry
 

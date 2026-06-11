@@ -23,8 +23,10 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 
 ## AFK Contract
 
-- Do not ask the user. On any gate or question: write a mailbox report with
-  status `needs-decision`, include your own recommendation, and stop.
+- Do not ask the user. For a mid-stage question that blocks progress: write a
+  mailbox report with status `needs-decision`, include your own
+  recommendation, and stop. Report stage-terminal exits (including
+  `needs-human` and `drift-candidate`) with the stage's own status verbatim.
 - One Issue only; no sub-workers; do not manage other sessions; do not touch
   files owned by other Issues.
 - Do not block on Linear. When Linear is unavailable, queue the mutation text

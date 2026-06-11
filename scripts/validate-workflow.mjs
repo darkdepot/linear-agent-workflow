@@ -252,6 +252,8 @@ function validateTemplateSections() {
       "\"recommendation\"",
       "\"linear_mutations_pending\"",
       "needs-decision",
+      "needs-human",
+      "drift-candidate",
       "## Ledger Entry",
     ],
   };
