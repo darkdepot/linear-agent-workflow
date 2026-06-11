@@ -193,3 +193,28 @@ Forbidden:
 - Running repo documentation workflow; repo docs belong before ship green.
 - Running interactive `/learn prune`, `/learn export`, or `/learn stats` automatically.
 - Inventing a merge/deploy path when `Deploy workflow` is missing or `None`.
+
+## Orchestration
+
+Optional mode: `linear-orchestrate` runs one control-plane session per
+product and sequences the stages above through delegated workers.
+
+Required:
+
+- Gate ordering of this lifecycle preserved verbatim.
+- `linear-idea`, discovery, `linear-handoff`, and `linear-deploy` run in the
+  orchestrator session; `linear-implement`, `linear-preflight`, and
+  `linear-ship` run in one worker session per Issue.
+- All Linear mutations during orchestration flow through the orchestrator
+  (single writer); workers queue unapplied mutations in mailbox reports.
+- Always-ask decisions (scope, design, product risk, deploy per policy) reach
+  the user as immediate decision briefs.
+
+Forbidden:
+
+- Skipping or weakening any gate above because an orchestrator is present.
+- The orchestrator performing implement/preflight/ship work itself.
+- Workers orchestrating: spawning sub-workers or managing other sessions.
+- Moving stage ownership: Delivery Start stays with `linear-implement`, PR
+  lifecycle with `linear-ship`, merge/deploy and closeout with
+  `linear-deploy`.

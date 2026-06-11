@@ -861,6 +861,9 @@ function validateAntiPatterns() {
   ]) {
     if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
   }
+  assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
+  assertIncludes("references/questioning.md", "## Orchestrated Mode");
+  assertIncludes("references/lifecycle.md", "## Orchestration");
 }
 
 validateSkills();

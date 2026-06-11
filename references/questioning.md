@@ -48,6 +48,7 @@ Question stages:
 - `linear-handoff`: ask only for package approval, unresolved product decisions, or accepted review fixes.
 - `linear-review`: ask nothing by default; return findings and options. If a required artifact is unavailable, return `blocked`.
 - `linear-implement`: ask only for implementation-start approval or a blocker involving product, UX, business, external access, dirty worktree, or risk acceptance.
+- `linear-orchestrate`: ask only for Always-ask escalations (scope, design/UX, product risk, deploy approval per the configured policy); answer worker technical questions autonomously and record them under «Решил сам:».
 - `linear-preflight`: ask only when local readiness cannot proceed because of dirty-worktree ownership, material drift, missing verification access, or commit/branch risk.
 - `linear-ship`: ask only when feedback requires product, UX, business, scope, or risk acceptance decisions.
 - `linear-deploy`: ask only for deploy approval per the configured deploy-approval policy, or a delivery-policy/risk-acceptance decision.
@@ -57,3 +58,15 @@ Output:
 - Keep questions concise.
 - Include the recommendation and why it is the safest workflow choice.
 - Accept custom user answers when predefined options do not fit.
+
+## Orchestrated Mode
+
+When a stage skill runs inside a worker dispatched by `linear-orchestrate`:
+
+- The worker never asks the user. Every question becomes a mailbox report
+  with the worker's own recommendation (`needs-decision`).
+- The orchestrator answers technical questions itself and records them under
+  «Решил сам:» in the ledger.
+- Always-ask questions still reach the user — through the orchestrator,
+  immediately and interactively, as a prepared decision brief. The Always-ask
+  list above is unchanged; only the routing changes.
