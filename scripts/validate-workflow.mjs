@@ -15,6 +15,7 @@ const EXPECTED_SKILLS = [
   "linear-idea",
   "linear-implement",
   "linear-issue",
+  "linear-orchestrate",
   "linear-preflight",
   "linear-prd",
   "linear-project",
@@ -836,6 +837,27 @@ function validateAntiPatterns() {
   }
   if (!idea.includes("BLOCKED / INCOMPLETE - linear-idea cannot complete because")) {
     fail("linear-idea blocked message must preserve English marker line");
+  }
+
+  const orchestrate = read("skills/linear-orchestrate/SKILL.md");
+  for (const required of [
+    "control plane",
+    "never implement, edit code, fix CI, or rewrite PRs",
+    "Single Linear writer",
+    "One Issue per worker",
+    "no-sub-delegation",
+    "scope-drift-needs-handoff",
+    "Do not steer an actively progressing worker",
+    "«Решил сам:»",
+    "references/orchestration.md",
+    "templates/orchestrator-dispatch.md",
+    "templates/orchestrator-brief.md",
+    "templates/orchestrator-report.md",
+    "deployApproval",
+    "~/.linear-agent-workflow/orchestrator/<product>/",
+    "`linear-implement` owns Delivery Start",
+  ]) {
+    if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
   }
 }
 
