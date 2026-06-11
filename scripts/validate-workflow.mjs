@@ -171,7 +171,7 @@ function validateTemplateSections() {
       "## Текущий процесс",
       "## Требования",
       "## Примеры приемки",
-      "## Намерение проверки поведения",
+      "## Что должна доказать проверка",
       "## Критерии успеха",
       "## Допущения",
       "## Открытые вопросы",
@@ -181,8 +181,8 @@ function validateTemplateSections() {
       "## Исходные требования",
       "## Контракты и границы",
       "## Единицы реализации",
-      "## Системное влияние",
-      "## Режимы отказа",
+      "## Влияние на остальную систему",
+      "## Что может сломаться и как защищаемся",
       "## Валидация",
       "## Релиз и откат",
     ],
@@ -205,7 +205,7 @@ function validateTemplateSections() {
       "Ревью Linear: <ready|advisory-ready|needs-fixes|blocked>",
       "Блокирующие замечания:",
       "Предложенные исправления:",
-      "Решения:",
+      "Нужно твоё решение:",
       "К сведению:",
       "Do not use `PASS`, `FAIL`, or `BLOCKED` as the review status.",
     ],
@@ -218,6 +218,14 @@ function validateTemplateSections() {
       "Ship certificate: <found/missing/stale>",
       "Deploy workflow:",
       "Learnings recorded:",
+    ],
+    "templates/check-output.md": [
+      "Смысл:",
+      "Чего не хватает:",
+      "Расхождения:",
+      "Следующий unblock:",
+      "Нарушение контракта:",
+      "Как починить:",
     ],
   };
 
@@ -354,6 +362,21 @@ function validateProjectConfigBehavior() {
     }
     if (config.workflows.ship !== "gstack ship") fail("project-config must migrate Ship workflow");
     if (config.workflows.deploy !== "gstack land-and-deploy") fail("project-config must migrate Deploy workflow");
+    if (!("deployApproval" in config)) fail("project-config must write deployApproval field");
+
+    config.deployApproval = "risky-only";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
+    config.deployApproval = "monthly";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    expectCommandFailure(
+      "project-config --check invalid deployApproval fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "deployApproval"
+    );
+    config.deployApproval = "always";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
     for (const removed of [
       ".agents/linear-workflow.config.md",
@@ -401,6 +424,7 @@ function validateDocsAndExamples() {
       "node scripts/project-config.mjs",
       "Review/check split",
       "Delivery ladder",
+      "Autonomy with transparency",
     ],
     "AGENTS.md": [
       "`linear-review` = report-only quality/risk review",
@@ -434,11 +458,17 @@ function validateDocsAndExamples() {
       "`decisions_carried_forward`",
       "`confidence_boundary`",
     ],
-    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:"],
+    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:", "Tiny Output Profile"],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
+    "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
     "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
+    "references/questioning.md": [
+      "`linear-deploy`: ask only for deploy approval",
+      "## Autonomy Defaults",
+      "/design-html",
+    ],
     "references/versioning.md": [
       "`Autoreview helper`",
       "`Artifact roots`",
@@ -479,11 +509,23 @@ function validateAntiPatterns() {
   ]) {
     if (!handoff.includes(required)) fail(`linear-handoff must expose artifact intake field: ${required}`);
   }
-  if (!handoff.includes("Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`")) {
-    fail("linear-handoff final response must carry artifact intake summary fields");
+  if (!handoff.includes("Artifact intake, one Russian sentence")) {
+    fail("linear-handoff final response must carry artifact intake one-sentence Russian rendering");
+  }
+  if (!handoff.includes("The structured intake record")) {
+    fail("linear-handoff final response must reference the structured intake record location");
   }
   if (!handoff.includes("Do not move the Project to Delivery from `linear-handoff`")) {
     fail("linear-handoff must not own Delivery Start");
+  }
+  if (!handoff.includes("это одновременно approval на старт кода")) {
+    fail("linear-handoff option 2 must label the bundled approval");
+  }
+  if (!handoff.includes("«Решил сам:»")) {
+    fail("linear-handoff must include «Решил сам:» ledger in package approval UX");
+  }
+  if (!handoff.includes("Always-ask list")) {
+    fail("linear-handoff rules must reference the Always-ask list in questioning.md");
   }
 
   const implement = read("skills/linear-implement/SKILL.md");
@@ -496,6 +538,12 @@ function validateAntiPatterns() {
     "Implementation workflow",
     "implemented-needs-preflight",
     "scope-drift-needs-handoff",
+    "Implementation-start approval UX:",
+    "Что это разрешает: Project переходит в Delivery",
+    "post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule",
+    "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
+    "gstack-learnings-search",
+    "Учтённые learnings:",
   ]) {
     if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
   }
@@ -532,6 +580,10 @@ function validateAntiPatterns() {
     "gstack-learnings-log",
     "Do not run `/learn prune`, `/learn export`, `/learn stats`",
     "Do not accept `Land workflow` as a compatibility alias",
+    "deployApproval",
+    "Готов деплоить",
+    "gstack-learnings-search",
+    "Learnings consulted:",
   ]) {
     if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }
@@ -565,6 +617,8 @@ function validateAntiPatterns() {
     "Do not cap the review loop at an arbitrary round count",
     "Do not call Compound `ce-code-review` for this gate",
     "Do not silently reject a repeated `autoreview` finding and mark `ready`",
+    "Decision needed: <none | точное решение по-русски>",
+    "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
     if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
   }
@@ -613,6 +667,29 @@ function validateAntiPatterns() {
   const techSpecTemplate = read("templates/tech-spec.md");
   for (const banned of ["## Skill contracts", "## linear-check design", "## Дизайн linear-check", "## Дизайн linear-review"]) {
     if (techSpecTemplate.includes(banned)) fail(`Tech Spec template must not expose workflow mechanics section: ${banned}`);
+  }
+
+  // New dual-layer comment contract pins (plan 005)
+  if (!preflight.includes("<1-2 предложения по-русски: итог и следующий шаг>")) {
+    fail("linear-preflight human comment shape missing Russian human-lead placeholder");
+  }
+  if (!preflight.includes("The Russian human lead (1-2 sentences) is required")) {
+    fail("linear-preflight must require the Russian human lead in Linear comment");
+  }
+
+  if (!deploy.includes("Выкатили: <что получили пользователи>; проверено на <среда>.")) {
+    fail("linear-deploy closeout shape missing required product-outcome Russian lead");
+  }
+  if (!deploy.includes("The Russian product-outcome lead is required in Linear")) {
+    fail("linear-deploy must require the Russian product-outcome lead");
+  }
+
+  const idea = read("skills/linear-idea/SKILL.md");
+  if (!idea.includes("Выйди из Plan Mode (или перезапусти /linear-idea в обычном режиме) — я создам Project в статусе Idea.")) {
+    fail("linear-idea blocked message missing Russian unblock instruction");
+  }
+  if (!idea.includes("BLOCKED / INCOMPLETE - linear-idea cannot complete because")) {
+    fail("linear-idea blocked message must preserve English marker line");
   }
 }
 

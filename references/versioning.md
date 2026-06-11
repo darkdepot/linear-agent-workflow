@@ -86,6 +86,7 @@ Required fields:
 - `artifactRoots`: array of narrow repo-relative or absolute artifact roots. Use `[]` when none exist.
 - `workflows`: object with `implementation`, `ship`, `documentation`, `reviewFeedback`, and `deploy`.
 - `prerequisites.autoreviewHelper`: must be `true`.
+- `deployApproval` (optional): deploy approval policy — `"always"` (default), `"risky-only"` (approval required for `standard`, `deep`, and `risky` risk classes; only `tiny` proceeds without asking), or `"never"`. When absent, the effective value is `"always"`.
 
 Workflow fields:
 
@@ -133,7 +134,8 @@ Example Zeni project config:
   },
   "prerequisites": {
     "autoreviewHelper": true
-  }
+  },
+  "deployApproval": "always"
 }
 ```
 

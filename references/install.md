@@ -80,7 +80,8 @@ The project config is JSON:
   },
   "prerequisites": {
     "autoreviewHelper": true
-  }
+  },
+  "deployApproval": "always"
 }
 ```
 
@@ -116,6 +117,7 @@ The JSON config should record:
 - `workflows.reviewFeedback`: review feedback workflow for `linear-ship`, or `null`.
 - `workflows.deploy`: deploy workflow for `linear-deploy`, or `null`.
 - `prerequisites.autoreviewHelper`: must be `true`; `linear-preflight` blocks if the helper is unavailable.
+- `deployApproval` (optional): deploy approval policy — `"always"` (default), `"risky-only"` (approval required for `standard`, `deep`, and `risky` risk classes; only `tiny` proceeds without asking), or `"never"`.
 
 ## Checks
 

@@ -110,6 +110,7 @@ Required:
 - Implementation starts from the approved Issue(s), not from raw discovery output.
 - `linear-implement` verifies or obtains implementation-start approval, moves the Project to Delivery, runs or reports `linear-check delivery`, records the start comment, and selects the implementation engine.
 - `linear-implement` exits as `implemented-needs-preflight`, `blocked`, `scope-drift-needs-handoff`, or `needs-human`.
+- Prior operational learnings consulted through `gstack-learnings-search` when the helper is available, advisory only.
 
 Forbidden:
 
@@ -183,6 +184,7 @@ Required:
 - Capture merged SHA, deploy target, and deploy verification evidence.
 - Run or report `linear-check post-ship` after deploy evidence is known.
 - Move the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
+- Consult prior operational learnings through `gstack-learnings-search` before delegating merge/deploy, advisory only.
 - Record durable operational learnings through `gstack-learnings-log` when they would save future time.
 
 Forbidden:

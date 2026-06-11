@@ -22,14 +22,15 @@ Workflow:
 
 1. Confirm this runtime can create or update a Linear Project.
 2. Inspect only the minimal repo and Linear context needed to ask better idea-shaping questions.
-3. Ask 2-4 high-leverage AskQuestion-style questions.
+3. Ask 1-3 high-leverage AskQuestion-style questions — only those that shape direction: outcome, boundary, or audience. Resolve everything else yourself and record it as explicit assumptions in the strengthened brief, so the user corrects by reading, not by interrogation.
 4. Each question must include answer options, one recommended option, and a short reason for the recommendation.
 5. Accept custom user answers when options do not fit.
 6. Build a strengthened brief from the raw idea and answers.
 7. Use `linear-project` to create or update a Project in `Idea`.
 8. Recommend `/office-hours` or `/brainstorming` and explain why.
-9. Run or report `linear-check idea`.
-10. Stop immediately.
+9. Record a short Russian comment on the Linear Project (not just in chat) that includes the chosen discovery route (`/office-hours` или `/brainstorming`) and a one-line reason — so the route survives the chat session and the operator can recover the recommended next step from Linear alone.
+10. Run or report `linear-check idea`.
+11. Stop immediately.
 
 User-facing narration:
 
@@ -91,8 +92,13 @@ Plan Mode and permission boundary:
 ```text
 BLOCKED / INCOMPLETE - linear-idea cannot complete because creating/updating a Linear Project in Idea is mandatory, and this runtime/mode did not allow the Linear mutation.
 
-Exit Plan Mode or rerun linear-idea in execution/default mode, then create/update the Project in Idea.
-No PRD, Tech Spec, Issue, implementation plan, ExecPlan, or code was created.
+Работа не завершена. Project в Linear не создан.
+
+Уже durable:
+- Ничего. Никаких артефактов создано не было.
+
+Следующий unblock:
+- Выйди из Plan Mode (или перезапусти /linear-idea в обычном режиме) — я создам Project в статусе Idea.
 ```
 
 Context inspection guidance:

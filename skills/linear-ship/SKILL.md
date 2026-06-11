@@ -49,37 +49,39 @@ User-facing ship status UX:
   - `needs-human`: a specific decision is needed; name the decision, not only the verdict.
   - `blocked`: the workflow cannot proceed because required context, auth, tools, PR state, or Linear state is unavailable.
   - `timed-out`: waiting did not settle; name what is still pending.
-- When the PR is green, say: "PR is ready for `linear-deploy`; I stopped before merge/deploy because that belongs to the deploy workflow."
-- Make code review state understandable. Include who or what reviewed, what was found, what was fixed, what remains unresolved, CI state, and whether the PR is safe to deploy from the review perspective.
-- If a resolver or documentation workflow pushed fixes, include the latest head SHA and say that review state was checked again after that push.
-- For bug or performance work, include the original repro or baseline, the fix proof, and the regression proof or documented test-seam gap.
-- Include a compact "checked / not checked" boundary. If manual browser QA, production smoke, mobile QA, deploy verification, or other surfaces did not run, say so plainly.
-- Do not dump phase names, git directives, or internal workflow telemetry unless they materially explain the status.
-- End with concrete next choices when a human decision is needed.
-- Decision choices must explain consequences and include a recommendation when review/CI state makes one path clearly preferable.
+- Для `green`: «PR готов к `linear-deploy`; `linear-ship` не мержил и не деплоил.»
+- Для `needs-human` при зелёном ревью/CI, но с явным deploy approval: «PR готов к деплою, жду твоего подтверждения.» Не звучит как блокер.
+- Для `needs-human` при нерешённом ревью-фидбеке: «Нужно решение по ревью-фидбеку» и список конкретных нерешённых пунктов.
+- Для `blocked`: назови отсутствующий пресреквизит и точный следующий unblock-шаг.
+- Для `timed-out`: назови, что не устаканилось, и известно ли, что PR в целом безопасен.
+- Сделай статус ревью понятным. Укажи кто/что ревьюил, что нашли, что починили, что не решено, статус CI, безопасен ли PR с точки зрения ревью.
+- Если resolver или documentation workflow пушили исправления, укажи точную версию кода после этого пуша и что ревью-статус был перепроверен.
+- Для bug- и performance-работ: оригинальное воспроизведение или базовый замер, доказательство исправления и регрессионного теста или задокументированного gap.
+- Включи компактную границу «проверено / не проверено». Если ручное browser QA, production smoke, mobile QA, верификация деплоя или другие поверхности не запускались — скажи прямо.
+- Не сваливай фазовые имена, git-директивы или внутреннюю workflow-телеметрию, если они не объясняют статус.
+- Заверши конкретными вариантами действий, когда нужно решение человека.
+- Варианты должны объяснять последствия и содержать рекомендацию, когда состояние ревью/CI делает один путь явно предпочтительным.
 
-Required review status shape when a PR exists:
+Статус ревью при наличии PR:
 
 ```text
-Review status:
-- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <local readiness outcome>.
-- Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
-- Documentation workflow: <run/skipped/not configured>; <head changed yes/no + outcome>.
+Статус ревью:
+- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <кратко о локальной готовности>.
+- Кто/что ревьюил: <pre-ship review + внешний авто-ревьюер PR — run/skipped/not configured; итог>.
+- Documentation workflow: <run/skipped/not configured>; <изменил ли head — yes/no + итог>.
 - Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>.
-- GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
-- Fixes applied: <none or concise list with commit SHA>.
-- Unresolved review threads: <count/status>.
-- Merge state: <clean/blocked/conflict/unknown>.
+- Что нашли и что починили: <краткий список исправлений или «нет»>.
+- Нерешённые треды: <количество/статус>.
 
-CI status:
-- <blocking check>: <state>.
-- <other relevant checks>: <state or "no blocking checks">.
+Проверки CI:
+- <блокирующая проверка>: <состояние>.
+- <прочие релевантные проверки>: <состояние или «блокирующих нет»>.
 
 Проверено:
-- <review/check/Linear state actually inspected>.
+- <ревью/проверки/Linear-статус — что реально смотрели>.
 
 Не проверено:
-- <manual QA/prod/browser/mobile/deploy surface that did not run>.
+- <ручное QA/прод/браузер/мобайл/деплой — что не запускали>.
 ```
 
 When a feedback loop ran, include a short timeline:
@@ -97,7 +99,11 @@ Review timeline:
 
 Green certificate shape:
 
+When recording this certificate as a Linear comment, open with the Russian human lead above the machine block:
+
 ```text
+<1-2 предложения по-русски: итог и следующий шаг — e.g. «PR готов к деплою: ревью чистое, CI зелёный. Дальше — linear-deploy.»>
+
 linear-ship green certificate
 Ship: green
 Issue(s): <keys>
@@ -114,6 +120,14 @@ Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod/deploy surfaces not inspected>
 Next: linear-deploy
 ```
+
+The Russian human lead is required in Linear; the machine core below the marker is never translated or summarized away.
+
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
+
+Exit comment rule:
+
+For `needs-human`, `blocked`, and `timed-out` ship endings, post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. For `needs-human` caused by unresolved review feedback, the comment must include the exact question as required by `references/ship-feedback-loop.md` — reference that rule rather than duplicating it here.
 
 Rules:
 

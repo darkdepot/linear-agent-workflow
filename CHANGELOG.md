@@ -6,6 +6,31 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-11
+
+### Added
+
+- Add `scripts/verify.mjs` one-command verification (range-aware whitespace check in CI) and a GitHub Actions workflow that runs it on every PR.
+- Add `deployApproval` config policy (`always` default / `risky-only` / `never`): `linear-deploy` now defines when to ask, the Russian ask shape, and a durable approval record bound to the PR number and head SHA; stale approvals are treated as absent. Deploy approval is never a ship gate.
+- Add an implementation-start approval prompt shape to `linear-implement` («что это разрешает / чего НЕ разрешает»); handoff package options now name which approval(s) they grant.
+- Add Autonomy Defaults to `references/questioning.md`: agents decide non-contested choices themselves and surface them as «Решил сам» in the handoff package; scope boundaries, issue slicing, risk acceptance, and design decisions always go to the user, and visual decisions are presented through `/design-html` variants.
+- Add Linear exit comments for every non-ready stop (blocked / needs-human / scope-drift / timed-out), a `Decision needed:` field in the preflight certificate, a Tiny Output Profile for `tiny`-risk work, and a Boundary Delta Rule against «Проверено/Не проверено» fatigue.
+- Add learnings read-back: `linear-implement` and `linear-deploy` consult `gstack-learnings-search` (advisory) before work, closing the loop that previously only wrote learnings at deploy.
+- Add `plans/` — the advisor audit record: executed improvement plans, verified findings, and rejected-findings rationale.
+
+### Changed
+
+- Linear machine blocks became dual-layer: certificates and the deploy closeout posted to Linear now open with 1-2 Russian human sentences above the byte-stable machine core; the deploy closeout leads with the shipped product outcome. Certificate recovery rule documented (latest marker comment wins).
+- Russified the user-facing output templates: check output («Смысл», «Следующий unblock»), review report («Коротко» first, «Нужно твоё решение:», translated risk/gate values), ship output (telemetry moved to the internal summary, translated next steps), deploy say-strings; added risk/gate and tooling glossaries to `references/human-friendly-output.md`.
+- Humanized the handoff chat final: artifact intake is one Russian sentence; the structured snake_case record moved to the package-approval Linear comment.
+- Humanized Linear documents: PRD template merged three overlapping operator sections (16 → 14 sections), calque headings renamed to natural Russian, R/AE references carry Russian slugs, and Issue `AFK`/`HITL` values carry a Russian gloss.
+- `linear-idea` now asks 1-3 direction-shaping questions and records the rest as explicit assumptions; its blocked message keeps the English marker line with a Russian blocked-shape body; the chosen discovery route is persisted as a Project comment.
+
+### Fixed
+
+- `project-config.mjs --write` backfills `deployApproval` into existing JSON configs; invalid values are rejected with fixture coverage in `validate-workflow.mjs`.
+- `verify.mjs --help` exits 0; duplicate file reads removed in `validate-workflow.mjs`; check-output template labels are now validator-pinned.
+
 ## [0.11.0] - 2026-06-10
 
 ### Added

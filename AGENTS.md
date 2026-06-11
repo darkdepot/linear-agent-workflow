@@ -45,5 +45,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 Run before finishing changes:
 
 ```bash
-git diff --check
+node scripts/verify.mjs
 ```
+
+This includes `git diff --check` and all artifact and workflow checks.

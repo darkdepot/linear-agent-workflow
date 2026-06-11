@@ -29,13 +29,24 @@ Workflow:
 2. `prepare`: read the latest `linear-ship green certificate` from Linear comments or resources. If no certificate exists, route to `linear-ship`.
 3. `prepare`: verify the PR URL/number and current PR head SHA match the certificate. If the head changed, route back to `linear-ship` for review stabilization.
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
-5. `approve`: if deploy requires explicit user approval and no approval is recorded, stop with `needs-human`.
-6. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
-7. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
-8. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
-9. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
-10. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
-11. Return the concise report in `templates/deploy-output.md`.
+5. `prepare`: consult prior operational learnings with `gstack-learnings-search --type operational --limit 10` when the helper is available; surface anything relevant to merge/deploy (deploy config quirks, merge queue behavior) before delegating. Advisory only.
+6. `approve`: read `deployApproval` from `.agents/linear-workflow.config.json` (absent → `"always"`). Apply the policy:
+   - `"always"`: require a recorded approval for every deploy. Approval is recorded as a Russian Linear comment on the Issue («Деплой одобрен: <кем/когда>; PR #<n>, head `<sha>`») or given explicitly in the current session. An in-session approval must be recorded as that Linear comment before the `deploy` step runs, so the authorization is always recoverable from Linear by a fresh agent. An approval is valid only when its PR number and head SHA match the current PR head; an approval recorded for a different PR or an older head is stale — treat it as absent. If no valid approval is recorded and none is given in the current session, stop with `needs-human` using the ask shape below.
+   - `"risky-only"`: require approval only when the Issue risk class is `standard`, `deep`, or `risky`. For `tiny` risk proceed without asking. If the risk class cannot be determined from the Issue, require approval; never default to `tiny`.
+   - `"never"`: proceed without asking; report the policy in the deploy output.
+   - If approval is needed but not yet recorded, present the following ask:
+     ```text
+     Готов деплоить <Issue key>: PR #<n> merge в <target>.
+     Что произойдёт: <merge/deploy путь, среда>. Откат: <как откатить>.
+     1. Деплоим — рекомендую: ревью и CI зелёные.
+     2. Подождать — PR останется готовым, ничего не произойдёт.
+     ```
+7. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
+8. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
+9. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
+10. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
+11. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
+12. Return the concise report in `templates/deploy-output.md`.
 
 Deploy workflow config:
 
@@ -49,10 +60,16 @@ Learning capture:
 - Record only durable discoveries such as deploy config quirks, merge queue behavior, branch cleanup pitfalls, review-loop facts, or repo-specific verification commands.
 - Do not run `/learn prune`, `/learn export`, `/learn stats`, or any interactive learning-management command automatically.
 - Include `Learnings recorded: <none|keys>` in the deploy report and Linear closeout comment.
+- Consult before writing: prior learnings are read in `prepare`; record only discoveries that are new relative to what was consulted.
 
 Deploy closeout shape:
 
+When recording this closeout as a Linear comment, open with the Russian human lead above the machine block. The first Russian sentence must state the shipped product outcome and verification environment:
+
 ```text
+Выкатили: <что получили пользователи>; проверено на <среда>.
+<опционально: одно дополнительное предложение — итог или следующий шаг>
+
 linear-deploy closeout
 Deploy: <deployed|blocked|needs-human|timed-out>
 Issue(s): <keys>
@@ -65,9 +82,12 @@ Deploy verification: <passed/failed/unavailable + evidence>
 Post-ship check: <PASS/FAIL/BLOCKED + meaning>
 Linear closeout: <Done/not done + reason>
 Learnings recorded: <none/list>
+Learnings consulted: <none/keys/helper unavailable>
 Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod surfaces not inspected>
 ```
+
+The Russian product-outcome lead is required in Linear; the machine core below the marker is never translated or summarized away.
 
 Verdicts:
 
@@ -75,6 +95,8 @@ Verdicts:
 - `needs-human`: explicit deploy approval, product/risk acceptance, external access, or delivery policy decision is required.
 - `blocked`: required config, tools, auth, certificate, PR state, deploy target, or Linear context is unavailable.
 - `timed-out`: merge, deploy, or deploy verification did not settle within the configured wait.
+
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
 
 Rules:
 

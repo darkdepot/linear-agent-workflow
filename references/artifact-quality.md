@@ -61,7 +61,7 @@ Required quality:
 
 Required quality:
 
-- Starts with the stable marker `linear-preflight certificate` when recorded in Linear.
+- Contains the stable marker line `linear-preflight certificate` when recorded in Linear, preceded only by the short Russian human lead (1-2 sentences). Recovery rule: the most recent Linear comment or resource containing the marker is the authoritative certificate; older ones are superseded. Never quote a certificate marker inside other comments.
 - States one status: `ready`, `blocked`, `drift-candidate`, or `needs-human`.
 - Names the Linear Issue(s), branch, and commit state.
 - Summarizes changed files without copying the full diff.
@@ -78,7 +78,7 @@ It must not claim `linear-review pre-ship`, `linear-check pre-ship`, PR creation
 
 Required quality:
 
-- Starts with the stable marker `linear-ship green certificate` when recorded in Linear.
+- Contains the stable marker line `linear-ship green certificate` when recorded in Linear, preceded only by the short Russian human lead (1-2 sentences). Recovery rule: the most recent Linear comment or resource containing the marker is the authoritative certificate; older ones are superseded. Never quote a certificate marker inside other comments.
 - States `Ship: green`.
 - Names the Linear Issue(s), PR number/URL, and reviewed head SHA.
 - References the preflight certificate and pre-ship review outcome.

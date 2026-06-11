@@ -7,39 +7,32 @@ Default user-facing response:
 
 PR: [#<number>](<url>)
 Linear Issue: `<key>` - <current Linear status>
-Latest head SHA: `<sha>`
 
-Review status:
-- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <local readiness outcome>.
-- Pre-ship review: <run/skipped/not configured>; <blocking outcome>.
-- Documentation workflow: <run/skipped/not configured>; <head changed yes/no + outcome>.
+Статус ревью:
+- Preflight: <ready/blocked/drift-candidate/needs-human/not run>; <кратко о локальной готовности>.
+- Кто/что ревьюил: <pre-ship review + внешний авто-ревьюер PR — run/skipped/not configured; итог>.
+- Documentation workflow: <run/skipped/not configured>; <изменил ли head — yes/no + итог>.
 - Bug/perf proof: <not applicable or original symptom/baseline + fix proof + regression proof/gap>.
-- GitHub/Greptile review: <run/unavailable/not configured>; <findings outcome>.
-- Fixes applied: <none or concise list with commit SHA>.
-- Unresolved review threads: <count/status>.
-- Merge state: <clean/blocked/conflict/unknown>.
+- Что нашли и что починили: <краткий список исправлений или «нет»>.
+- Нерешённые треды: <количество/статус>.
 
-CI status:
-- <blocking check>: <state>.
-- <other relevant checks>: <state or "no blocking checks">.
-
-Green certificate:
-- `linear-ship green certificate`: <recorded/not recorded + reason>.
-- Next: <linear-deploy | needs-human | blocked>.
+Проверки CI:
+- <блокирующая проверка>: <состояние>.
+- <прочие релевантные проверки>: <состояние или «блокирующих нет»>.
 
 Проверено:
-- <Linear/PR/review/check/docs state actually inspected>.
+- <Linear/PR/ревью/проверки/docs — что реально смотрели>.
 
 Не проверено:
-- <manual QA/browser/prod/mobile/deploy surface/etc. that did not run, or `none known`>.
+- <ручное QA/браузер/прод/мобайл/деплой и т.д. — что не запускали, или `none known`>.
 
-Linear status:
+Статус в Linear:
 - <issue/project sync outcome>.
 - <comments/resources/status updates outcome>.
 
 Что дальше:
-1. <recommended next action, normally `linear-deploy` when green>.
-2. <alternative next action, when useful>.
+1. <рекомендуемый следующий шаг, обычно `linear-deploy` при зелёном>.
+2. <альтернативный следующий шаг, когда полезно>.
 ```
 
 Optional internal summary for logs or Linear comments:
@@ -49,17 +42,20 @@ Linear ship verdict: <green|needs-human|blocked|timed-out>
 
 PR:
 Linear Issue:
+Latest head SHA:
 Phases run:
 Rounds run:
-Latest head SHA:
 Checks status:
 Greptile status:
 Review status:
 Documentation workflow:
 Resolver used:
 Commits pushed:
-Green certificate:
+Fixes applied: <none or concise list with commit SHA>
+Merge state: <clean/blocked/conflict/unknown>
 Unresolved feedback:
+linear-ship green certificate: <recorded/not recorded + reason>
+Next: <linear-deploy | needs-human | blocked>
 Notes:
 ```
 
@@ -72,8 +68,8 @@ Verdicts:
 
 Verdict-to-human translation:
 
-- For `green`, say "PR is ready for `linear-deploy`; it has not been merged or deployed by `linear-ship`."
-- For `needs-human` with green review/checks but explicit deploy approval required, say "PR is ready for deploy, waiting for your approval." Do not make it sound blocked.
-- For `needs-human` with unresolved review feedback, say "Decision needed on review feedback" and list the concrete unresolved items.
-- For `blocked`, name the missing prerequisite and the exact next unblock step.
-- For `timed-out`, name what did not settle and whether the PR is otherwise safe or unknown.
+- Для `green`: «PR готов к `linear-deploy`; `linear-ship` не мержил и не деплоил.»
+- Для `needs-human` при зелёном ревью/CI, но с явным deploy approval: «PR готов к деплою, жду твоего подтверждения.» Не звучит как блокер.
+- Для `needs-human` при нерешённом ревью-фидбеке: «Нужно решение по ревью-фидбеку» и список конкретных нерешённых пунктов.
+- Для `blocked`: назови отсутствующий пресреквизит и точный следующий unblock-шаг.
+- Для `timed-out`: назови, что не устаканилось, и известно ли, что PR в целом безопасен.

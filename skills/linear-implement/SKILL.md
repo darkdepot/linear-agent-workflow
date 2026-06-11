@@ -42,6 +42,7 @@ Inputs to gather:
 - Handoff artifact intake summary when recorded in Linear comments, resources, or package notes.
 - Package approval comment and implementation-start approval, if already recorded.
 - Project config, including optional `Implementation workflow`.
+- Prior operational learnings for this repo through `gstack-learnings-search` when the helper is available.
 - Minimal repo context needed to understand commands, conventions, and validation.
 - Current git branch, worktree state, and remote/base branch status.
 
@@ -56,6 +57,7 @@ Workflow states:
    - Move the Project to Delivery only after approval and prerequisites are explicit.
    - Run or report `linear-check delivery` after the Project is in Delivery.
    - Inspect git state and create or switch to a safe implementation branch when needed.
+   - Consult prior learnings with `gstack-learnings-search --limit 10` (optionally `--query`/`--type` scoped to the Issue topic) when the helper is available. Treat results as advisory context only, never as a gate; when the helper is unavailable or returns nothing, proceed and report that.
    - Record a human Linear comment that implementation started.
 2. `execute`
    - Select the implementation engine.
@@ -65,6 +67,23 @@ Workflow states:
 3. `exit`
    - Return exactly one terminal status.
    - Record changed files, tests/checks run, tests/checks not run, branch/dirty state, drift summary, Linear comment outcome, and next workflow.
+   - For `blocked`, `needs-human`, and `scope-drift-needs-handoff`: post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. (`implemented-needs-preflight` is handled by the next workflow — no extra comment needed here.)
+
+Implementation-start approval UX:
+
+This is the SECOND approval in the workflow. The first approval was package approval granted during `linear-handoff`. Implementation-start approval is a separate, more consequential gate: it authorises Project movement to Delivery, branch creation, and code writing.
+
+Required prompt shape:
+
+```text
+Пакет утверждён. Теперь отдельное решение — старт реализации.
+
+Что это разрешает: Project переходит в Delivery, создаётся ветка, агент пишет код по <Issue keys>.
+Чего это НЕ разрешает: PR, merge и deploy — они потребуют отдельных шагов.
+
+1. Стартовать сейчас — рекомендую, если scope финален.
+2. Отложить — пакет останется утверждённым, старт можно дать позже любой фразой "запускай реализацию".
+```
 
 Implementation engine selection:
 
@@ -84,12 +103,15 @@ Exit statuses:
 - `scope-drift-needs-handoff`: implementation discovered material scope drift that must be reflected in Linear before continuing.
 - `needs-human`: a product, UX, business, external access, dirty-worktree, or risk decision is required.
 
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
+
 Rules:
 
 - Keep Linear as durable truth. Local discovery artifacts are evidence only after `linear-handoff` translated them into Linear.
 - Do not re-run product discovery unless Linear artifacts are missing or contradictory.
 - Do not start from local discovery artifacts alone.
 - Do not treat package approval as implementation-start approval unless that approval is explicit.
+- Do not infer implementation-start approval from ambiguous phrases; the approval must name implementation or the Issue key(s) explicitly. Choosing a handoff package option that explicitly bundles implementation start (e.g. «это одновременно approval на старт кода») counts as explicit; do not re-ask after it.
 - Do not move the Project to Delivery before approved Issue(s) exist.
 - Do not pass delivery readiness with only PRD and Tech Spec.
 - Do not create PRs directly from `linear-implement`.
@@ -103,10 +125,11 @@ Implementation-start comment shape:
 Начал реализацию по <Issue keys>.
 
 Проверил: <Project, PRD, Tech Spec, Issue, approval/review/check state>.
-Источник правды: Linear package, не raw discovery chat и не local scratch docs.
+Делаю строго по утверждённому Issue; ничего сверх scope не добавляю.
 Объем: <approved one-PR slice>.
 Workflow реализации: <configured workflow or default selection and why>.
 План проверки: <targeted tests/checks/manual surfaces expected later>.
+Учтённые learnings: <none|ключи|helper unavailable>.
 Пока не проверено: <browser/manual/PR review/deploy/etc.>.
 ```
 

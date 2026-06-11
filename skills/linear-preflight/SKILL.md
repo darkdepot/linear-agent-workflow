@@ -84,9 +84,12 @@ Local verification: <commands run + outcome>
 Autoreview: <clean|blocked|needs-human|unavailable>; final command: <selected-scope helper command>; clean result: <exit 0 + clean line or none>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
+Decision needed: <none | точное решение по-русски>
 Not checked: <manual QA/browser/mobile/deploy/etc.>
 Next: <linear-ship | linear-handoff | needs-human>
 ```
+
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
 
 Rules:
 
@@ -107,6 +110,8 @@ Rules:
 Human Linear comment/resource shape:
 
 ```text
+<1-2 предложения по-русски: итог и следующий шаг>
+
 linear-preflight certificate
 Preflight: <ready|blocked|drift-candidate|needs-human>
 Issue(s): <keys>
@@ -116,9 +121,16 @@ Local verification: <commands run + outcome>
 Autoreview: <clean|blocked|needs-human|unavailable>; final command: <selected-scope helper command>; clean result: <exit 0 + clean line or none>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
+Decision needed: <none | точное решение по-русски>
 Not checked: <manual QA/browser/mobile/deploy/etc.>
 Next: <linear-ship | linear-handoff | needs-human>
 ```
+
+Rules for the Human Linear comment:
+
+- The Russian human lead (1-2 sentences) is required; it states the outcome and next step for the operator.
+- The machine core below the marker line is never translated, reworded, or summarized away — downstream skills recover the certificate by its stable marker and field keys.
+- `Decision needed:` must be non-`none` whenever the certificate status is `needs-human`; name the exact decision or unblock required in Russian.
 
 Final response must include:
 

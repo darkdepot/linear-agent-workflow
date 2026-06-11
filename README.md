@@ -192,8 +192,25 @@ See `references/install.md` for install details and `references/versioning.md` f
 - Agent-ready Issues: mark `AFK` or `HITL`, name dependencies, avoid brittle line-number edit scripts, and require repro/fix proof for bug/perf work.
 - No silent sync: report drift before moving stages.
 - Report-only checks: `PASS` means inspected and no blocking drift found, not deterministic proof.
+- Autonomy with transparency: agents resolve non-contested choices themselves and surface them as «Решил сам»; scope boundaries, issue slicing, risk acceptance, and design decisions stay with the user, and design choices are presented visually.
 
 ## Validation
+
+Run the one-command entry point before finishing any change:
+
+```bash
+node scripts/verify.mjs
+```
+
+CI runs `node scripts/verify.mjs` automatically on every PR and push to `main`.
+
+To additionally verify the installed local skill pack (maintainer machine only):
+
+```bash
+node scripts/verify.mjs --install-check
+```
+
+### Individual checks
 
 ```bash
 git diff --check

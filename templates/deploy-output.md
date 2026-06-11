@@ -18,6 +18,7 @@ Deploy status:
 - Post-ship check: <PASS/FAIL/BLOCKED + human meaning>.
 - Linear closeout: <Done/not done + reason>.
 - Learnings recorded: <none or keys>.
+- Learnings consulted: <none/keys/helper unavailable>.
 
 Проверено:
 - <PR/merge/deploy/Linear/learning state actually inspected>.
@@ -46,6 +47,7 @@ Verification:
 Post-ship check:
 Linear closeout:
 Learnings recorded:
+Learnings consulted:
 Notes:
 ```
 
@@ -58,7 +60,7 @@ Verdicts:
 
 Verdict-to-human translation:
 
-- For `deployed`, say exactly what was merged/deployed and how Linear was updated.
-- For stale certificates, say "PR changed after review; run `linear-ship` again before deploy."
-- For missing Deploy workflow, say "Deploy workflow is not configured; set `Deploy workflow` or run the repo's deploy path manually."
-- For `timed-out`, name whether merge, deploy, verification, or Linear closeout did not settle.
+- Для `deployed`: напиши точно, что было смержено/задеплоено и как обновился Linear.
+- Для stale certificates: «PR изменился после ревью; прогони `linear-ship` ещё раз перед деплоем.»
+- Для отсутствующего Deploy workflow: «Deploy workflow не настроен; укажи `Deploy workflow` или запусти deploy-путь репозитория вручную.»
+- Для `timed-out`: назови, что не устаканилось — merge, deploy, верификация или Linear closeout.
