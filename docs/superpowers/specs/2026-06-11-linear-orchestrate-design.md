@@ -67,8 +67,8 @@ Owns:
   directly in the orchestrator session.
 - `linear-handoff` execution (Linear-heavy, code-light).
 - All Linear mutations: lifecycle status moves, comments, certificates. Single
-  writer; workers do not need Linear at start and queue any Linear mutations
-  they could not perform into their reports.
+  writer; workers never write to Linear and queue every stage-required
+  mutation into their reports.
 - Worker dispatch, monitoring, technical question answering, stage
   transitions, and `linear-deploy` delegation.
 - The persistent ledger and decision log.
@@ -90,7 +90,7 @@ Boundaries:
   - never ask the user; any gate or question becomes a structured report with
     the worker's own recommendation;
   - one Issue per worker; no sub-workers; no touching other Issues' files;
-  - do not block on Linear: if unavailable, queue mutations into the report;
+  - never write to Linear; queue all stage-required mutations into the report;
   - write an exit report to the mailbox at stage completion or on any blocker.
 - Worker naming follows `ISSUE-KEY: stage` (e.g. `ZEN-42: implement`).
 

@@ -206,7 +206,8 @@ Required:
   orchestrator session; `linear-implement`, `linear-preflight`, and
   `linear-ship` run in one worker session per Issue.
 - All Linear mutations during orchestration flow through the orchestrator
-  (single writer); workers queue unapplied mutations in mailbox reports.
+  (single writer); workers never write to Linear and queue stage-required
+  mutations in mailbox reports.
 - Always-ask decisions (scope, design, product risk, deploy per policy) reach
   the user as immediate decision briefs.
 

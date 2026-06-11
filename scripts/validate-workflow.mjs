@@ -235,6 +235,7 @@ function validateTemplateSections() {
       "## Mailbox",
       "## Authorization",
       "Do not ask the user",
+      "Never write to Linear yourself",
       "no sub-workers",
     ],
     "templates/orchestrator-brief.md": [

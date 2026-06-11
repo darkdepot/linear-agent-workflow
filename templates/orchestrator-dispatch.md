@@ -29,10 +29,11 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
   `needs-human` and `drift-candidate`) with the stage's own status verbatim.
 - One Issue only; no sub-workers; do not manage other sessions; do not touch
   files owned by other Issues.
-- Do not block on Linear. When Linear is unavailable, queue the mutation text
-  in `linear_mutations_pending` and continue working.
-- Follow the stage skill exactly, including its exit statuses, gates, and
-  Linear comment shapes.
+- Never write to Linear yourself, even when Linear is available. Produce
+  every stage-required Linear mutation (comments, status moves, certificates)
+  in its required shape, but deliver it through `linear_mutations_pending` in
+  your report; the orchestrator applies it.
+- Follow the stage skill exactly, including its exit statuses and gates.
 
 ## Mailbox
 
@@ -46,5 +47,5 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 
 - Allowed: <stage-appropriate scope, e.g. local code changes and verification;
   push and PR creation only for the ship stage>
-- Not allowed: merge, deploy, Linear lifecycle moves, Issue closeout — the
+- Not allowed: any direct Linear writes, merge, deploy, Issue closeout — the
   orchestrator owns those.

@@ -19,6 +19,11 @@ project config (`languages.linear`).
 3. <свой ответ>
 ```
 
+Package-approval briefs: include an option that explicitly bundles
+implementation start («это одновременно approval на старт кода») so the
+bundled-approval rule from `linear-implement` applies and the orchestrator
+does not re-ask before dispatching workers.
+
 Design questions: prepare side-by-side variants first (`/design-html` when the
 runtime provides it), open them, then ask. Never decide visual questions
 silently and never ask them text-only when the difference is visual.

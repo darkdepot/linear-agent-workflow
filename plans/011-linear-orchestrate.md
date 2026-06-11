@@ -99,7 +99,8 @@ implements stage work itself.
   delegation, and the ledger.
 - Workers: one Issue each; run `linear-implement` → `linear-preflight` →
   `linear-ship` sequentially in the same session and worktree under the AFK
-  contract from `templates/orchestrator-dispatch.md`.
+  contract from `templates/orchestrator-dispatch.md`; they never write to
+  Linear directly.
 
 ## Stage Ownership
 
@@ -137,7 +138,8 @@ under «Решил сам:» with a one-line reason:
   bundled-approval rule from `linear-implement` applies).
 - Technical review-finding acceptance, CI repair, and PR stabilization
   routing.
-- Merge/deploy for risk classes the configured `deployApproval` allows.
+- Merge/deploy for risk classes the configured `deployApproval` allows (all
+  classes under `never`).
 
 The user can override any recorded orchestrator decision later; reopen the
 affected stage when that happens.
@@ -262,6 +264,7 @@ Insert immediately AFTER it (keep the trailing comma on the block above):
       "## Mailbox",
       "## Authorization",
       "Do not ask the user",
+      "Never write to Linear yourself",
       "no sub-workers",
     ],
     "templates/orchestrator-brief.md": [
@@ -327,10 +330,11 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
   `needs-human` and `drift-candidate`) with the stage's own status verbatim.
 - One Issue only; no sub-workers; do not manage other sessions; do not touch
   files owned by other Issues.
-- Do not block on Linear. When Linear is unavailable, queue the mutation text
-  in `linear_mutations_pending` and continue working.
-- Follow the stage skill exactly, including its exit statuses, gates, and
-  Linear comment shapes.
+- Never write to Linear yourself, even when Linear is available. Produce
+  every stage-required Linear mutation (comments, status moves, certificates)
+  in its required shape, but deliver it through `linear_mutations_pending` in
+  your report; the orchestrator applies it.
+- Follow the stage skill exactly, including its exit statuses and gates.
 
 ## Mailbox
 
@@ -344,7 +348,7 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 
 - Allowed: <stage-appropriate scope, e.g. local code changes and verification;
   push and PR creation only for the ship stage>
-- Not allowed: merge, deploy, Linear lifecycle moves, Issue closeout — the
+- Not allowed: any direct Linear writes, merge, deploy, Issue closeout — the
   orchestrator owns those.
 ````
 
@@ -373,6 +377,11 @@ project config (`languages.linear`).
 2. <вариант B>
 3. <свой ответ>
 ```
+
+Package-approval briefs: include an option that explicitly bundles
+implementation start («это одновременно approval на старт кода») so the
+bundled-approval rule from `linear-implement` applies and the orchestrator
+does not re-ask before dispatching workers.
 
 Design questions: prepare side-by-side variants first (`/design-html` when the
 runtime provides it), open them, then ask. Never decide visual questions
@@ -634,7 +643,8 @@ Workflow states:
    - Follow the Monitoring Protocol in `references/orchestration.md`. Do not
      steer an actively progressing worker.
    - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
-     `needs-decision`) to `decide-or-escalate` instead of advancing.
+     `needs-decision`, `scope-drift-needs-handoff`) to `decide-or-escalate`
+     instead of advancing.
    - On `timed-out`: treat as a stuck worker; rebuild stage state from Linear
      and the last mailbox report and respawn per the Monitoring Protocol.
 6. `decide-or-escalate`
@@ -655,8 +665,8 @@ Rules:
 - This skill is a control plane: never implement, edit code, fix CI, or
   rewrite PRs in this session; delegate that to workers.
 - Single Linear writer: all Linear mutations during orchestration happen in
-  this session; workers queue mutations in reports when Linear is unavailable
-  to them.
+  this session; workers never write to Linear and queue every stage-required
+  mutation in their reports.
 - Never skip or weaken lifecycle gates; the orchestrator sequences gates, it
   does not replace them.
 - Never ask the user an unprepared question; exhaust autonomous work first
@@ -671,7 +681,8 @@ Rules:
   report; continue the stage, do not restart the Issue.
 - Keep the ledger free of secrets and routine polling entries.
 - Keep user-facing output in the project config language (Russian by
-  default); ledger and mailbox stay English.
+  default); ledger and mailbox stay English except the fixed «Решил сам:»
+  term.
 
 Session verdicts:
 
@@ -792,7 +803,8 @@ Required:
   orchestrator session; `linear-implement`, `linear-preflight`, and
   `linear-ship` run in one worker session per Issue.
 - All Linear mutations during orchestration flow through the orchestrator
-  (single writer); workers queue unapplied mutations in mailbox reports.
+  (single writer); workers never write to Linear and queue stage-required
+  mutations in mailbox reports.
 - Always-ask decisions (scope, design, product risk, deploy per policy) reach
   the user as immediate decision briefs.
 

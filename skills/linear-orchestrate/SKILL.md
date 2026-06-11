@@ -90,7 +90,8 @@ Workflow states:
      `linear-ship`).
    - Follow the Monitoring Protocol in `references/orchestration.md`. Do not steer an actively progressing worker.
    - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
-     `needs-decision`) to `decide-or-escalate` instead of advancing.
+     `needs-decision`, `scope-drift-needs-handoff`) to `decide-or-escalate`
+     instead of advancing.
    - On `timed-out`: treat as a stuck worker; rebuild stage state from Linear
      and the last mailbox report and respawn per the Monitoring Protocol.
 6. `decide-or-escalate`
@@ -111,8 +112,8 @@ Rules:
 - This skill is a control plane: never implement, edit code, fix CI, or rewrite PRs
   in this session; delegate that to workers.
 - Single Linear writer: all Linear mutations during orchestration happen in
-  this session; workers queue mutations in reports when Linear is unavailable
-  to them.
+  this session; workers never write to Linear and queue every stage-required
+  mutation in their reports.
 - Never skip or weaken lifecycle gates; the orchestrator sequences gates, it
   does not replace them.
 - Never ask the user an unprepared question; exhaust autonomous work first
@@ -127,7 +128,8 @@ Rules:
   report; continue the stage, do not restart the Issue.
 - Keep the ledger free of secrets and routine polling entries.
 - Keep user-facing output in the project config language (Russian by
-  default); ledger and mailbox stay English.
+  default); ledger and mailbox stay English except the fixed «Решил сам:»
+  term.
 
 Session verdicts:
 

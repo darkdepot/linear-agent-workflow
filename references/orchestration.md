@@ -13,7 +13,8 @@ implements stage work itself.
   delegation, and the ledger.
 - Workers: one Issue each; run `linear-implement` → `linear-preflight` →
   `linear-ship` sequentially in the same session and worktree under the AFK
-  contract from `templates/orchestrator-dispatch.md`.
+  contract from `templates/orchestrator-dispatch.md`; they never write to
+  Linear directly.
 
 ## Stage Ownership
 
@@ -51,7 +52,8 @@ under «Решил сам:» with a one-line reason:
   bundled-approval rule from `linear-implement` applies).
 - Technical review-finding acceptance, CI repair, and PR stabilization
   routing.
-- Merge/deploy for risk classes the configured `deployApproval` allows.
+- Merge/deploy for risk classes the configured `deployApproval` allows (all
+  classes under `never`).
 
 The user can override any recorded orchestrator decision later; reopen the
 affected stage when that happens.
