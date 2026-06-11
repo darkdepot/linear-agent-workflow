@@ -60,7 +60,7 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 
 When risk class is `tiny`:
 
-- Chat finals shrink to: outcome sentence + link + Что дальше (boundary only as delta — see Boundary Delta Rule in `references/human-friendly-output.md`).
+- Chat finals shrink to: outcome sentence + link + Что дальше (boundary only as delta — see Boundary Delta Rule in `references/human-friendly-output.md`). Exception: ship and deploy chat finals always keep the full `Проверено/Не проверено` form, even for `tiny` work — the Boundary Delta Rule says so and wins here.
 - The implementation-start comment and the preflight certificate may be combined into ONE Linear comment on the Issue. The certificate marker line `linear-preflight certificate` must appear verbatim inside the combined comment so downstream workflow stages can recover the certificate.
 - Ship and deploy keep their certificates unchanged (required for machine recovery) but drop all optional narrative around them.
 

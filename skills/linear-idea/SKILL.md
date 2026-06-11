@@ -28,9 +28,9 @@ Workflow:
 6. Build a strengthened brief from the raw idea and answers.
 7. Use `linear-project` to create or update a Project in `Idea`.
 8. Recommend `/office-hours` or `/brainstorming` and explain why.
-8a. Record a short Russian comment on the Linear Project (not just in chat) that includes the chosen discovery route (`/office-hours` или `/brainstorming`) and a one-line reason — so the route survives the chat session and the operator can recover the recommended next step from Linear alone.
-9. Run or report `linear-check idea`.
-10. Stop immediately.
+9. Record a short Russian comment on the Linear Project (not just in chat) that includes the chosen discovery route (`/office-hours` или `/brainstorming`) and a one-line reason — so the route survives the chat session and the operator can recover the recommended next step from Linear alone.
+10. Run or report `linear-check idea`.
+11. Stop immediately.
 
 User-facing narration:
 

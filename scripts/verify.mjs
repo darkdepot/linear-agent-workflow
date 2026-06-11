@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-function usage() {
+function usage(exitCode = 2) {
   console.error(
     "Usage: node scripts/verify.mjs [--install-check] [--help|-h]"
   );
@@ -16,7 +16,7 @@ function usage() {
   console.error("  --install-check  Also run node scripts/install-local.mjs --check");
   console.error("                   (machine-specific; only valid on maintainer machine)");
   console.error("  --help, -h       Show this help and exit");
-  process.exit(2);
+  process.exit(exitCode);
 }
 
 function parseArgs(argv) {
@@ -25,7 +25,7 @@ function parseArgs(argv) {
     if (arg === "--install-check") {
       args.installCheck = true;
     } else if (arg === "--help" || arg === "-h") {
-      usage();
+      usage(0);
     } else {
       console.error(`Unknown argument: ${arg}`);
       usage();
@@ -36,8 +36,24 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 
+// In CI (GITHUB_BASE_REF set, base ref fetched) the working tree is clean, so a
+// bare `git diff --check` is a no-op; check the committed PR range instead.
+function whitespaceCheckArgs() {
+  const baseRef = process.env.GITHUB_BASE_REF;
+  if (baseRef) {
+    try {
+      execFileSync("git", ["rev-parse", "--verify", `origin/${baseRef}`], { cwd: root, stdio: "ignore" });
+      return ["diff", "--check", `origin/${baseRef}...HEAD`];
+    } catch {
+      // base ref not fetched — fall back to the working-tree check
+    }
+  }
+  return ["diff", "--check"];
+}
+
+const whitespaceArgs = whitespaceCheckArgs();
 const steps = [
-  { label: "git diff --check", cmd: "git", cmdArgs: ["diff", "--check"] },
+  { label: `git ${whitespaceArgs.join(" ")}`, cmd: "git", cmdArgs: whitespaceArgs },
   { label: "node --check scripts/install-local.mjs", cmd: "node", cmdArgs: ["--check", "scripts/install-local.mjs"] },
   { label: "node --check scripts/project-config.mjs", cmd: "node", cmdArgs: ["--check", "scripts/project-config.mjs"] },
   { label: "node --check scripts/lint-linear-artifacts.mjs", cmd: "node", cmdArgs: ["--check", "scripts/lint-linear-artifacts.mjs"] },

@@ -31,8 +31,8 @@ Workflow:
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
 5. `prepare`: consult prior operational learnings with `gstack-learnings-search --type operational --limit 10` when the helper is available; surface anything relevant to merge/deploy (deploy config quirks, merge queue behavior) before delegating. Advisory only.
 6. `approve`: read `deployApproval` from `.agents/linear-workflow.config.json` (absent → `"always"`). Apply the policy:
-   - `"always"`: require a recorded approval for every deploy. Approval is recorded as a Russian Linear comment on the Issue («Деплой одобрен: <кем/когда>») or given explicitly in the current session; a fresh agent must be able to recover it from Linear. If no approval is recorded and none is given in the current session, stop with `needs-human` using the ask shape below.
-   - `"risky-only"`: require approval only when the Issue risk class is `standard`, `deep`, or `risky`. For `tiny` risk proceed without asking.
+   - `"always"`: require a recorded approval for every deploy. Approval is recorded as a Russian Linear comment on the Issue («Деплой одобрен: <кем/когда>; PR #<n>, head `<sha>`») or given explicitly in the current session. An in-session approval must be recorded as that Linear comment before the `deploy` step runs, so the authorization is always recoverable from Linear by a fresh agent. An approval is valid only when its PR number and head SHA match the current PR head; an approval recorded for a different PR or an older head is stale — treat it as absent. If no valid approval is recorded and none is given in the current session, stop with `needs-human` using the ask shape below.
+   - `"risky-only"`: require approval only when the Issue risk class is `standard`, `deep`, or `risky`. For `tiny` risk proceed without asking. If the risk class cannot be determined from the Issue, require approval; never default to `tiny`.
    - `"never"`: proceed without asking; report the policy in the deploy output.
    - If approval is needed but not yet recorded, present the following ask:
      ```text

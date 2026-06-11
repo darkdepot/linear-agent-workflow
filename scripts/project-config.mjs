@@ -150,6 +150,7 @@ function configFromRepo(repo, projectName) {
     const failures = [];
     const config = readJsonConfig(jsonPath, failures);
     if (!config) throw new Error(failures.join("\n"));
+    if (!("deployApproval" in config)) config.deployApproval = "always";
     return config;
   }
   if (fs.existsSync(legacyPath)) {

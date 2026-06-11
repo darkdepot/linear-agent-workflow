@@ -107,7 +107,8 @@ Return `needs-human` when any are true:
 - Resolver reports `needs-human`.
 - Branch or worktree is dirty in a way unrelated to the loop.
 - PR head changes by another actor during a fix attempt.
-- Deploy approval is required before `linear-deploy` and no approval is recorded.
+
+Deploy approval is never a ship gate: `linear-ship` certifies green without it, and `linear-deploy` owns asking for and recording deploy approval per the configured `deployApproval` policy.
 
 ## Blocked Or Timed Out
 

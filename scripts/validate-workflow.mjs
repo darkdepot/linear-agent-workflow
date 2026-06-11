@@ -219,6 +219,14 @@ function validateTemplateSections() {
       "Deploy workflow:",
       "Learnings recorded:",
     ],
+    "templates/check-output.md": [
+      "Смысл:",
+      "Чего не хватает:",
+      "Расхождения:",
+      "Следующий unblock:",
+      "Нарушение контракта:",
+      "Как починить:",
+    ],
   };
 
   for (const [relativePath, sections] of Object.entries(requiredSections)) {
@@ -355,6 +363,20 @@ function validateProjectConfigBehavior() {
     if (config.workflows.ship !== "gstack ship") fail("project-config must migrate Ship workflow");
     if (config.workflows.deploy !== "gstack land-and-deploy") fail("project-config must migrate Deploy workflow");
     if (!("deployApproval" in config)) fail("project-config must write deployApproval field");
+
+    config.deployApproval = "risky-only";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
+    config.deployApproval = "monthly";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    expectCommandFailure(
+      "project-config --check invalid deployApproval fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "deployApproval"
+    );
+    config.deployApproval = "always";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
     for (const removed of [
       ".agents/linear-workflow.config.md",
@@ -648,19 +670,17 @@ function validateAntiPatterns() {
   }
 
   // New dual-layer comment contract pins (plan 005)
-  const preflight2 = read("skills/linear-preflight/SKILL.md");
-  if (!preflight2.includes("<1-2 предложения по-русски: итог и следующий шаг>")) {
+  if (!preflight.includes("<1-2 предложения по-русски: итог и следующий шаг>")) {
     fail("linear-preflight human comment shape missing Russian human-lead placeholder");
   }
-  if (!preflight2.includes("The Russian human lead (1-2 sentences) is required")) {
+  if (!preflight.includes("The Russian human lead (1-2 sentences) is required")) {
     fail("linear-preflight must require the Russian human lead in Linear comment");
   }
 
-  const deploy2 = read("skills/linear-deploy/SKILL.md");
-  if (!deploy2.includes("Выкатили: <что получили пользователи>; проверено на <среда>.")) {
+  if (!deploy.includes("Выкатили: <что получили пользователи>; проверено на <среда>.")) {
     fail("linear-deploy closeout shape missing required product-outcome Russian lead");
   }
-  if (!deploy2.includes("The Russian product-outcome lead is required in Linear")) {
+  if (!deploy.includes("The Russian product-outcome lead is required in Linear")) {
     fail("linear-deploy must require the Russian product-outcome lead");
   }
 
