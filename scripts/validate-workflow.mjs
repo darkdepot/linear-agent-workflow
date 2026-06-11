@@ -354,6 +354,7 @@ function validateProjectConfigBehavior() {
     }
     if (config.workflows.ship !== "gstack ship") fail("project-config must migrate Ship workflow");
     if (config.workflows.deploy !== "gstack land-and-deploy") fail("project-config must migrate Deploy workflow");
+    if (!("deployApproval" in config)) fail("project-config must write deployApproval field");
 
     for (const removed of [
       ".agents/linear-workflow.config.md",
@@ -440,6 +441,9 @@ function validateDocsAndExamples() {
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
     "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
+    "references/questioning.md": [
+      "`linear-deploy`: ask only for deploy approval",
+    ],
     "references/versioning.md": [
       "`Autoreview helper`",
       "`Artifact roots`",
@@ -489,6 +493,9 @@ function validateAntiPatterns() {
   if (!handoff.includes("Do not move the Project to Delivery from `linear-handoff`")) {
     fail("linear-handoff must not own Delivery Start");
   }
+  if (!handoff.includes("это одновременно approval на старт кода")) {
+    fail("linear-handoff option 2 must label the bundled approval");
+  }
 
   const implement = read("skills/linear-implement/SKILL.md");
   for (const required of [
@@ -500,6 +507,8 @@ function validateAntiPatterns() {
     "Implementation workflow",
     "implemented-needs-preflight",
     "scope-drift-needs-handoff",
+    "Implementation-start approval UX:",
+    "Что это разрешает: Project переходит в Delivery",
   ]) {
     if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
   }
@@ -536,6 +545,8 @@ function validateAntiPatterns() {
     "gstack-learnings-log",
     "Do not run `/learn prune`, `/learn export`, `/learn stats`",
     "Do not accept `Land workflow` as a compatibility alias",
+    "deployApproval",
+    "Готов деплоить",
   ]) {
     if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }

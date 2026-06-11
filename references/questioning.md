@@ -19,6 +19,7 @@ Question stages:
 - `linear-implement`: ask only for implementation-start approval or a blocker involving product, UX, business, external access, dirty worktree, or risk acceptance.
 - `linear-preflight`: ask only when local readiness cannot proceed because of dirty-worktree ownership, material drift, missing verification access, or commit/branch risk.
 - `linear-ship`: ask only when feedback requires product, UX, business, scope, or risk acceptance decisions.
+- `linear-deploy`: ask only for deploy approval per the configured deploy-approval policy, or a delivery-policy/risk-acceptance decision.
 
 Output:
 

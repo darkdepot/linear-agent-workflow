@@ -103,6 +103,7 @@ function defaultConfig(projectName) {
     prerequisites: {
       autoreviewHelper: true,
     },
+    deployApproval: "always",
   };
 }
 
@@ -205,6 +206,12 @@ function validateConfig(config, failures) {
   }
   if (!config.prerequisites || config.prerequisites.autoreviewHelper !== true) {
     failures.push("Project config must set prerequisites.autoreviewHelper to true");
+  }
+  if ("deployApproval" in config) {
+    const allowed = ["always", "risky-only", "never"];
+    if (!allowed.includes(config.deployApproval)) {
+      failures.push(`Project config deployApproval must be one of: ${allowed.join(", ")}`);
+    }
   }
   if (hasPlaceholder(config)) {
     failures.push("Project config contains unresolved <...> placeholder");

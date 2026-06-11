@@ -66,6 +66,22 @@ Workflow states:
    - Return exactly one terminal status.
    - Record changed files, tests/checks run, tests/checks not run, branch/dirty state, drift summary, Linear comment outcome, and next workflow.
 
+Implementation-start approval UX:
+
+This is the SECOND approval in the workflow. The first approval was package approval granted during `linear-handoff`. Implementation-start approval is a separate, more consequential gate: it authorises Project movement to Delivery, branch creation, and code writing.
+
+Required prompt shape:
+
+```text
+Пакет утверждён. Теперь отдельное решение — старт реализации.
+
+Что это разрешает: Project переходит в Delivery, создаётся ветка, агент пишет код по <Issue keys>.
+Чего это НЕ разрешает: PR, merge и deploy — они потребуют отдельных шагов.
+
+1. Стартовать сейчас — рекомендую, если scope финален.
+2. Отложить — пакет останется утверждённым, старт можно дать позже любой фразой "запускай реализацию".
+```
+
 Implementation engine selection:
 
 - Use the configured `Implementation workflow` when present and not `None`.
@@ -90,6 +106,7 @@ Rules:
 - Do not re-run product discovery unless Linear artifacts are missing or contradictory.
 - Do not start from local discovery artifacts alone.
 - Do not treat package approval as implementation-start approval unless that approval is explicit.
+- Do not infer implementation-start approval from ambiguous phrases; the approval must name implementation or the Issue key(s) explicitly.
 - Do not move the Project to Delivery before approved Issue(s) exist.
 - Do not pass delivery readiness with only PRD and Tech Spec.
 - Do not create PRs directly from `linear-implement`.

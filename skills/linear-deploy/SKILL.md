@@ -29,7 +29,17 @@ Workflow:
 2. `prepare`: read the latest `linear-ship green certificate` from Linear comments or resources. If no certificate exists, route to `linear-ship`.
 3. `prepare`: verify the PR URL/number and current PR head SHA match the certificate. If the head changed, route back to `linear-ship` for review stabilization.
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
-5. `approve`: if deploy requires explicit user approval and no approval is recorded, stop with `needs-human`.
+5. `approve`: read `deployApproval` from `.agents/linear-workflow.config.json` (absent → `"always"`). Apply the policy:
+   - `"always"`: require a recorded approval for every deploy. Approval is recorded as a Russian Linear comment on the Issue («Деплой одобрен: <кем/когда>») or given explicitly in the current session; a fresh agent must be able to recover it from Linear. If no approval is recorded and none is given in the current session, stop with `needs-human` using the ask shape below.
+   - `"risky-only"`: require approval only when the Issue risk class is `standard`, `deep`, or `risky`. For `tiny` risk proceed without asking.
+   - `"never"`: proceed without asking; report the policy in the deploy output.
+   - If approval is needed but not yet recorded, present the following ask:
+     ```text
+     Готов деплоить <Issue key>: PR #<n> merge в <target>.
+     Что произойдёт: <merge/deploy путь, среда>. Откат: <как откатить>.
+     1. Деплоим — рекомендую: ревью и CI зелёные.
+     2. Подождать — PR останется готовым, ничего не произойдёт.
+     ```
 6. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
 7. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
 8. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.

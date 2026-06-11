@@ -74,7 +74,7 @@ Draft package approval UX:
   - Tech Spec implementation decisions.
   - Issue slicing, `AFK`/`HITL` readiness, dependencies, and why this split is right.
   - Review gate, risk, and validation plan.
-  - Decision options.
+  - Decision options — every option must say which approval(s) it grants.
 - If there is one recommended path, name it plainly.
 
 Draft package example:
@@ -106,7 +106,7 @@ Visual: desktop/mobile smoke на representative routes: general, profile, integ
 
 Что делаем?
 1. Зафиксировать пакет в Linear и остановиться перед кодом. Рекомендую, если хочешь сначала увидеть durable PRD/Spec/Issue.
-2. Зафиксировать пакет и сразу после readiness gate начать реализацию.
+2. Зафиксировать пакет и сразу начать реализацию — это одновременно approval на старт кода (Project уйдёт в Delivery, появится ветка).
 3. Поправить пакет перед записью.
 ```
 
