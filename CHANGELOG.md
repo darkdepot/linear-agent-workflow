@@ -6,6 +6,19 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-11
+
+### Added
+
+- `scripts/install-local.mjs` now defaults to `--all-roots`: it discovers every previously-installed skills root by checking for `.linear-agent-workflow.lock.json` in the known roots (`~/.codex/skills`, `~/.claude/skills`, and any root recorded in a discovered lockfile) and syncs or checks each of them in one run, reporting the per-root installed version. This fixes the failure mode where only the default root was reinstalled and other roots (for example `~/.claude/skills`) were silently left at an older version.
+- `--check` now also fails when a lockfile is pinned to a different upstream version than the current checkout, and reports the per-root version on success.
+- `LINEAR_WORKFLOW_KNOWN_ROOTS` environment override for the known roots list (used by fixtures and sandboxes).
+- Multi-root functional fixtures in `scripts/validate-workflow.mjs`: fresh-install fallback, one-run sync across roots, lockfile-recorded root discovery, stale per-root version detection, and per-root check failure isolation.
+
+### Changed
+
+- Explicit `--skills-root` keeps the previous single-root behavior; combining it with `--all-roots` is rejected.
+
 ## [0.12.0] - 2026-06-11
 
 ### Added

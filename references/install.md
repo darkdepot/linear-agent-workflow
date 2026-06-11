@@ -24,26 +24,42 @@ Run the installer from this upstream checkout:
 node scripts/install-local.mjs --remove-stale
 ```
 
-The command writes:
+The default mode is `--all-roots`: the installer discovers every
+previously-installed skills root by looking for
+`.linear-agent-workflow.lock.json` in the known roots — `~/.codex/skills`,
+`~/.claude/skills`, and any root recorded in a discovered lockfile — and syncs
+each of them in one run, reporting the per-root installed version. A single
+default run keeps every installed runtime (Codex, Claude Code, etc.) on the
+same upstream version. On a fresh machine with no lockfiles, the installer
+falls back to `~/.codex/skills`.
 
-- `~/.codex/skills/linear-*/SKILL.md`
-- `~/.codex/skills/linear-*/AGENTS.md`
-- `~/.codex/skills/linear-*/references/*`
-- `~/.codex/skills/linear-*/templates/*`
-- `~/.codex/skills/.linear-agent-workflow.lock.json`
+For each installed skills root the command writes:
 
-Use an alternate skills root only for tests or runtimes that do not read
-`~/.codex/skills`:
+- `<skills-root>/linear-*/SKILL.md`
+- `<skills-root>/linear-*/AGENTS.md`
+- `<skills-root>/linear-*/references/*`
+- `<skills-root>/linear-*/templates/*`
+- `<skills-root>/.linear-agent-workflow.lock.json`
+
+Use an explicit single skills root only for tests or runtimes outside the
+known roots:
 
 ```bash
 node scripts/install-local.mjs --skills-root /path/to/skills --remove-stale
 ```
 
-Check the local install without writing:
+Set `LINEAR_WORKFLOW_KNOWN_ROOTS` (a `path.delimiter`-separated list, `:` on
+POSIX) to replace the known roots list, for example in fixtures or sandboxes.
+
+Check every installed root without writing:
 
 ```bash
 node scripts/install-local.mjs --check
 ```
+
+The check reports the per-root installed version and fails when any
+discovered root is missing files, stale, edited, or pinned to a different
+upstream version or commit than the current checkout.
 
 `linear-preflight` has one external runtime prerequisite: the agent runtime
 must have the `autoreview` skill/helper installed, for example
@@ -127,7 +143,7 @@ Validate the upstream workflow contract:
 node scripts/validate-workflow.mjs
 ```
 
-Verify the local skill pack:
+Verify the local skill pack across all installed roots:
 
 ```bash
 node scripts/install-local.mjs --check
@@ -154,7 +170,8 @@ The project check fails when:
 - Do not keep `.agents/linear-workflow-check.mjs` or `.agents/linear-workflow.lock.json` in a project repo.
 - Do not keep `.github/workflows/update-linear-workflow.yml` in a project repo.
 - Do not keep `.github/workflows/update-linear-agent-workflow.yml` in a project repo.
-- Do not hand-edit local generated skills under `~/.codex/skills/linear-*`; edit this upstream repo and rerun `scripts/install-local.mjs`.
+- Do not hand-edit local generated skills under any installed skills root (`~/.codex/skills/linear-*`, `~/.claude/skills/linear-*`); edit this upstream repo and rerun `scripts/install-local.mjs`.
+- Do not update only one skills root with `--skills-root` on a machine with several installed roots; the default `--all-roots` run keeps every root on the same version.
 - Do not let `linear-review` mutate Linear artifacts; accepted fixes belong to `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Do not let `linear-handoff` move the Project to Delivery; Delivery Start belongs to `linear-implement`.
 - Do not let `linear-preflight` run pre-ship review/check or create/land the final PR by default; those belong to `linear-ship`.

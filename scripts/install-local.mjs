@@ -14,8 +14,12 @@ const GENERATED_MARKER = `Installed from ${UPSTREAM_REPO}`;
 
 function usage() {
   console.error(
-    "Usage: node scripts/install-local.mjs [--skills-root /path/to/skills] [--check] [--remove-stale]"
+    "Usage: node scripts/install-local.mjs [--all-roots | --skills-root /path/to/skills] [--check] [--remove-stale]"
   );
+  console.error("");
+  console.error(`Default mode is --all-roots: discover every installed skills root (a directory holding ${LOCKFILE_NAME})`);
+  console.error("among the known roots (~/.codex/skills, ~/.claude/skills, roots recorded in discovered lockfiles,");
+  console.error("or the LINEAR_WORKFLOW_KNOWN_ROOTS override) and sync/check each of them in one run.");
   process.exit(2);
 }
 
@@ -23,13 +27,17 @@ function parseArgs(argv) {
   const args = {
     check: false,
     removeStale: false,
-    skillsRoot: path.join(os.homedir(), ".codex", "skills"),
+    allRoots: false,
+    skillsRoot: "",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     if (arg === "--skills-root") {
       args.skillsRoot = argv[++index] || "";
+      if (!args.skillsRoot) usage();
+    } else if (arg === "--all-roots") {
+      args.allRoots = true;
     } else if (arg === "--check") {
       args.check = true;
     } else if (arg === "--remove-stale") {
@@ -42,13 +50,87 @@ function parseArgs(argv) {
     }
   }
 
-  if (!args.skillsRoot) usage();
+  if (args.allRoots && args.skillsRoot) {
+    console.error("--all-roots cannot be combined with --skills-root; pass one root selection mode.");
+    process.exit(2);
+  }
   if (args.check && args.removeStale) {
     console.error("--remove-stale has no effect in --check mode; run without --check to sync and remove stale skills.");
     process.exit(2);
   }
-  args.skillsRoot = path.resolve(args.skillsRoot);
+  if (args.skillsRoot) {
+    args.skillsRoot = path.resolve(args.skillsRoot);
+  } else {
+    args.allRoots = true;
+  }
   return args;
+}
+
+function knownRootCandidates() {
+  const envValue = process.env.LINEAR_WORKFLOW_KNOWN_ROOTS;
+  if (envValue !== undefined) {
+    return envValue
+      .split(path.delimiter)
+      .filter(Boolean)
+      .map((entry) => path.resolve(entry));
+  }
+  return [
+    path.join(os.homedir(), ".codex", "skills"),
+    path.join(os.homedir(), ".claude", "skills"),
+  ];
+}
+
+function discoverInstalledRoots(candidates) {
+  const queue = [...candidates];
+  const seen = new Set();
+  const installed = [];
+
+  while (queue.length > 0) {
+    const candidate = path.resolve(queue.shift());
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    if (!fs.existsSync(path.join(candidate, LOCKFILE_NAME))) continue;
+    installed.push(candidate);
+    const lock = readLock(path.join(candidate, LOCKFILE_NAME));
+    if (typeof lock?.skillsRoot === "string" && lock.skillsRoot) {
+      queue.push(lock.skillsRoot);
+    }
+  }
+
+  return installed;
+}
+
+function installedRootVersion(skillsRoot) {
+  const lock = readLock(path.join(skillsRoot, LOCKFILE_NAME));
+  return lock?.upstreamVersion || "unknown";
+}
+
+function resolveTargetRoots(args) {
+  if (!args.allRoots) return [args.skillsRoot];
+
+  const candidates = knownRootCandidates();
+  const installed = discoverInstalledRoots(candidates);
+
+  if (installed.length > 0) {
+    console.log(`Discovered ${installed.length} installed skills root(s):`);
+    for (const skillsRoot of installed) {
+      console.log(`- ${skillsRoot} (version ${installedRootVersion(skillsRoot)})`);
+    }
+    return installed;
+  }
+
+  if (args.check) {
+    console.error(`No installed skills roots found (checked: ${candidates.join(", ") || "none"}).`);
+    console.error("Run node scripts/install-local.mjs first, or pass --skills-root.");
+    process.exit(1);
+  }
+
+  if (candidates.length === 0) {
+    console.error("No known skills roots to install into; pass --skills-root.");
+    process.exit(2);
+  }
+  console.log(`No installed skills roots found; installing into default root ${candidates[0]}`);
+  return [candidates[0]];
 }
 
 function command(cwd, commandName, args) {
@@ -279,10 +361,10 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
   };
   fs.writeFileSync(plan.lockPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-  console.log(`Installed ${manifestSkills.length} Linear workflow skills into ${skillsRoot}`);
+  console.log(`Installed ${manifestSkills.length} Linear workflow skills into ${skillsRoot} (version ${version || "unknown"})`);
 }
 
-function check(root, skillsRoot, commit, dirty) {
+function check(root, skillsRoot, commit, dirty, version) {
   const failures = [];
   const plan = plannedInstall(root, skillsRoot, commit, dirty);
   const lock = readLock(plan.lockPath, failures);
@@ -310,6 +392,9 @@ function check(root, skillsRoot, commit, dirty) {
     failures.push(`Missing lockfile: ${path.relative(skillsRoot, plan.lockPath)}`);
   } else {
     if (lock.schemaVersion !== 2) failures.push("Lockfile schemaVersion must be 2");
+    if (lock.upstreamVersion !== version) {
+      failures.push(`Lockfile upstreamVersion is ${lock.upstreamVersion || "unknown"} but upstream is ${version || "unknown"}`);
+    }
     if (lock.upstreamRepo !== UPSTREAM_REPO) failures.push("Lockfile upstreamRepo mismatch");
     if (lock.upstreamCommit !== commit) failures.push("Lockfile upstreamCommit mismatch");
     if (lock.upstreamDirty !== dirty) failures.push("Lockfile upstreamDirty mismatch");
@@ -332,13 +417,7 @@ function check(root, skillsRoot, commit, dirty) {
     }
   }
 
-  if (failures.length > 0) {
-    console.error("Linear workflow local install check failed:");
-    for (const failure of failures) console.error(`- ${failure}`);
-    process.exit(1);
-  }
-
-  console.log(`Linear workflow local install check passed for ${skillsRoot}`);
+  return failures;
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -356,8 +435,24 @@ try {
   process.exit(1);
 }
 
+const version = readVersion(root);
+const targetRoots = resolveTargetRoots(args);
+
 if (args.check) {
-  check(root, args.skillsRoot, commit, dirty);
+  let failed = false;
+  for (const skillsRoot of targetRoots) {
+    const failures = check(root, skillsRoot, commit, dirty, version);
+    if (failures.length > 0) {
+      failed = true;
+      console.error(`Linear workflow local install check failed for ${skillsRoot}:`);
+      for (const failure of failures) console.error(`- ${failure}`);
+    } else {
+      console.log(`Linear workflow local install check passed for ${skillsRoot} (version ${installedRootVersion(skillsRoot)})`);
+    }
+  }
+  process.exit(failed ? 1 : 0);
 } else {
-  sync(root, args.skillsRoot, commit, dirty, readVersion(root), args.removeStale);
+  for (const skillsRoot of targetRoots) {
+    sync(root, skillsRoot, commit, dirty, version, args.removeStale);
+  }
 }

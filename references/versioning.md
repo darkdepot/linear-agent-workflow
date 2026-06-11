@@ -20,14 +20,20 @@ node scripts/install-local.mjs --remove-stale
 node scripts/install-local.mjs --check
 ```
 
-The install writes local runtime files under `~/.codex/skills` by default:
+The default `--all-roots` mode discovers every installed skills root by
+checking for `.linear-agent-workflow.lock.json` in the known roots
+(`~/.codex/skills`, `~/.claude/skills`, and any root recorded in a discovered
+lockfile) and syncs or checks each of them in one run, reporting the per-root
+installed version. On a fresh machine it falls back to `~/.codex/skills`.
+
+The install writes local runtime files into each installed skills root:
 
 - `linear-*/SKILL.md` as executable generated local skill bodies;
 - `linear-*/AGENTS.md` beside each generated local skill;
 - `linear-*/references/*` and `linear-*/templates/*` beside each generated local skill;
 - `.linear-agent-workflow.lock.json` with upstream identity, version, commit, dirty flag, installed skill paths/hashes, and copied asset hashes.
 
-Opening `~/.codex/skills/<name>/SKILL.md` must be enough for the agent runtime
+Opening `<skills-root>/<name>/SKILL.md` must be enough for the agent runtime
 to follow the skill. Project repos must not carry workflow execution logic.
 
 ## Local Lockfile
@@ -150,7 +156,7 @@ resolved before the project config is ready.
 Workflow updates are local:
 
 1. Update this upstream checkout to the desired version/commit.
-2. Run `node scripts/install-local.mjs --remove-stale`.
+2. Run `node scripts/install-local.mjs --remove-stale` (default `--all-roots` mode updates every installed skills root).
 3. Run `node scripts/install-local.mjs --check`.
 4. Use `node scripts/project-config.mjs --repo /path/to/project --check` only to verify project-specific config and absence of legacy vendored workflow files.
 
@@ -164,12 +170,13 @@ Project migrations are config-only:
 
 ## Checks
 
-`node scripts/install-local.mjs --check` verifies:
+`node scripts/install-local.mjs --check` verifies, for every installed skills
+root:
 
-- each expected local `~/.codex/skills/linear-*` skill exists;
+- each expected local `<skills-root>/linear-*` skill exists;
 - installed skill contents match the current upstream-generated body;
 - copied `AGENTS.md`, `references/`, and `templates/` match the upstream checkout;
-- `.linear-agent-workflow.lock.json` has matching paths and SHA-256 hashes.
+- `.linear-agent-workflow.lock.json` has matching paths, SHA-256 hashes, and upstream version/commit.
 
 `node scripts/project-config.mjs --repo /path/to/project --check` verifies:
 

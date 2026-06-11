@@ -101,27 +101,29 @@ Install or update the workflow as a local skill pack from this upstream checkout
 node scripts/install-local.mjs --remove-stale
 ```
 
-The installer writes the executable `linear-*` skills into `~/.codex/skills` by default:
+The default mode is `--all-roots`: the installer discovers every previously-installed skills root by checking for `.linear-agent-workflow.lock.json` in the known roots (`~/.codex/skills`, `~/.claude/skills`, and any root recorded in a discovered lockfile) and syncs each of them in one run, reporting the per-root installed version. On a fresh machine with no lockfiles it falls back to `~/.codex/skills`.
 
-- `~/.codex/skills/linear-*`: executable local skill bodies generated from upstream.
-- `~/.codex/skills/linear-*/references` and `~/.codex/skills/linear-*/templates`: copied beside each local skill for progressive disclosure.
-- `~/.codex/skills/.linear-agent-workflow.lock.json`: upstream repo, version, commit, dirty flag, installed skill paths, and copied asset hashes.
+Each installed skills root contains:
+
+- `<skills-root>/linear-*`: executable local skill bodies generated from upstream.
+- `<skills-root>/linear-*/references` and `<skills-root>/linear-*/templates`: copied beside each local skill for progressive disclosure.
+- `<skills-root>/.linear-agent-workflow.lock.json`: upstream repo, version, commit, dirty flag, installed skill paths, and copied asset hashes.
 
 `linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime. This workflow does not vendor `autoreview`; preflight blocks when the helper is missing.
 
-Check the local skill pack without writing:
+Check every installed root without writing:
 
 ```bash
 node scripts/install-local.mjs --check
 ```
 
-Use a different skill root only for testing or alternate runtimes:
+Use a single explicit skills root only for testing or alternate runtimes:
 
 ```bash
 node scripts/install-local.mjs --skills-root /path/to/skills --remove-stale
 ```
 
-The checks fail when local skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, or lockfile hashes drift.
+The checks fail when local skills are missing, stale, edited, too small to be executable, copied references/templates are missing, stale, edited, or unexpected, lockfile hashes drift, or any discovered root is pinned to an older upstream version.
 
 ## Project Config
 
