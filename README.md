@@ -195,6 +195,22 @@ See `references/install.md` for install details and `references/versioning.md` f
 
 ## Validation
 
+Run the one-command entry point before finishing any change:
+
+```bash
+node scripts/verify.mjs
+```
+
+CI runs `node scripts/verify.mjs` automatically on every PR and push to `main`.
+
+To additionally verify the installed local skill pack (maintainer machine only):
+
+```bash
+node scripts/verify.mjs --install-check
+```
+
+### Individual checks
+
 ```bash
 git diff --check
 node --check scripts/install-local.mjs
