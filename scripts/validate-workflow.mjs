@@ -227,6 +227,33 @@ function validateTemplateSections() {
       "Нарушение контракта:",
       "Как починить:",
     ],
+    "templates/orchestrator-dispatch.md": [
+      "## Assignment",
+      "## Context Snapshot",
+      "## AFK Contract",
+      "## Mailbox",
+      "## Authorization",
+      "Do not ask the user",
+      "no sub-workers",
+    ],
+    "templates/orchestrator-brief.md": [
+      "Что решаем:",
+      "Почему сейчас:",
+      "Что уже доказано:",
+      "Рекомендация:",
+      "Решил сам:",
+      "Нужно от тебя:",
+    ],
+    "templates/orchestrator-report.md": [
+      "\"issue\"",
+      "\"stage\"",
+      "\"status\"",
+      "\"question\"",
+      "\"recommendation\"",
+      "\"linear_mutations_pending\"",
+      "needs-decision",
+      "## Ledger Entry",
+    ],
   };
 
   for (const [relativePath, sections] of Object.entries(requiredSections)) {
