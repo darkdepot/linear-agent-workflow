@@ -744,7 +744,7 @@ Expected: FAIL with three `references/... missing ...` lines.
 
 - [ ] **Step 3: Update `references/questioning.md`**
 
-Edit 1 — in the `Question stages:` list, replace:
+Edit 1 — replace the `Question stages:` lead-in line with `Question stages (worker note: under \`linear-orchestrate\` dispatch, the \`## Orchestrated Mode\` section below overrides every per-stage line — route questions to the orchestrator mailbox, never to the user):` — then, in the `Question stages:` list, replace:
 
 ```markdown
 - `linear-implement`: ask only for implementation-start approval or a blocker involving product, UX, business, external access, dirty worktree, or risk acceptance.

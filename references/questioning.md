@@ -42,7 +42,9 @@ Always ask (one at a time, options + recommendation):
   When the runtime lacks `/design-html`, describe each variant concretely
   (layout, hierarchy, states) before asking.
 
-Question stages:
+Question stages (worker note: under `linear-orchestrate` dispatch, the
+`## Orchestrated Mode` section below overrides every per-stage line — route
+questions to the orchestrator mailbox, never to the user):
 
 - `linear-idea`: ask 1-3 direction-shaping questions (outcome, boundary, audience) before creating or updating the Idea Project; resolve the rest as explicit assumptions in the brief.
 - `linear-handoff`: ask only for package approval, unresolved product decisions, or accepted review fixes.
