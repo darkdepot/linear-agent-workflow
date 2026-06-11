@@ -577,6 +577,7 @@ function validateDocsAndExamples() {
       "## Resume",
       "claude-code-desktop",
       "deployApproval",
+      "any risk class except `tiny` under `risky-only`",
       "«Решил сам:»",
       "scope-drift-needs-handoff",
     ],

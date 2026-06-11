@@ -153,8 +153,8 @@ User (immediate interactive question, decision-brief format):
   questioning policy inherited).
 - Product risk: money, user data, irreversible production actions, external
   access.
-- Deploy when `deployApproval` policy requires it (`always`, or risk class
-  deep/risky under `risky-only`).
+- Deploy when `deployApproval` policy requires it (`always`, or any risk
+  class except `tiny` under `risky-only`).
 
 Orchestrator (decides itself, records in ledger):
 

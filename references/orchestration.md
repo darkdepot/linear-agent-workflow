@@ -40,7 +40,8 @@ brief (options + recommendation):
 - Product risk: money, user data, irreversible production actions, external
   access.
 - Deploy approval when the configured `deployApproval` policy requires it
-  (`always`, or deep/risky risk classes under `risky-only`).
+  (`always`, or any risk class except `tiny` under `risky-only`; only `tiny`
+  proceeds without asking).
 
 The orchestrator decides itself and records every such decision in the ledger
 under «Решил сам:» with a one-line reason:
