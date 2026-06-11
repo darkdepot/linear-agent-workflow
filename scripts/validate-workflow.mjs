@@ -402,6 +402,7 @@ function validateDocsAndExamples() {
       "node scripts/project-config.mjs",
       "Review/check split",
       "Delivery ladder",
+      "Autonomy with transparency",
     ],
     "AGENTS.md": [
       "`linear-review` = report-only quality/risk review",
@@ -443,6 +444,8 @@ function validateDocsAndExamples() {
     "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
     "references/questioning.md": [
       "`linear-deploy`: ask only for deploy approval",
+      "## Autonomy Defaults",
+      "/design-html",
     ],
     "references/versioning.md": [
       "`Autoreview helper`",
@@ -495,6 +498,12 @@ function validateAntiPatterns() {
   }
   if (!handoff.includes("это одновременно approval на старт кода")) {
     fail("linear-handoff option 2 must label the bundled approval");
+  }
+  if (!handoff.includes("«Решил сам:»")) {
+    fail("linear-handoff must include «Решил сам:» ledger in package approval UX");
+  }
+  if (!handoff.includes("Always-ask list")) {
+    fail("linear-handoff rules must reference the Always-ask list in questioning.md");
   }
 
   const implement = read("skills/linear-implement/SKILL.md");

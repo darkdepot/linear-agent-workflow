@@ -11,6 +11,37 @@ Rules:
 - Do not ask permission for report-only checks.
 - Do not ask the user to choose routine implementation details such as file layout, helper naming, or parser mechanics.
 
+## Autonomy Defaults
+
+The agent owns every answer it can ground in repo, Linear, GitHub, config, or
+discovery context. Asking the user is the exception, not the rhythm.
+
+Resolve without asking:
+
+- Anything discoverable from repo, Linear, GitHub, or project config.
+- Implementation details: file layout, naming, libraries, patterns, refactoring scope.
+- Document structure, risk classification, review-gate routing, and workflow mechanics.
+- Product micro-choices with one clearly safest option: decide, record, move on.
+
+Decide-and-surface instead of pre-asking:
+
+- When a non-contested product choice has a clearly better option, take it and
+  record it in the draft package under «Решил сам:» with a one-line reason.
+  The user overrides it at package approval; do not interrupt discovery to ask.
+
+Always ask (one at a time, options + recommendation):
+
+- Scope boundaries when genuinely contestable: what goes in, what gets cut.
+- Issue slicing when the work plausibly exceeds one PR: propose the split and
+  stage count with a reason, and ask before fixing it in the package.
+- Risk acceptance: money, user data, production irreversibility, external access.
+- Design and visual decisions: the user controls design. Never decide visual
+  questions silently, and never ask them text-only when the difference is
+  visual. Prepare side-by-side variants through the `/design-html` skill when
+  the runtime provides it, open the mockup, then ask with a recommendation.
+  When the runtime lacks `/design-html`, describe each variant concretely
+  (layout, hierarchy, states) before asking.
+
 Question stages:
 
 - `linear-idea`: ask 2-4 idea-shaping questions before creating or updating the Idea Project.

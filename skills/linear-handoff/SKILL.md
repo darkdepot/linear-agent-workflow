@@ -72,6 +72,7 @@ Draft package approval UX:
   - PRD product decisions.
   - PRD actor -> capability -> benefit coverage and behavior-validation intent.
   - Tech Spec implementation decisions.
+  - «Решил сам:» — non-contested product choices the agent took itself, each with a one-line reason; overriding any of them is a valid approval answer.
   - Issue slicing, `AFK`/`HITL` readiness, dependencies, and why this split is right.
   - Review gate, risk, and validation plan.
   - Decision options — every option must say which approval(s) it grants.
@@ -96,6 +97,11 @@ Tech Spec
 Issue
 Один PR: `Привести initial skeleton состояний Settings к structural kit`.
 Я бы не дробил это на несколько issues: изменение широкое по routes, но цель одна. Если резать по страницам, выше риск получить разный skeleton language в одном разделе.
+
+Решил сам:
+- Skeleton повторяет структуру, но не копирует каждую кнопку — иначе шум.
+- Logs-страницы получают табличный skeleton, как у таблиц, а не спиннер.
+Если что-то из этого не так - скажи, поправлю до записи в Linear.
 
 Review gate
 Risk: `standard`, потому что touched surface широкий: много Settings routes и визуальное качество. Перед Issue будет handoff review; перед PR нужен pre-ship review.
@@ -182,6 +188,8 @@ Execution-mode workflow:
 
 Rules:
 
+- Resolve non-contested product micro-choices yourself and surface them under «Решил сам:»; ask only per the Always-ask list in references/questioning.md (scope boundaries, issue slicing, risk acceptance, design decisions).
+- Design and visual decisions follow references/questioning.md: prepare /design-html variants when available; the user controls design.
 - Keep durable workflow truth in Linear.
 - Treat local and gstack artifacts as discovery inputs, not durable source of truth.
 - Follow `references/artifact-intake.md`; do not scan broadly or guess which local scratch file is authoritative.

@@ -22,7 +22,7 @@ Workflow:
 
 1. Confirm this runtime can create or update a Linear Project.
 2. Inspect only the minimal repo and Linear context needed to ask better idea-shaping questions.
-3. Ask 2-4 high-leverage AskQuestion-style questions.
+3. Ask 1-3 high-leverage AskQuestion-style questions — only those that shape direction: outcome, boundary, or audience. Resolve everything else yourself and record it as explicit assumptions in the strengthened brief, so the user corrects by reading, not by interrogation.
 4. Each question must include answer options, one recommended option, and a short reason for the recommendation.
 5. Accept custom user answers when options do not fit.
 6. Build a strengthened brief from the raw idea and answers.
