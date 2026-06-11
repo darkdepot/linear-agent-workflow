@@ -75,7 +75,7 @@ Workflow states:
      package-approval decision brief per `templates/orchestrator-brief.md`.
    - After package approval, implementation start is the orchestrator's own
      decision; record it explicitly (the bundled-approval rule from
-     `linear-handoff` applies).
+     `linear-implement` applies).
 4. `dispatch`
    - One Issue per worker. Spawn through the runtime transport with
      `templates/orchestrator-dispatch.md`: full context snapshot, AFK
@@ -89,6 +89,10 @@ Workflow states:
      to the next stage (`linear-implement` → `linear-preflight` →
      `linear-ship`).
    - Follow the Monitoring Protocol in `references/orchestration.md`. Do not steer an actively progressing worker.
+   - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
+     `needs-decision`) to `decide-or-escalate` instead of advancing.
+   - On `timed-out`: treat as a stuck worker; rebuild stage state from Linear
+     and the last mailbox report and respawn per the Monitoring Protocol.
 6. `decide-or-escalate`
    - Technical questions: decide, record in the ledger under «Решил сам:»
      with a one-line reason, answer the worker.
@@ -124,6 +128,15 @@ Rules:
 - Keep the ledger free of secrets and routine polling entries.
 - Keep user-facing output in the project config language (Russian by
   default); ledger and mailbox stay English.
+
+Session verdicts:
+
+- `active`: work in flight; status updates continue.
+- `needs-human`: an Always-ask decision blocks all remaining progress;
+  waiting on the user.
+- `blocked`: orchestration cannot continue (Linear, config, or worker state
+  unrecoverable); exact blocker reported.
+- `idle`: every active Issue is deployed and closed; awaiting new work.
 
 Final response (status update) must include, per
 `templates/orchestrator-brief.md`:

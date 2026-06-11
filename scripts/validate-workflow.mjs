@@ -854,6 +854,8 @@ function validateAntiPatterns() {
     "templates/orchestrator-brief.md",
     "templates/orchestrator-report.md",
     "deployApproval",
+    "Session verdicts:",
+    "timed-out",
     "~/.linear-agent-workflow/orchestrator/<product>/",
     "`linear-implement` owns Delivery Start",
   ]) {

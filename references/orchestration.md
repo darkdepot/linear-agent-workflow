@@ -48,7 +48,7 @@ under «Решил сам:» with a one-line reason:
 
 - All technical and implementation questions from workers.
 - Implementation start after package approval (recorded explicitly; the
-  bundled-approval rule from `linear-handoff` applies).
+  bundled-approval rule from `linear-implement` applies).
 - Technical review-finding acceptance, CI repair, and PR stabilization
   routing.
 - Merge/deploy for risk classes the configured `deployApproval` allows.
