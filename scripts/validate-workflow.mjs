@@ -15,6 +15,7 @@ const EXPECTED_SKILLS = [
   "linear-idea",
   "linear-implement",
   "linear-issue",
+  "linear-orchestrate",
   "linear-preflight",
   "linear-prd",
   "linear-project",
@@ -226,6 +227,36 @@ function validateTemplateSections() {
       "Следующий unblock:",
       "Нарушение контракта:",
       "Как починить:",
+    ],
+    "templates/orchestrator-dispatch.md": [
+      "## Assignment",
+      "## Context Snapshot",
+      "## AFK Contract",
+      "## Mailbox",
+      "## Authorization",
+      "Do not ask the user",
+      "Never write to Linear yourself",
+      "no sub-workers",
+    ],
+    "templates/orchestrator-brief.md": [
+      "Что решаем:",
+      "Почему сейчас:",
+      "Что уже доказано:",
+      "Рекомендация:",
+      "Решил сам:",
+      "Нужно от тебя:",
+    ],
+    "templates/orchestrator-report.md": [
+      "\"issue\"",
+      "\"stage\"",
+      "\"status\"",
+      "\"question\"",
+      "\"recommendation\"",
+      "\"linear_mutations_pending\"",
+      "needs-decision",
+      "needs-human",
+      "drift-candidate",
+      "## Ledger Entry",
     ],
   };
 
@@ -566,6 +597,21 @@ function validateDocsAndExamples() {
       "LINEAR_WORKFLOW_KNOWN_ROOTS",
       "per-root",
     ],
+    "references/orchestration.md": [
+      "## Roles",
+      "## Stage Ownership",
+      "## Decision Authority",
+      "## Worker Transports",
+      "## Mailbox And Ledger",
+      "## Monitoring Protocol",
+      "## Decision Briefs",
+      "## Resume",
+      "claude-code-desktop",
+      "deployApproval",
+      "any risk class except `tiny` under `risky-only`",
+      "«Решил сам:»",
+      "scope-drift-needs-handoff",
+    ],
     "references/questioning.md": [
       "`linear-deploy`: ask only for deploy approval",
       "## Autonomy Defaults",
@@ -793,6 +839,34 @@ function validateAntiPatterns() {
   if (!idea.includes("BLOCKED / INCOMPLETE - linear-idea cannot complete because")) {
     fail("linear-idea blocked message must preserve English marker line");
   }
+
+  const orchestrate = read("skills/linear-orchestrate/SKILL.md");
+  for (const required of [
+    "control plane",
+    "never implement, edit code, fix CI, or rewrite PRs",
+    "Single Linear writer",
+    "One Issue per worker",
+    "no-sub-delegation",
+    "scope-drift-needs-handoff",
+    "Do not steer an actively progressing worker",
+    "«Решил сам:»",
+    "references/orchestration.md",
+    "templates/orchestrator-dispatch.md",
+    "templates/orchestrator-brief.md",
+    "templates/orchestrator-report.md",
+    "deployApproval",
+    "Session verdicts:",
+    "timed-out",
+    "~/.linear-agent-workflow/orchestrator/<product>/",
+    "`linear-implement` owns Delivery Start",
+  ]) {
+    if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
+  }
+  assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
+  assertIncludes("references/questioning.md", "## Orchestrated Mode");
+  assertIncludes("references/lifecycle.md", "## Orchestration");
+  assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
+  assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");
 }
 
 validateSkills();
