@@ -864,6 +864,8 @@ function validateAntiPatterns() {
   assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
   assertIncludes("references/questioning.md", "## Orchestrated Mode");
   assertIncludes("references/lifecycle.md", "## Orchestration");
+  assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
+  assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");
 }
 
 validateSkills();

@@ -24,6 +24,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-preflight`: local branch readiness, targeted verification, mandatory `autoreview` clean gate, and preflight certificate.
 - `linear-ship`: wrapper around configured project ship, documentation, review feedback, and green certificate workflows.
 - `linear-deploy`: wrapper around configured project deploy, post-ship check, Linear closeout, and learning capture workflows.
+- `linear-orchestrate`: control-plane orchestrator session per product; drives projects and Issues through worker sessions, decides technical questions itself, escalates only product decisions (scope, design, risk).
 
 The workflow includes an execution quality layer inspired by proven agent-skill
 guardrails: PRDs must cover actor, capability, and benefit; Issues must be
@@ -83,6 +84,17 @@ when final discovery/review plan appears
 -> run configured Deploy workflow
 -> run/report linear-check post-ship
 -> close Linear and record durable learnings
+```
+
+Orchestrated mode (optional):
+
+```text
+/linear-orchestrate (one session per product)
+-> resume state from Linear + ledger + mailbox
+-> run idea/discovery/handoff with the user in-session
+-> dispatch one worker per Issue (implement -> preflight -> ship)
+-> answer technical questions; escalate scope/design/risk as decision briefs
+-> run linear-deploy per deployApproval policy
 ```
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `linear-handoff` persists the package.

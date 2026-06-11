@@ -25,6 +25,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - `linear-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate, commit state, and preflight certificate.
 - `linear-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
 - `linear-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
+- `linear-orchestrate` = product-level control plane: worker dispatch, monitoring, decision routing, single Linear writer during orchestration; never does stage work itself.
 
 ## Skill Design Rules
 
@@ -36,6 +37,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Keep `linear-review` report-only and `linear-check` readiness-only.
 - Apply accepted review fixes through `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Keep `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
+- Keep `linear-orchestrate` control-plane only: it sequences stages and routes decisions but never absorbs stage ownership or implements.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
 - Project repos must keep only `.agents/linear-workflow.config.json` for this workflow. Do not install, generate, or vendor `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local checkers, or updater CI into project repos.
