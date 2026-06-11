@@ -26,7 +26,7 @@ Linear Issue: `<key>` - <current Linear status>
 Не проверено:
 - <ручное QA/браузер/прод/мобайл/деплой и т.д. — что не запускали, или `none known`>.
 
-Linear status:
+Статус в Linear:
 - <issue/project sync outcome>.
 - <comments/resources/status updates outcome>.
 
