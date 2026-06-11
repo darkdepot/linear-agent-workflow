@@ -314,6 +314,96 @@ function validateLocalInstallBehavior() {
   }
 }
 
+function validateMultiRootInstallBehavior() {
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-multi-root-"));
+  const codexRoot = path.join(baseDir, "codex", "skills");
+  const claudeRoot = path.join(baseDir, "claude", "skills");
+  const recordedRoot = path.join(baseDir, "recorded", "skills");
+  const lockName = ".linear-agent-workflow.lock.json";
+  const env = {
+    ...process.env,
+    LINEAR_WORKFLOW_KNOWN_ROOTS: [codexRoot, claudeRoot].join(path.delimiter),
+  };
+  const version = read("VERSION").trim();
+
+  try {
+    expectCommandFailure(
+      "install-local --all-roots --skills-root conflict",
+      () => runNode(["scripts/install-local.mjs", "--all-roots", "--skills-root", codexRoot]),
+      "--all-roots cannot be combined with --skills-root"
+    );
+
+    // Fresh machine: no lockfiles anywhere, default mode installs the first known root only.
+    const fallbackOutput = runNode(["scripts/install-local.mjs"], { env });
+    if (!fallbackOutput.includes("No installed skills roots found")) {
+      fail("install-local default mode must report the fresh-install fallback");
+    }
+    if (!fs.existsSync(path.join(codexRoot, lockName))) {
+      fail("install-local default mode must install into the first known root on a fresh machine");
+    }
+    if (fs.existsSync(claudeRoot)) {
+      fail("install-local fresh-install fallback must not create other known roots");
+    }
+
+    // With a second installed root, one default run must sync every root and report per-root versions.
+    runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
+    const syncOutput = runNode(["scripts/install-local.mjs", "--all-roots", "--remove-stale"], { env });
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (!syncOutput.includes(`Installed ${EXPECTED_SKILLS.length} Linear workflow skills into ${skillsRoot} (version ${version})`)) {
+        fail(`install-local --all-roots must report a per-root install for ${skillsRoot}`);
+      }
+    }
+
+    const checkOutput = runNode(["scripts/install-local.mjs", "--check"], { env });
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (!checkOutput.includes(`Linear workflow local install check passed for ${skillsRoot} (version ${version})`)) {
+        fail(`install-local --check must report the per-root version for ${skillsRoot}`);
+      }
+    }
+
+    // A root recorded in a discovered lockfile is synced even when missing from the known list.
+    runNode(["scripts/install-local.mjs", "--skills-root", recordedRoot], { env });
+    const claudeLockPath = path.join(claudeRoot, lockName);
+    const claudeLock = JSON.parse(fs.readFileSync(claudeLockPath, "utf8"));
+    claudeLock.skillsRoot = recordedRoot;
+    fs.writeFileSync(claudeLockPath, `${JSON.stringify(claudeLock, null, 2)}\n`);
+    const recordedOutput = runNode(["scripts/install-local.mjs"], { env });
+    if (!recordedOutput.includes(`Installed ${EXPECTED_SKILLS.length} Linear workflow skills into ${recordedRoot}`)) {
+      fail("install-local --all-roots must sync roots recorded in discovered lockfiles");
+    }
+
+    // One root left at an older version: the multi-root check must surface it.
+    const codexLockPath = path.join(codexRoot, lockName);
+    const codexLock = JSON.parse(fs.readFileSync(codexLockPath, "utf8"));
+    codexLock.upstreamVersion = "0.0.1";
+    fs.writeFileSync(codexLockPath, `${JSON.stringify(codexLock, null, 2)}\n`);
+    expectCommandFailure(
+      "install-local --check stale per-root version fixture",
+      () => runNode(["scripts/install-local.mjs", "--check"], { env }),
+      "Lockfile upstreamVersion is 0.0.1"
+    );
+    runNode(["scripts/install-local.mjs"], { env });
+
+    // One edited root: the multi-root check must fail naming the broken root and still pass the healthy one.
+    fs.appendFileSync(path.join(claudeRoot, "linear-review", "SKILL.md"), "\nBROKEN\n");
+    for (const expectedText of [
+      `Linear workflow local install check failed for ${claudeRoot}`,
+      `Linear workflow local install check passed for ${codexRoot}`,
+    ]) {
+      expectCommandFailure(
+        "install-local --check multi-root edited skill fixture",
+        () => runNode(["scripts/install-local.mjs", "--check"], { env }),
+        expectedText
+      );
+    }
+
+    runNode(["scripts/install-local.mjs", "--all-roots"], { env });
+    runNode(["scripts/install-local.mjs", "--all-roots", "--check"], { env });
+  } finally {
+    fs.rmSync(baseDir, { recursive: true, force: true });
+  }
+}
+
 function writeLegacyProjectConfig(repo) {
   fs.mkdirSync(path.join(repo, ".agents"), { recursive: true });
   fs.writeFileSync(
@@ -422,6 +512,9 @@ function validateDocsAndExamples() {
       "autoreview",
       "node scripts/install-local.mjs",
       "node scripts/project-config.mjs",
+      "--all-roots",
+      "~/.claude/skills",
+      "per-root",
       "Review/check split",
       "Delivery ladder",
       "Autonomy with transparency",
@@ -463,7 +556,16 @@ function validateDocsAndExamples() {
     "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
-    "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
+    "references/install.md": [
+      "local skill pack",
+      ".agents/linear-workflow.config.json",
+      "does not vendor `autoreview`",
+      "--all-roots",
+      "~/.claude/skills",
+      ".linear-agent-workflow.lock.json",
+      "LINEAR_WORKFLOW_KNOWN_ROOTS",
+      "per-root",
+    ],
     "references/questioning.md": [
       "`linear-deploy`: ask only for deploy approval",
       "## Autonomy Defaults",
@@ -697,6 +799,7 @@ validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
 validateLocalInstallBehavior();
+validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
