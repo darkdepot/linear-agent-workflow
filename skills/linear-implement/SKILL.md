@@ -42,6 +42,7 @@ Inputs to gather:
 - Handoff artifact intake summary when recorded in Linear comments, resources, or package notes.
 - Package approval comment and implementation-start approval, if already recorded.
 - Project config, including optional `Implementation workflow`.
+- Prior operational learnings for this repo through `gstack-learnings-search` when the helper is available.
 - Minimal repo context needed to understand commands, conventions, and validation.
 - Current git branch, worktree state, and remote/base branch status.
 
@@ -56,6 +57,7 @@ Workflow states:
    - Move the Project to Delivery only after approval and prerequisites are explicit.
    - Run or report `linear-check delivery` after the Project is in Delivery.
    - Inspect git state and create or switch to a safe implementation branch when needed.
+   - Consult prior learnings with `gstack-learnings-search --limit 10` (optionally `--query`/`--type` scoped to the Issue topic) when the helper is available. Treat results as advisory context only, never as a gate; when the helper is unavailable or returns nothing, proceed and report that.
    - Record a human Linear comment that implementation started.
 2. `execute`
    - Select the implementation engine.
@@ -127,6 +129,7 @@ Implementation-start comment shape:
 Объем: <approved one-PR slice>.
 Workflow реализации: <configured workflow or default selection and why>.
 План проверки: <targeted tests/checks/manual surfaces expected later>.
+Учтённые learnings: <none|ключи|helper unavailable>.
 Пока не проверено: <browser/manual/PR review/deploy/etc.>.
 ```
 

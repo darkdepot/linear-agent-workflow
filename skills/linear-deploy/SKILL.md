@@ -29,7 +29,8 @@ Workflow:
 2. `prepare`: read the latest `linear-ship green certificate` from Linear comments or resources. If no certificate exists, route to `linear-ship`.
 3. `prepare`: verify the PR URL/number and current PR head SHA match the certificate. If the head changed, route back to `linear-ship` for review stabilization.
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
-5. `approve`: read `deployApproval` from `.agents/linear-workflow.config.json` (absent → `"always"`). Apply the policy:
+5. `prepare`: consult prior operational learnings with `gstack-learnings-search --type operational --limit 10` when the helper is available; surface anything relevant to merge/deploy (deploy config quirks, merge queue behavior) before delegating. Advisory only.
+6. `approve`: read `deployApproval` from `.agents/linear-workflow.config.json` (absent → `"always"`). Apply the policy:
    - `"always"`: require a recorded approval for every deploy. Approval is recorded as a Russian Linear comment on the Issue («Деплой одобрен: <кем/когда>») or given explicitly in the current session; a fresh agent must be able to recover it from Linear. If no approval is recorded and none is given in the current session, stop with `needs-human` using the ask shape below.
    - `"risky-only"`: require approval only when the Issue risk class is `standard`, `deep`, or `risky`. For `tiny` risk proceed without asking.
    - `"never"`: proceed without asking; report the policy in the deploy output.
@@ -40,12 +41,12 @@ Workflow:
      1. Деплоим — рекомендую: ревью и CI зелёные.
      2. Подождать — PR останется готовым, ничего не произойдёт.
      ```
-6. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
-7. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
-8. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
-9. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
-10. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
-11. Return the concise report in `templates/deploy-output.md`.
+7. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
+8. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
+9. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
+10. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
+11. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
+12. Return the concise report in `templates/deploy-output.md`.
 
 Deploy workflow config:
 
@@ -59,6 +60,7 @@ Learning capture:
 - Record only durable discoveries such as deploy config quirks, merge queue behavior, branch cleanup pitfalls, review-loop facts, or repo-specific verification commands.
 - Do not run `/learn prune`, `/learn export`, `/learn stats`, or any interactive learning-management command automatically.
 - Include `Learnings recorded: <none|keys>` in the deploy report and Linear closeout comment.
+- Consult before writing: prior learnings are read in `prepare`; record only discoveries that are new relative to what was consulted.
 
 Deploy closeout shape:
 
@@ -80,6 +82,7 @@ Deploy verification: <passed/failed/unavailable + evidence>
 Post-ship check: <PASS/FAIL/BLOCKED + meaning>
 Linear closeout: <Done/not done + reason>
 Learnings recorded: <none/list>
+Learnings consulted: <none/keys/helper unavailable>
 Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod surfaces not inspected>
 ```

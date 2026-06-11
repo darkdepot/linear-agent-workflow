@@ -520,6 +520,8 @@ function validateAntiPatterns() {
     "Что это разрешает: Project переходит в Delivery",
     "post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule",
     "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
+    "gstack-learnings-search",
+    "Учтённые learnings:",
   ]) {
     if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
   }
@@ -558,6 +560,8 @@ function validateAntiPatterns() {
     "Do not accept `Land workflow` as a compatibility alias",
     "deployApproval",
     "Готов деплоить",
+    "gstack-learnings-search",
+    "Learnings consulted:",
   ]) {
     if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }

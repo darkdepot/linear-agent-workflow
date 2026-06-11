@@ -18,6 +18,7 @@ Deploy status:
 - Post-ship check: <PASS/FAIL/BLOCKED + human meaning>.
 - Linear closeout: <Done/not done + reason>.
 - Learnings recorded: <none or keys>.
+- Learnings consulted: <none/keys/helper unavailable>.
 
 Проверено:
 - <PR/merge/deploy/Linear/learning state actually inspected>.
@@ -46,6 +47,7 @@ Verification:
 Post-ship check:
 Linear closeout:
 Learnings recorded:
+Learnings consulted:
 Notes:
 ```
 
