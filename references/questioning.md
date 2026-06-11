@@ -44,7 +44,7 @@ Always ask (one at a time, options + recommendation):
 
 Question stages:
 
-- `linear-idea`: ask 2-4 idea-shaping questions before creating or updating the Idea Project.
+- `linear-idea`: ask 1-3 direction-shaping questions (outcome, boundary, audience) before creating or updating the Idea Project; resolve the rest as explicit assumptions in the brief.
 - `linear-handoff`: ask only for package approval, unresolved product decisions, or accepted review fixes.
 - `linear-review`: ask nothing by default; return findings and options. If a required artifact is unavailable, return `blocked`.
 - `linear-implement`: ask only for implementation-start approval or a blocker involving product, UX, business, external access, dirty worktree, or risk acceptance.
