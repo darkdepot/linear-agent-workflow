@@ -56,6 +56,16 @@ Use `tiny`, `standard`, `deep`, or `risky`.
 - `needs-fixes`: proposed fixes or decisions remain before the next stage.
 - `blocked`: required artifacts, permissions, or context are unavailable.
 
+## Tiny Output Profile
+
+When risk class is `tiny`:
+
+- Chat finals shrink to: outcome sentence + link + Что дальше (boundary only as delta — see Boundary Delta Rule in `references/human-friendly-output.md`).
+- The implementation-start comment and the preflight certificate may be combined into ONE Linear comment on the Issue. The certificate marker line `linear-preflight certificate` must appear verbatim inside the combined comment so downstream workflow stages can recover the certificate.
+- Ship and deploy keep their certificates unchanged (required for machine recovery) but drop all optional narrative around them.
+
+Reference: each of `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` carries one line pointing here.
+
 ## Ownership
 
 - `linear-review` reports findings only.

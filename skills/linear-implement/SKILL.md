@@ -65,6 +65,7 @@ Workflow states:
 3. `exit`
    - Return exactly one terminal status.
    - Record changed files, tests/checks run, tests/checks not run, branch/dirty state, drift summary, Linear comment outcome, and next workflow.
+   - For `blocked`, `needs-human`, and `scope-drift-needs-handoff`: post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. (`implemented-needs-preflight` is handled by the next workflow — no extra comment needed here.)
 
 Implementation-start approval UX:
 
@@ -99,6 +100,8 @@ Exit statuses:
 - `blocked`: required Linear context, repo state, tooling, permissions, or validation are unavailable.
 - `scope-drift-needs-handoff`: implementation discovered material scope drift that must be reflected in Linear before continuing.
 - `needs-human`: a product, UX, business, external access, dirty-worktree, or risk decision is required.
+
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
 
 Rules:
 

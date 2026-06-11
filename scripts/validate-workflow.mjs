@@ -436,9 +436,9 @@ function validateDocsAndExamples() {
       "`decisions_carried_forward`",
       "`confidence_boundary`",
     ],
-    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:"],
+    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:", "Tiny Output Profile"],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
-    "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments"],
+    "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
     "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
@@ -518,6 +518,8 @@ function validateAntiPatterns() {
     "scope-drift-needs-handoff",
     "Implementation-start approval UX:",
     "Что это разрешает: Project переходит в Delivery",
+    "post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule",
+    "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
     if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
   }
@@ -589,6 +591,8 @@ function validateAntiPatterns() {
     "Do not cap the review loop at an arbitrary round count",
     "Do not call Compound `ce-code-review` for this gate",
     "Do not silently reject a repeated `autoreview` finding and mark `ready`",
+    "Decision needed: <none | точное решение по-русски>",
+    "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
     if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
   }

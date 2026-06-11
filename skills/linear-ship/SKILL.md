@@ -123,6 +123,12 @@ Next: linear-deploy
 
 The Russian human lead is required in Linear; the machine core below the marker is never translated or summarized away.
 
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
+
+Exit comment rule:
+
+For `needs-human`, `blocked`, and `timed-out` ship endings, post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. For `needs-human` caused by unresolved review feedback, the comment must include the exact question as required by `references/ship-feedback-loop.md` — reference that rule rather than duplicating it here.
+
 Rules:
 
 - Do not create PRs directly.

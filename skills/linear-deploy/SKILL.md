@@ -93,6 +93,8 @@ Verdicts:
 - `blocked`: required config, tools, auth, certificate, PR state, deploy target, or Linear context is unavailable.
 - `timed-out`: merge, deploy, or deploy verification did not settle within the configured wait.
 
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
+
 Rules:
 
 - Do not create or update the PR except through the configured Deploy workflow.
