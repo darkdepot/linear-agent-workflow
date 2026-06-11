@@ -52,7 +52,12 @@ Learning capture:
 
 Deploy closeout shape:
 
+When recording this closeout as a Linear comment, open with the Russian human lead above the machine block. The first Russian sentence must state the shipped product outcome and verification environment:
+
 ```text
+Выкатили: <что получили пользователи>; проверено на <среда>.
+<опционально: одно дополнительное предложение — итог или следующий шаг>
+
 linear-deploy closeout
 Deploy: <deployed|blocked|needs-human|timed-out>
 Issue(s): <keys>
@@ -68,6 +73,8 @@ Learnings recorded: <none/list>
 Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod surfaces not inspected>
 ```
+
+The Russian product-outcome lead is required in Linear; the machine core below the marker is never translated or summarized away.
 
 Verdicts:
 

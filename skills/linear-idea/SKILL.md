@@ -91,8 +91,13 @@ Plan Mode and permission boundary:
 ```text
 BLOCKED / INCOMPLETE - linear-idea cannot complete because creating/updating a Linear Project in Idea is mandatory, and this runtime/mode did not allow the Linear mutation.
 
-Exit Plan Mode or rerun linear-idea in execution/default mode, then create/update the Project in Idea.
-No PRD, Tech Spec, Issue, implementation plan, ExecPlan, or code was created.
+Работа не завершена. Project в Linear не создан.
+
+Уже durable:
+- Ничего. Никаких артефактов создано не было.
+
+Следующий unblock:
+- Выйди из Plan Mode (или перезапусти /linear-idea в обычном режиме) — я создам Project в статусе Idea.
 ```
 
 Context inspection guidance:

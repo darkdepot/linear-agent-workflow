@@ -97,7 +97,11 @@ Review timeline:
 
 Green certificate shape:
 
+When recording this certificate as a Linear comment, open with the Russian human lead above the machine block:
+
 ```text
+<1-2 предложения по-русски: итог и следующий шаг — e.g. «PR готов к деплою: ревью чистое, CI зелёный. Дальше — linear-deploy.»>
+
 linear-ship green certificate
 Ship: green
 Issue(s): <keys>
@@ -114,6 +118,8 @@ Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod/deploy surfaces not inspected>
 Next: linear-deploy
 ```
+
+The Russian human lead is required in Linear; the machine core below the marker is never translated or summarized away.
 
 Rules:
 

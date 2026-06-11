@@ -103,7 +103,7 @@ Implementation-start comment shape:
 Начал реализацию по <Issue keys>.
 
 Проверил: <Project, PRD, Tech Spec, Issue, approval/review/check state>.
-Источник правды: Linear package, не raw discovery chat и не local scratch docs.
+Делаю строго по утверждённому Issue; ничего сверх scope не добавляю.
 Объем: <approved one-PR slice>.
 Workflow реализации: <configured workflow or default selection and why>.
 План проверки: <targeted tests/checks/manual surfaces expected later>.

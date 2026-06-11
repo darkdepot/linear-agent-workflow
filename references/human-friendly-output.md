@@ -114,3 +114,13 @@ Blocked or timed-out responses must still be useful:
 ```
 
 Do not call a blocked run complete. Do not hide partial durable state.
+
+## Machine Blocks In Linear Comments
+
+Certificates and closeouts posted to Linear are dual-audience: the next workflow stage recovers them by their stable English marker and field keys.
+
+Every such comment MUST open with 1-2 Russian sentences (project config language when set) stating the human outcome and the next step — e.g. `Ветка готова к PR: автоматическое ревью чистое, локальные проверки прошли. Дальше — linear-ship.` — followed by the unchanged machine block.
+
+The marker line, field names, and status tokens inside the machine block must never be translated, reworded, or summarized away.
+
+Exception: the Russian-comments rule in each skill applies to the human lead; the machine core is exempt by design.

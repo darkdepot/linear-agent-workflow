@@ -107,6 +107,8 @@ Rules:
 Human Linear comment/resource shape:
 
 ```text
+<1-2 предложения по-русски: итог и следующий шаг>
+
 linear-preflight certificate
 Preflight: <ready|blocked|drift-candidate|needs-human>
 Issue(s): <keys>
@@ -119,6 +121,11 @@ Drift candidate: <none/summary>
 Not checked: <manual QA/browser/mobile/deploy/etc.>
 Next: <linear-ship | linear-handoff | needs-human>
 ```
+
+Rules for the Human Linear comment:
+
+- The Russian human lead (1-2 sentences) is required; it states the outcome and next step for the operator.
+- The machine core below the marker line is never translated, reworded, or summarized away — downstream skills recover the certificate by its stable marker and field keys.
 
 Final response must include:
 

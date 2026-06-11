@@ -436,6 +436,7 @@ function validateDocsAndExamples() {
     ],
     "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:"],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
+    "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
     "references/install.md": ["local skill pack", ".agents/linear-workflow.config.json", "does not vendor `autoreview`"],
@@ -613,6 +614,31 @@ function validateAntiPatterns() {
   const techSpecTemplate = read("templates/tech-spec.md");
   for (const banned of ["## Skill contracts", "## linear-check design", "## Дизайн linear-check", "## Дизайн linear-review"]) {
     if (techSpecTemplate.includes(banned)) fail(`Tech Spec template must not expose workflow mechanics section: ${banned}`);
+  }
+
+  // New dual-layer comment contract pins (plan 005)
+  const preflight2 = read("skills/linear-preflight/SKILL.md");
+  if (!preflight2.includes("<1-2 предложения по-русски: итог и следующий шаг>")) {
+    fail("linear-preflight human comment shape missing Russian human-lead placeholder");
+  }
+  if (!preflight2.includes("The Russian human lead (1-2 sentences) is required")) {
+    fail("linear-preflight must require the Russian human lead in Linear comment");
+  }
+
+  const deploy2 = read("skills/linear-deploy/SKILL.md");
+  if (!deploy2.includes("Выкатили: <что получили пользователи>; проверено на <среда>.")) {
+    fail("linear-deploy closeout shape missing required product-outcome Russian lead");
+  }
+  if (!deploy2.includes("The Russian product-outcome lead is required in Linear")) {
+    fail("linear-deploy must require the Russian product-outcome lead");
+  }
+
+  const idea = read("skills/linear-idea/SKILL.md");
+  if (!idea.includes("Выйди из Plan Mode (или перезапусти /linear-idea в обычном режиме) — я создам Project в статусе Idea.")) {
+    fail("linear-idea blocked message missing Russian unblock instruction");
+  }
+  if (!idea.includes("BLOCKED / INCOMPLETE - linear-idea cannot complete because")) {
+    fail("linear-idea blocked message must preserve English marker line");
   }
 }
 
