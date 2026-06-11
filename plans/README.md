@@ -25,6 +25,7 @@ maintainer can reorder, reject, or request plans for backlog items below.
 | 008 | Linear exit traces + tiny output profile + boundary delta | P2 | M | 005 | DONE (f681f92) |
 | 009 | Linear docs papercuts: PRD overlap, calque headings, ID slugs, AFK gloss | P2 | M | — | DONE (d835ed9) |
 | 010 | Discovery autonomy: decide-and-surface, always-ask list, /design-html control | P1 | M | 007 | DONE (6ef084c, 2ed6171) |
+| 011 | linear-orchestrate control-plane skill | P1 | M | — | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
