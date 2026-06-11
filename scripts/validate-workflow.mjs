@@ -205,7 +205,7 @@ function validateTemplateSections() {
       "Ревью Linear: <ready|advisory-ready|needs-fixes|blocked>",
       "Блокирующие замечания:",
       "Предложенные исправления:",
-      "Решения:",
+      "Нужно твоё решение:",
       "К сведению:",
       "Do not use `PASS`, `FAIL`, or `BLOCKED` as the review status.",
     ],
@@ -480,8 +480,11 @@ function validateAntiPatterns() {
   ]) {
     if (!handoff.includes(required)) fail(`linear-handoff must expose artifact intake field: ${required}`);
   }
-  if (!handoff.includes("Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`")) {
-    fail("linear-handoff final response must carry artifact intake summary fields");
+  if (!handoff.includes("Artifact intake, one Russian sentence")) {
+    fail("linear-handoff final response must carry artifact intake one-sentence Russian rendering");
+  }
+  if (!handoff.includes("The structured intake record")) {
+    fail("linear-handoff final response must reference the structured intake record location");
   }
   if (!handoff.includes("Do not move the Project to Delivery from `linear-handoff`")) {
     fail("linear-handoff must not own Delivery Start");

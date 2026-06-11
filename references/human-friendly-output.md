@@ -115,6 +115,28 @@ Blocked or timed-out responses must still be useful:
 
 Do not call a blocked run complete. Do not hide partial durable state.
 
+## Risk And Gate Glossary
+
+Use these Russian renderings in user-facing lines:
+
+- `tiny` → «крошечный: правка в одну строку, ритуалы по минимуму»
+- `standard` → «обычный»
+- `deep` → «глубокий: затрагивает много поверхностей»
+- `risky` → «рискованный: деньги/данные/прод»
+- `required` → «обязательное ревью»
+- `advisory` → «совещательное: можно идти дальше, замечания на усмотрение»
+
+## Tooling Glossary
+
+Translate tooling vocabulary into plain Russian in user-facing lines:
+
+- `Greptile` → «внешний авто-ревьюер PR»
+- `head SHA` → «точная версия кода, которую проверяли»
+- `merge state` → «можно ли влить без конфликтов»
+- `CI` → «автоматические проверки на сервере»
+
+Rule: helper command paths and exit codes belong only inside Linear machine blocks, never in chat finals.
+
 ## Machine Blocks In Linear Comments
 
 Certificates and closeouts posted to Linear are dual-audience: the next workflow stage recovers them by their stable English marker and field keys.

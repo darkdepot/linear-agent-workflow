@@ -58,7 +58,7 @@ Verdicts:
 
 Verdict-to-human translation:
 
-- For `deployed`, say exactly what was merged/deployed and how Linear was updated.
-- For stale certificates, say "PR changed after review; run `linear-ship` again before deploy."
-- For missing Deploy workflow, say "Deploy workflow is not configured; set `Deploy workflow` or run the repo's deploy path manually."
-- For `timed-out`, name whether merge, deploy, verification, or Linear closeout did not settle.
+- Для `deployed`: напиши точно, что было смержено/задеплоено и как обновился Linear.
+- Для stale certificates: «PR изменился после ревью; прогони `linear-ship` ещё раз перед деплоем.»
+- Для отсутствующего Deploy workflow: «Deploy workflow не настроен; укажи `Deploy workflow` или запусти deploy-путь репозитория вручную.»
+- Для `timed-out`: назови, что не устаканилось — merge, deploy, верификация или Linear closeout.

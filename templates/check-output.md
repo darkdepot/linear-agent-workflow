@@ -4,44 +4,44 @@ Pass:
 
 ```text
 PASS - Linear <mode> ready
-Meaning: inspected required state and found no blocking drift; this is not deterministic proof.
+Смысл: <по-русски, например: посмотрел нужные артефакты, блокеров не нашёл; ручную проверку это не заменяет>
 
 Проверено:
 Не проверено:
-Notes:
+Заметки:
 ```
 
 Blocked:
 
 ```text
 BLOCKED - Linear <mode> not ready
-Meaning: required state could not be inspected or updated, so readiness is unknown.
+Смысл: <по-русски, например: нужные артефакты не удалось прочитать или обновить, готовность неизвестна>
 
-Missing:
-Drift:
-Risk:
+Чего не хватает:
+Расхождения:
+Риск:
 Проверено:
 Не проверено:
-Next action:
+Следующий unblock:
 ```
 
 Fail:
 
 ```text
 FAIL - Linear <mode> not ready
-Meaning: a hard workflow contract was violated or a required artifact/stage is missing.
+Смысл: <по-русски, например: нарушен жёсткий контракт или пропущен обязательный артефакт/этап>
 
-Contract violation:
-Evidence:
+Нарушение контракта:
+Доказательство:
 Проверено:
 Не проверено:
-Required recovery:
+Как починить:
 ```
 
-Notes:
+Правила:
 
 - `PASS` means the agent inspected required state and found no blocking drift.
-- `PASS` is not deterministic proof.
-- `FAIL` means the workflow violated a hard contract or skipped a required artifact.
-- `BLOCKED` must include the smallest useful next action.
-- Every result should include a compact "not checked" boundary when manual QA, browser QA, production smoke, deploy verification, or user acceptance did not run.
+- `PASS` is not deterministic proof. The `Смысл:` line must say what was and was not proven.
+- `FAIL` means the workflow violated a hard contract or skipped a required artifact. The `Нарушение контракта:` and `Как починить:` lines must be present.
+- `BLOCKED` must include the smallest useful next action in `Следующий unblock:`.
+- Every result should include a compact "not checked" boundary (`Не проверено:`) when manual QA, browser QA, production smoke, deploy verification, or user acceptance did not run.

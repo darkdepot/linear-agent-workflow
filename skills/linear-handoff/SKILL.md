@@ -208,7 +208,7 @@ Final response after an approved package must include:
 
 - Outcome sentence: handoff is fixed in Linear and whether code was touched.
 - Clickable artifact map, ordered Project -> PRD -> Tech Spec -> Issue(s).
-- Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`.
+- Artifact intake, one Russian sentence: what fed the package, what was unavailable or conflicting, where confidence is low (e.g. «Читал: discovery-план и PRD; не нашёл: заметки office-hours; конфликтов нет»). The structured intake record (`read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, `confidence_boundary`) is recorded in the package-approval Linear comment, not the chat final.
 - Project status.
 - One-line role for each artifact:
   - Project: top-level product brief and lifecycle container.

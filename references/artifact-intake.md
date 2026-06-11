@@ -62,7 +62,9 @@ Use `none` explicitly when a field has no entries. Do not omit fields.
 
 ## Output Shape
 
-Use this compact shape in draft handoff and final confidence reports:
+The structured intake record belongs in the package-approval Linear comment and package notes. The chat final carries a one-sentence Russian rendering instead.
+
+Structured record (for package-approval Linear comment):
 
 ```text
 Artifact intake:
@@ -72,6 +74,12 @@ Artifact intake:
 - conflicts: <material disagreements, or none>
 - decisions_carried_forward: <decisions translated into Linear shape>
 - confidence_boundary: <what this package can and cannot prove>
+```
+
+Chat final (one Russian sentence, e.g.):
+
+```text
+Читал: discovery-план и PRD; не нашёл: заметки office-hours; конфликтов нет; уверенность средняя по scope реализации.
 ```
 
 ## Durable Artifact Rule
