@@ -22,7 +22,7 @@
 
 ## Status
 
-TODO. Update `plans/README.md` row 011 when done.
+DONE (final commit 48b1da6; fixes: a3e5780, 9f391e1, 917d5d6, 52fddb6).
 
 ## STOP conditions
 
