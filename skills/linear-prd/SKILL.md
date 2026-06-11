@@ -31,7 +31,7 @@ Rules:
 - Capture problem, target operator, workflow, scenarios, requirements, non-goals, and acceptance.
 - For Standard or Deep work, assign stable requirement IDs: `R1.`, `R2.`, `R3.`. Use plain bullets only for very small PRD-lite docs.
 - Use the `actor -> capability -> benefit` shape from `references/execution-quality.md` as a coverage check for scenarios and requirements. Do not add a long user-story section unless it materially clarifies the product truth.
-- Use acceptance examples for stateful or conditional behavior. In default Russian output, use: `AE1. Покрывает R1, R2. Дано ..., когда ..., тогда ...`. Adapt the wording to the project config language.
+- Use acceptance examples for stateful or conditional behavior. In default Russian output, use: `AE1 (безопасное сохранение). Покрывает R1 (частичное сохранение), R2. Дано ..., когда ..., тогда ...`. Bare IDs remain the canonical machine key; the Russian slug in parentheses is additive for human readability. Adapt the wording to the project config language.
 - Add success criteria for both:
   - the human/operator outcome;
   - handoff quality, so Tech Spec and Issue slicing can proceed without inventing product behavior.
