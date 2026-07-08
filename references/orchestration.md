@@ -20,7 +20,7 @@ implements stage work itself.
 
 | Stage | Runs in |
 | --- | --- |
-| `linear-idea`, discovery | orchestrator session, live with the user |
+| `linear-idea`, discovery | orchestrator session (Director Discovery) |
 | `linear-handoff` | orchestrator session |
 | `linear-implement`, `linear-preflight`, `linear-ship` | worker session |
 | `linear-deploy` | orchestrator session |
@@ -37,7 +37,9 @@ brief (options + recommendation):
 - Idea direction and scope: handoff package approval, Issue slicing, scope
   drift.
 - Design and UX: always with prepared side-by-side variants (`/design-html`
-  when the runtime provides it; concrete textual variants otherwise).
+  when the runtime provides it; concrete textual variants otherwise). Under
+  Director Discovery, batch design/UX escalations into the UX checkpoint
+  unless they block discovery from continuing.
 - Product risk: money, user data, irreversible production actions, external
   access.
 - Deploy approval when the configured `deployApproval` policy requires it
@@ -57,6 +59,54 @@ under «Решил сам:» with a one-line reason:
 
 The user can override any recorded orchestrator decision later; reopen the
 affected stage when that happens.
+
+## Director Discovery
+
+Discovery under orchestration runs in director mode: the user is the
+advisor, the orchestrator is the product director. Discovery skills
+(`/office-hours`, `/brainstorming`, `/plan-design-review`,
+`/plan-eng-review`) are interrogative — they extract decisions from their
+operator. Under orchestration that operator is the orchestrator: it
+generates their questions and answers them in-session as product director,
+grounded in the Linear brief, repo and product context, and prior user
+answers. It never relays a discovery-skill question stream to the user.
+
+- Material product choices made this way are recorded under «Решил сам:»
+  and surface in the package-approval brief, where overriding any of them
+  is a valid answer.
+- Genuinely contested items (per the Always-ask list) are collected and
+  batched into the UX checkpoint or the package-approval brief; interrupt
+  discovery only when the item blocks it from continuing.
+- When a named discovery skill is not available in the current runtime,
+  run an equivalent internal review pass over the same ground (product,
+  engineering, and design lenses) and record the substitution in the
+  discovery notes.
+- Internal review passes may run as parallel subagents when the runtime
+  provides them; findings return to the orchestrator, never to the user
+  directly. Workers remain barred from spawning anything.
+
+Checkpoints — the only moments that touch the user:
+
+1. Intake direction questions: 1-3 per idea per `linear-idea`; zero when
+   the idea is already clear.
+2. UX checkpoint (user-facing surface only): one brief per
+   `templates/orchestrator-brief.md` with a reviewed near-production
+   prototype and the few contested UX decisions.
+3. Package approval: the existing single handoff brief, bundling the
+   implementation-start option.
+4. Deploy approval per the configured `deployApproval` policy.
+5. Ad-hoc: risk acceptance and material scope drift — these never wait.
+
+Prototype bar for the UX checkpoint: prepared via `/design-html` when the
+runtime provides it (concrete textual variants otherwise), realistic
+product content, correct states, side-by-side variants where a genuine
+choice exists, and an internal design-review pass already applied — the
+prototype is near-production, never a first draft.
+
+Multi-idea intake: the user may bring several ideas in one session. Run
+`linear-idea` per idea, queue discovery, and run Director Discovery one
+project at a time while dispatched delivery work continues in parallel;
+show the discovery queue in the status table.
 
 ## Worker Transports
 

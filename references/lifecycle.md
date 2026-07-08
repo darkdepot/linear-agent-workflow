@@ -210,6 +210,12 @@ Required:
   mutations in mailbox reports.
 - Always-ask decisions (scope, design, product risk, deploy per policy) reach
   the user as immediate decision briefs.
+- Discovery under orchestration follows Director Discovery
+  (references/orchestration.md): the orchestrator answers discovery-skill
+  questions itself and touches the user only at checkpoints — intake
+  direction questions, the UX checkpoint with a reviewed prototype, package
+  approval, deploy approval per policy, and ad-hoc risk or scope-drift
+  escalations.
 
 Forbidden:
 
@@ -219,3 +225,5 @@ Forbidden:
 - Moving stage ownership: Delivery Start stays with `linear-implement`, PR
   lifecycle with `linear-ship`, merge/deploy and closeout with
   `linear-deploy`.
+- Relaying discovery-skill question streams to the user one by one, or
+  presenting an unreviewed first-draft prototype at the UX checkpoint.

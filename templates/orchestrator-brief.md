@@ -28,6 +28,25 @@ Design questions: prepare side-by-side variants first (`/design-html` when the
 runtime provides it), open them, then ask. Never decide visual questions
 silently and never ask them text-only when the difference is visual.
 
+## UX-чекпоинт (UX Checkpoint Brief)
+
+```text
+UX-чекпоинт: <проект> — прототип готов к твоему фидбэку
+
+Что смотрим: <ссылка/файл прототипа — near-production, уже прошёл внутренний design review>
+Контекст: <одно предложение — какую часть продукта это меняет>
+Решил сам: <ключевые product/UX-решения внутри прототипа, по строке с причиной>
+
+Нужно твоё решение:
+1. <контестный UX-вопрос: вариант A — рекомендую, почему / вариант B>
+2. <…или «только общий фидбэк по прототипу»>
+```
+
+The prototype must be near-production before the checkpoint: realistic
+product content, correct states, side-by-side variants where a genuine choice
+exists (`/design-html` when the runtime provides it), and an internal
+design-review pass already applied. Never bring a first draft.
+
 ## Статус (Status Update)
 
 ```text

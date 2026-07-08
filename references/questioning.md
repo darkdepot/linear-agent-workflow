@@ -50,7 +50,7 @@ questions to the orchestrator mailbox, never to the user):
 - `linear-handoff`: ask only for package approval, unresolved product decisions, or accepted review fixes.
 - `linear-review`: ask nothing by default; return findings and options. If a required artifact is unavailable, return `blocked`.
 - `linear-implement`: ask only for implementation-start approval or a blocker involving product, UX, business, external access, dirty worktree, or risk acceptance.
-- `linear-orchestrate`: ask only for Always-ask escalations (scope, design/UX, product risk, deploy approval per the configured policy); answer worker technical questions autonomously and record them under «Решил сам:».
+- `linear-orchestrate`: ask only for Always-ask escalations (scope, design/UX, product risk, deploy approval per the configured policy); answer worker technical questions autonomously and record them under «Решил сам:»; batch design/UX escalations into the UX checkpoint with a prepared prototype per Director Discovery in references/orchestration.md.
 - `linear-preflight`: ask only when local readiness cannot proceed because of dirty-worktree ownership, material drift, missing verification access, or commit/branch risk.
 - `linear-ship`: ask only when feedback requires product, UX, business, scope, or risk acceptance decisions.
 - `linear-deploy`: ask only for deploy approval per the configured deploy-approval policy, or a delivery-policy/risk-acceptance decision.
@@ -72,3 +72,8 @@ When a stage skill runs inside a worker dispatched by `linear-orchestrate`:
 - Always-ask questions still reach the user — through the orchestrator,
   immediately and interactively, as a prepared decision brief. The Always-ask
   list above is unchanged; only the routing changes.
+- Discovery skills run in the orchestrator session with the orchestrator
+  as respondent (Director Discovery): it answers their questions itself as
+  product director, records material choices under «Решил сам:», and
+  batches contested Always-ask items into the UX checkpoint or the
+  package-approval brief instead of relaying question streams to the user.

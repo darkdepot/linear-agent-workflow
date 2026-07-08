@@ -71,8 +71,21 @@ Workflow states:
      applied.
    - Output the rebuilt status table before taking new actions.
 2. `intake-and-discovery`
-   - Run `linear-idea` and discovery dialogue directly in this session, live
-     with the user. Scope and design belong to the user.
+   - Run `linear-idea` per idea in this session; with several ideas, queue
+     them and run discovery one project at a time (Director Discovery in
+     `references/orchestration.md`) while dispatched work continues.
+   - Run the recommended discovery route and review skills in this session
+     with the orchestrator as respondent: answer their questions yourself
+     as product director, record material choices under «Решил сам:», and
+     batch genuinely contested items into checkpoints instead of relaying
+     question streams to the user.
+   - For user-facing surface, prepare the UX checkpoint per
+     `templates/orchestrator-brief.md`: a near-production prototype that
+     already passed an internal design-review pass, plus the few contested
+     UX decisions, one brief.
+   - Scope boundaries, issue slicing, risk acceptance, and design stay the
+     user's decisions — exercised at checkpoints with prepared variants,
+     per the Always-ask list.
 3. `handoff`
    - Run `linear-handoff` in this session. Bring the user one
      package-approval decision brief per `templates/orchestrator-brief.md`.
@@ -129,6 +142,10 @@ Rules:
   does not replace them.
 - Never ask the user an unprepared question; exhaust autonomous work first
   and refresh item state immediately before asking (Decision Briefs policy).
+- Touch the user only at checkpoints: intake direction questions, the UX
+  checkpoint, package approval, deploy approval per policy, and ad-hoc
+  risk or scope-drift escalations; decide everything else and record it
+  under «Решил сам:» (Director Discovery in `references/orchestration.md`).
 - Workers must not spawn sub-workers or manage other sessions; the
   no-sub-delegation rule goes into every dispatch prompt.
 - One Issue per worker; the worker keeps its session and worktree across

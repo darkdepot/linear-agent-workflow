@@ -876,6 +876,9 @@ function validateAntiPatterns() {
     "codex exec resume",
     "orchestration.transport",
     "maxParallelWorkers",
+    "Director Discovery",
+    "UX checkpoint",
+    "Touch the user only at checkpoints",
   ]) {
     if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
   }
@@ -888,6 +891,13 @@ function validateAntiPatterns() {
   assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
   assertIncludes("references/questioning.md", "## Orchestrated Mode");
   assertIncludes("references/lifecycle.md", "## Orchestration");
+  assertIncludes("references/orchestration.md", "## Director Discovery");
+  assertIncludes("references/orchestration.md", "near-production");
+  assertIncludes("references/orchestration.md", "never a first draft");
+  assertIncludes("references/questioning.md", "Director Discovery");
+  assertIncludes("references/lifecycle.md", "Director Discovery");
+  assertIncludes("templates/orchestrator-brief.md", "UX-чекпоинт");
+  assertIncludes("README.md", "director mode");
   assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
   assertIncludes("README.md", "Codex CLI worker");
   assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");
