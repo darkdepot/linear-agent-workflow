@@ -879,6 +879,7 @@ function validateAntiPatterns() {
     "Director Discovery",
     "UX checkpoint",
     "Touch the user only at checkpoints",
+    "Second Voice",
   ]) {
     if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
   }
@@ -894,10 +895,15 @@ function validateAntiPatterns() {
   assertIncludes("references/orchestration.md", "## Director Discovery");
   assertIncludes("references/orchestration.md", "near-production");
   assertIncludes("references/orchestration.md", "never a first draft");
+  assertIncludes("references/orchestration.md", "### Second Voice");
+  assertIncludes("references/orchestration.md", "never talks to the user, never writes");
   assertIncludes("references/questioning.md", "Director Discovery");
+  assertIncludes("references/questioning.md", "Second Voice");
   assertIncludes("references/lifecycle.md", "Director Discovery");
+  assertIncludes("references/lifecycle.md", "Second Voice");
   assertIncludes("templates/orchestrator-brief.md", "UX-чекпоинт");
   assertIncludes("README.md", "director mode");
+  assertIncludes("README.md", "Second Voice");
   assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
   assertIncludes("README.md", "Codex CLI worker");
   assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");

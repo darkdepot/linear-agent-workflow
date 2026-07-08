@@ -74,15 +74,16 @@ Workflow states:
    - Run `linear-idea` per idea in this session; with several ideas, queue
      them and run discovery one project at a time (Director Discovery in
      `references/orchestration.md`) while dispatched work continues.
-   - Run the recommended discovery route and review skills in this session
-     with the orchestrator as respondent: answer their questions yourself
-     as product director, record material choices under «Решил сам:», and
-     batch genuinely contested items into checkpoints instead of relaying
+   - Run the recommended discovery route and review skills through the
+     Second Voice protocol (`references/orchestration.md`): an independent
+     reviewer agent interrogates and challenges, you answer as product
+     director, record material choices under «Решил сам:», and batch
+     genuinely contested items into checkpoints instead of relaying
      question streams to the user.
    - For user-facing surface, prepare the UX checkpoint per
      `templates/orchestrator-brief.md`: a near-production prototype that
-     already passed an internal design-review pass, plus the few contested
-     UX decisions, one brief.
+     already passed a design-lens Second Voice review (in-session pass as
+     fallback), plus the few contested UX decisions, one brief.
    - Scope boundaries, issue slicing, risk acceptance, and design stay the
      user's decisions — exercised at checkpoints with prepared variants,
      per the Always-ask list.
@@ -148,6 +149,9 @@ Rules:
   checkpoint, package approval, deploy approval per policy, and ad-hoc
   risk or scope-drift escalations; decide everything else and record it
   under «Решил сам:» (Director Discovery in `references/orchestration.md`).
+- Second Voice reviewers are discovery agents, not workers: they never
+  talk to the user, never write Linear, and never dispatch or steer
+  workers.
 - Workers must not spawn sub-workers or manage other sessions; the
   no-sub-delegation rule goes into every dispatch prompt.
 - One Issue per worker; the worker keeps its session and worktree across

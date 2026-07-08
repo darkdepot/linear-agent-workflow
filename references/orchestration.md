@@ -66,10 +66,11 @@ Discovery under orchestration runs in director mode: the user is the
 advisor, the orchestrator is the product director. Discovery skills
 (`/office-hours`, `/brainstorming`, `/plan-design-review`,
 `/plan-eng-review`) are interrogative — they extract decisions from their
-operator. Under orchestration that operator is the orchestrator: it
-generates their questions and answers them in-session as product director,
-grounded in the Linear brief, repo and product context, and prior user
-answers. It never relays a discovery-skill question stream to the user.
+operator. Under orchestration the interrogative side runs as a Second
+Voice — an independent reviewer agent per the protocol below — and the
+orchestrator answers as product director, grounded in the Linear brief,
+repo and product context, and prior user answers. It never relays a
+discovery-skill question stream to the user.
 
 - Material product choices made this way are recorded under «Решил сам:»
   and surface in the package-approval brief, where overriding any of them
@@ -81,8 +82,8 @@ answers. It never relays a discovery-skill question stream to the user.
   run an equivalent internal review pass over the same ground (product,
   engineering, and design lenses) and record the substitution in the
   discovery notes.
-- Internal review passes may run as parallel subagents when the runtime
-  provides them; findings return to the orchestrator, never to the user
+- Second Voice and lens reviews run as agents per the Second Voice
+  protocol below; findings return to the orchestrator, never to the user
   directly. Workers remain barred from spawning anything.
 
 Checkpoints — the only moments that touch the user:
@@ -100,13 +101,55 @@ Checkpoints — the only moments that touch the user:
 Prototype bar for the UX checkpoint: prepared via `/design-html` when the
 runtime provides it (concrete textual variants otherwise), realistic
 product content, correct states, side-by-side variants where a genuine
-choice exists, and an internal design-review pass already applied — the
-prototype is near-production, never a first draft.
+choice exists, and a design-lens Second Voice pass already applied
+(in-session review as fallback) — the prototype is near-production,
+never a first draft.
 
 Multi-idea intake: the user may bring several ideas in one session. Run
 `linear-idea` per idea, queue discovery, and run Director Discovery one
 project at a time while dispatched delivery work continues in parallel;
 show the discovery queue in the status table.
+
+### Second Voice
+
+A self-interview is an echo chamber. The interrogative side of discovery
+is delegated to a Second Voice: an independent reviewer agent in a fresh
+context that gets the product brief, Linear links, repo read access, and
+the named discovery skill's question framework — none of the
+orchestrator's reasoning. It plays interviewer for idea shaping
+(`/office-hours`, `/brainstorming`) and critic for reviews
+(`/plan-eng-review`, `/plan-design-review`); the orchestrator answers as
+product director.
+
+Bindings — pick the strongest available; never block discovery on a
+missing one:
+
+- Claude Code: spawn a subagent on the strongest reviewer model distinct
+  from the orchestrator's own session (Opus-class; the Agent tool's
+  `opus` model) and continue the dialogue via session messages to the
+  same agent.
+- Codex CLI runtimes: a fresh `codex exec` thread with
+  `model_reasoning_effort="high"`, continued with `codex exec resume`.
+  The thread is a reviewer, not a worker: no worktree, no Issue, no
+  registry entry.
+- Fallback: run the lens review in-session (product, engineering, and
+  design lenses) and record the substitution in the discovery notes.
+
+Dispatch shape per skill run: the reviewer role and the named skill; the
+product brief and Linear links; repo read access; the instruction to
+deliver questions and challenges as its final message — never through
+user-question tools, there is no user on its side; and the required
+closing verdict: strengths, top risks, contested items, recommendation.
+
+Dialogue protocol: rounds of ask → answer → challenge, capped at 3
+rounds per skill (guidance, not a gate). After the cap, unresolved
+disagreements that are Always-ask class go to the user as checkpoint
+items; the rest the orchestrator decides, recording both positions under
+«Решил сам:».
+
+Boundaries: the Second Voice never talks to the user, never writes
+Linear, and never dispatches or steers workers; it is discovery work,
+not stage work.
 
 ## Worker Transports
 

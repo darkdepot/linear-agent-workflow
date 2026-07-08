@@ -73,7 +73,10 @@ When a stage skill runs inside a worker dispatched by `linear-orchestrate`:
   immediately and interactively, as a prepared decision brief. The Always-ask
   list above is unchanged; only the routing changes.
 - Discovery skills run in the orchestrator session with the orchestrator
-  as respondent (Director Discovery): it answers their questions itself as
-  product director, records material choices under «Решил сам:», and
-  batches contested Always-ask items into the UX checkpoint or the
-  package-approval brief instead of relaying question streams to the user.
+  as respondent (Director Discovery): a Second Voice reviewer agent
+  generates the questions and challenges when the runtime provides one, the
+  orchestrator answers as product director, records material choices under
+  «Решил сам:», and batches contested Always-ask items into the UX
+  checkpoint or the package-approval brief instead of relaying question
+  streams to the user. Disagreements that survive the Second Voice round
+  cap go to the user only when they are Always-ask class.
