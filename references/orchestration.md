@@ -79,9 +79,10 @@ discovery-skill question stream to the user.
   batched into the UX checkpoint or the package-approval brief; interrupt
   discovery only when the item blocks it from continuing.
 - When a named discovery skill is not available in the current runtime,
-  run an equivalent internal review pass over the same ground (product,
-  engineering, and design lenses) and record the substitution in the
-  discovery notes.
+  run an equivalent review pass over the same ground (product,
+  engineering, and design lenses) through the Second Voice — a missing
+  skill does not license in-session self-review while an agent binding
+  exists — and record the substitution in the discovery notes.
 - Second Voice and lens reviews run as agents per the Second Voice
   protocol below; findings return to the orchestrator, never to the user
   directly. Workers remain barred from spawning anything.
@@ -131,7 +132,10 @@ missing one:
 - Codex CLI runtimes: a fresh `codex exec` thread with
   `model_reasoning_effort="high"`, continued with `codex exec resume`.
   The thread is a reviewer, not a worker: no worktree, no Issue, no
-  registry entry.
+  registry entry. Note the live thread id and round count in the
+  discovery notes so a resumed orchestrator rebinds or deliberately
+  restarts the dialogue — and ends orphaned reviewer processes — instead
+  of silently losing it.
 - Fallback: run the lens review in-session (product, engineering, and
   design lenses) and record the substitution in the discovery notes.
 

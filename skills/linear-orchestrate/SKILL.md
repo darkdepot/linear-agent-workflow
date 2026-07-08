@@ -137,7 +137,7 @@ Rules:
 - This skill is a control plane: never implement, edit code, fix CI, or rewrite PRs
   in this session; delegate that to workers. Discovery artifacts (prototypes,
   mockups, review notes) are discovery work, not stage work, and stay
-  in-session.
+  orchestrator-owned.
 - Single Linear writer: all Linear mutations during orchestration happen in
   this session; workers never write to Linear and queue every stage-required
   mutation in their reports.
