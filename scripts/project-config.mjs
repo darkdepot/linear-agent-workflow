@@ -214,6 +214,24 @@ function validateConfig(config, failures) {
       failures.push(`Project config deployApproval must be one of: ${allowed.join(", ")}`);
     }
   }
+  if ("orchestration" in config) {
+    const orchestration = config.orchestration;
+    if (!orchestration || typeof orchestration !== "object" || Array.isArray(orchestration)) {
+      failures.push("Project config orchestration must be an object");
+    } else {
+      const allowedTransports = ["codex-cli", "claude-code-desktop", "fallback"];
+      if ("transport" in orchestration && orchestration.transport !== null && !allowedTransports.includes(orchestration.transport)) {
+        failures.push(`Project config orchestration.transport must be one of: ${allowedTransports.join(", ")}`);
+      }
+      if (
+        "maxParallelWorkers" in orchestration &&
+        orchestration.maxParallelWorkers !== null &&
+        (!Number.isInteger(orchestration.maxParallelWorkers) || orchestration.maxParallelWorkers < 1)
+      ) {
+        failures.push("Project config orchestration.maxParallelWorkers must be a positive integer");
+      }
+    }
+  }
   if (hasPlaceholder(config)) {
     failures.push("Project config contains unresolved <...> placeholder");
   }

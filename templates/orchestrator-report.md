@@ -21,9 +21,14 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
   "recommendation": "<the worker's own recommended answer, or null>",
   "linear_mutations_pending": ["<comment/status text the worker could not apply>"],
   "certificate": "<preflight certificate or linear-ship green certificate text, or null>",
+  "notes": "<runtime substitutions or constraints the orchestrator must know, or null>",
   "next": "<linear-preflight | linear-ship | linear-deploy | null>"
 }
 ```
+
+`notes` is optional free text for runtime facts the fixed fields cannot
+carry — e.g. an engine or workflow substitution because the configured skill
+was not available in the worker runtime. It never replaces a status.
 
 Status semantics:
 
@@ -36,6 +41,30 @@ Status semantics:
 - `needs-decision` is mailbox-only: the worker is paused mid-stage on a
   question and has included its own recommendation. The orchestrator answers
   (technical) or escalates (Always-ask) and then continues the same worker.
+
+## Worker Registry
+
+Path: `~/.linear-agent-workflow/orchestrator/<product>/workers.json`
+
+Orchestrator-owned runtime metadata; workers never read or write it. One
+entry per Issue, updated on spawn, stage advance, and respawn. The registry
+is what lets a fresh orchestrator session rebind to surviving `codex-cli`
+threads (`codex exec resume <thread_id>`) instead of respawning them.
+
+```json
+{
+  "<ISSUE-KEY>": {
+    "transport": "<codex-cli | claude-code-desktop | fallback>",
+    "thread_id": "<codex thread id, or null>",
+    "worktree": "<absolute path>",
+    "branch": "<branch>",
+    "stage": "<linear-implement | linear-preflight | linear-ship>",
+    "spawned_at": "<ISO 8601>",
+    "last_activity_at": "<ISO 8601>",
+    "log": "<absolute path to the worker's JSONL log, or null>"
+  }
+}
+```
 
 ## Ledger Entry
 

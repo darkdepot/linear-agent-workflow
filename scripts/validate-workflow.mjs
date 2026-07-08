@@ -230,6 +230,7 @@ function validateTemplateSections() {
     ],
     "templates/orchestrator-dispatch.md": [
       "## Assignment",
+      "## Engine",
       "## Context Snapshot",
       "## AFK Contract",
       "## Mailbox",
@@ -237,6 +238,8 @@ function validateTemplateSections() {
       "Do not ask the user",
       "Never write to Linear yourself",
       "no sub-workers",
+      "~/.codex/skills/",
+      ".orchestrator/",
     ],
     "templates/orchestrator-brief.md": [
       "Что решаем:",
@@ -253,10 +256,13 @@ function validateTemplateSections() {
       "\"question\"",
       "\"recommendation\"",
       "\"linear_mutations_pending\"",
+      "\"notes\"",
       "needs-decision",
       "needs-human",
       "drift-candidate",
       "## Ledger Entry",
+      "## Worker Registry",
+      "workers.json",
     ],
   };
 
@@ -611,6 +617,12 @@ function validateDocsAndExamples() {
       "any risk class except `tiny` under `risky-only`",
       "«Решил сам:»",
       "scope-drift-needs-handoff",
+      "codex-cli",
+      "codex exec resume",
+      "--add-dir",
+      "workers.json",
+      "sandbox_workspace_write.network_access",
+      "git worktree add",
     ],
     "references/questioning.md": [
       "`linear-deploy`: ask only for deploy approval",
@@ -859,14 +871,28 @@ function validateAntiPatterns() {
     "timed-out",
     "~/.linear-agent-workflow/orchestrator/<product>/",
     "`linear-implement` owns Delivery Start",
+    "codex-cli",
+    "workers.json",
+    "codex exec resume",
+    "orchestration.transport",
+    "maxParallelWorkers",
   ]) {
     if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
+  }
+  if (!implement.includes("not available in the current runtime")) {
+    fail("linear-implement must define the engine runtime-availability fallback");
+  }
+  if (!ship.includes("not available in the current runtime")) {
+    fail("linear-ship must define the workflow runtime-availability fallback");
   }
   assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
   assertIncludes("references/questioning.md", "## Orchestrated Mode");
   assertIncludes("references/lifecycle.md", "## Orchestration");
   assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
+  assertIncludes("README.md", "Codex CLI worker");
   assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");
+  assertIncludes("references/install.md", "\"orchestration\"");
+  assertIncludes("references/install.md", "maxParallelWorkers");
 }
 
 validateSkills();

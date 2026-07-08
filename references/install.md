@@ -97,7 +97,11 @@ The project config is JSON:
   "prerequisites": {
     "autoreviewHelper": true
   },
-  "deployApproval": "always"
+  "deployApproval": "always",
+  "orchestration": {
+    "transport": "codex-cli",
+    "maxParallelWorkers": 3
+  }
 }
 ```
 
@@ -134,6 +138,7 @@ The JSON config should record:
 - `workflows.deploy`: deploy workflow for `linear-deploy`, or `null`.
 - `prerequisites.autoreviewHelper`: must be `true`; `linear-preflight` blocks if the helper is unavailable.
 - `deployApproval` (optional): deploy approval policy — `"always"` (default), `"risky-only"` (approval required for `standard`, `deep`, and `risky` risk classes; only `tiny` proceeds without asking), or `"never"`.
+- `orchestration` (optional): `linear-orchestrate` policy. `transport` — worker transport (`"codex-cli"`, `"claude-code-desktop"`, or `"fallback"`); when absent the orchestrator detects the runtime per `references/orchestration.md`. `maxParallelWorkers` — concurrent worker cap (default 3).
 
 ## Checks
 

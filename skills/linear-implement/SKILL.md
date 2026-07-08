@@ -95,6 +95,7 @@ Implementation engine selection:
   - Superpowers `systematic-debugging` when the Issue is a bug or performance symptom with a repro loop.
   - Superpowers `subagent-driven-development` only when slices are independent and file/surface boundaries are explicit.
   - gstack `qa` after implementation when browser, product, or manual-surface verification is the main risk.
+- When the configured or selected engine skill is not available in the current runtime (for example a Codex worker where Compound or Superpowers skills are not invocable), implement directly from the approved Issue under this skill and `references/execution-quality.md`, and record the substitution in the exit report (and in the report `notes` field when running under orchestration).
 
 Exit statuses:
 

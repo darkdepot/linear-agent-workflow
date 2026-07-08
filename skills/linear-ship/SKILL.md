@@ -133,6 +133,7 @@ Rules:
 
 - Do not create PRs directly.
 - Do not fork or reimplement the project repo's ship workflow.
+- Runtime-availability fallback: when a configured ship, documentation, or review feedback workflow is not available in the current runtime (for example a Codex worker where Compound or gstack skills are not invocable), perform the equivalent steps directly under this skill's own gates — branch push and PR creation via `gh`, documentation sync, feedback resolution — keep the gate ordering and the green-certificate contract unchanged, and record the substitution in the report (`notes` field under orchestration). This is a last-resort delegation path, never permission to bypass a configured workflow that is available.
 - Do not resolve review feedback directly when a configured resolver exists; delegate to it.
 - Do not merge or deploy directly; route green PRs to `linear-deploy`.
 - Do not close Linear Issues as shipped; `linear-deploy` owns verified delivery closeout.

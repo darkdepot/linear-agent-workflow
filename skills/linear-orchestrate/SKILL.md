@@ -48,22 +48,25 @@ Do not use:
 Inputs to gather:
 
 - Project config `.agents/linear-workflow.config.json`: product name,
-  configured workflows, `deployApproval`.
+  configured workflows, `deployApproval`, and the optional `orchestration`
+  block (`orchestration.transport`, `orchestration.maxParallelWorkers`).
 - Fresh Linear state: projects in flight, Issue statuses, latest comments and
   certificates.
 - Orchestrator state on disk under
-  `~/.linear-agent-workflow/orchestrator/<product>/`: ledger and mailbox
-  reports.
+  `~/.linear-agent-workflow/orchestrator/<product>/`: ledger, mailbox
+  reports, and the `workers.json` worker registry.
 - Runtime transport binding per `references/orchestration.md` Worker
-  Transports.
+  Transports (config override first, then runtime detection).
 - Live worker sessions via the runtime session list when available.
 
 Workflow states:
 
 1. `resume`
-   - Rebuild the full picture from Linear + ledger + mailbox + live session
-     list before any action (Resume procedure in
+   - Rebuild the full picture from Linear + ledger + mailbox + worker
+     registry + live session list before any action (Resume procedure in
      `references/orchestration.md`).
+   - Rebind to surviving `codex-cli` workers by thread id instead of
+     respawning them.
    - Apply queued Linear mutations from worker reports that were never
      applied.
    - Output the rebuilt status table before taking new actions.
@@ -79,15 +82,23 @@ Workflow states:
 4. `dispatch`
    - One Issue per worker. Spawn through the runtime transport with
      `templates/orchestrator-dispatch.md`: full context snapshot, AFK
-     contract, mailbox path, authorization. Include the no-sub-delegation
-     rule in every dispatch prompt.
+     contract, engine block, mailbox path, authorization. Include the
+     no-sub-delegation rule in every dispatch prompt.
+   - For `codex-cli` and `fallback` transports, create the worker's worktree
+     before spawn per `references/orchestration.md` Worker Transports.
+   - Record every spawn in `workers.json` (transport, thread id, worktree,
+     branch, stage); update it on stage advance and respawn.
+   - Cap concurrent workers at `orchestration.maxParallelWorkers` (default 3);
+     queue the rest.
    - Respect Issue dependencies; queue dependents until their blockers
      report done.
    - Name workers `<ISSUE-KEY>: <stage>`.
 5. `monitor`
    - Poll the mailbox cheaply; read reports; advance the same worker session
      to the next stage (`linear-implement` → `linear-preflight` →
-     `linear-ship`).
+     `linear-ship`). For `codex-cli` workers advance the same thread with
+     `codex exec resume` and treat process exit plus report as the normal
+     advance signal (liveness ladder in `references/orchestration.md`).
    - Follow the Monitoring Protocol in `references/orchestration.md`. Do not steer an actively progressing worker.
    - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
      `needs-decision`, `scope-drift-needs-handoff`) to `decide-or-escalate`

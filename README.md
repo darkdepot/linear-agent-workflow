@@ -90,12 +90,18 @@ Orchestrated mode (optional):
 
 ```text
 /linear-orchestrate (one session per product)
--> resume state from Linear + ledger + mailbox
+-> resume state from Linear + ledger + mailbox + worker registry
 -> run idea/discovery/handoff with the user in-session
 -> dispatch one worker per Issue (implement -> preflight -> ship)
 -> answer technical questions; escalate scope/design/risk as decision briefs
 -> run linear-deploy per deployApproval policy
 ```
+
+Recommended pairing: a Claude Code orchestrator session with one headless
+Codex CLI worker per Issue (`codex-cli` transport — `codex exec` spawns,
+resumable threads across stages, mailbox reports, `workers.json` registry for
+resume). Set `orchestration.transport` in the project config or let the
+orchestrator detect the runtime; see `references/orchestration.md`.
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `linear-handoff` persists the package.
 
