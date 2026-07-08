@@ -26,6 +26,7 @@ maintainer can reorder, reject, or request plans for backlog items below.
 | 009 | Linear docs papercuts: PRD overlap, calque headings, ID slugs, AFK gloss | P2 | M | — | DONE (d835ed9) |
 | 010 | Discovery autonomy: decide-and-surface, always-ask list, /design-html control | P1 | M | 007 | DONE (6ef084c, 2ed6171) |
 | 011 | linear-orchestrate control-plane skill | P1 | M | — | DONE (48b1da6) |
+| 012 | codex-cli worker transport for linear-orchestrate | P1 | M | 011 | DONE (8cbc8c4) |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
