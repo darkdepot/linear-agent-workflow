@@ -209,7 +209,9 @@ Required:
   (single writer); workers never write to Linear and queue stage-required
   mutations in mailbox reports.
 - Always-ask decisions (scope, design, product risk, deploy per policy) reach
-  the user as immediate decision briefs.
+  the user as decision briefs — immediately when they block progress;
+  design/UX items arising during discovery batch into the UX checkpoint per
+  Director Discovery.
 - Discovery under orchestration follows Director Discovery
   (references/orchestration.md): the orchestrator answers discovery-skill
   questions itself and touches the user only at checkpoints — intake
