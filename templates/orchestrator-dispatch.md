@@ -12,6 +12,20 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 - Worker session name: `<ISSUE-KEY>: <stage>`
 - Chip title (user-visible, Russian): `<ISSUE-KEY>: <стадия по-русски>`
 
+## Engine
+
+- Transport: <codex-cli | claude-code-desktop | fallback>
+- Your worktree is pre-created by the orchestrator; work only inside it.
+- Stage skill body: read `~/.codex/skills/<stage-skill>/SKILL.md` fully before
+  starting and follow it exactly; its `references/` and `templates/` live
+  beside it. (For claude-code-desktop or fallback workers: invoke the
+  installed `<stage-skill>` skill instead.)
+- Project config: `.agents/linear-workflow.config.json` at the repo root.
+- Report delivery: write to the mailbox path below. If the sandbox denies
+  that write, write the same JSON to
+  `<worktree>/.orchestrator/<ISSUE-KEY>-<stage>.json` instead; never commit
+  `.orchestrator/`.
+
 ## Context Snapshot
 
 - Project brief: <full text>
