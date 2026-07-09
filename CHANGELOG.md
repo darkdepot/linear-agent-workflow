@@ -6,6 +6,21 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-09
+
+### Added
+
+- `codex-cli` worker transport for `linear-orchestrate`: the orchestrator spawns one headless Codex thread per Issue (`codex exec --json` in a pre-created worktree), advances the same thread across stages with `codex exec resume`, and tracks every worker in a `workers.json` registry (transport, thread id, worktree, branch, stage). Liveness ladder, stage budgets, and report-delivery fallback under a write sandbox are specified in `references/orchestration.md` Worker Transports; transport selection honors the new optional `orchestration` config block (`orchestration.transport`, `orchestration.maxParallelWorkers`).
+- Director Discovery (`references/orchestration.md`): discovery under orchestration runs in director mode — the orchestrator answers discovery-skill questions itself as product director and touches the user only at five checkpoints: intake direction questions, the UX checkpoint with a reviewed near-production prototype, package approval, deploy approval per policy, and ad-hoc risk or scope-drift escalations. Includes the prototype bar (never a first draft), multi-idea intake queueing, and the «UX-чекпоинт» brief shape in `templates/orchestrator-brief.md`.
+- Second Voice (`references/orchestration.md`): the interrogative side of discovery is delegated to an independent reviewer agent in a fresh context (Opus-class subagent in Claude Code, a fresh high-reasoning `codex exec` thread otherwise, in-session lens review as recorded fallback). Dialogue protocol ask → answer → challenge capped at 3 rounds; disagreements that survive the cap go to the user only when Always-ask class; the Second Voice never talks to the user, never writes Linear, and never dispatches workers.
+- Runtime-availability fallbacks: `linear-implement` and `linear-ship` define behavior when a configured engine/workflow is not available in the current runtime, recording the substitution without weakening gates.
+- Executor plans `plans/012-codex-worker-transport.md`, `plans/013-director-discovery.md`, `plans/014-second-voice-discovery.md`; validator pins for all new contracts.
+
+### Changed
+
+- `references/questioning.md` Orchestrated Mode covers discovery skills in the orchestrator session; `references/lifecycle.md` Orchestration section names the checkpoint model; README documents director mode and the recommended orchestrator/worker pairing.
+- Always-ask design/UX escalations arising during discovery batch into the UX checkpoint instead of interrupting; discovery artifacts (prototypes, mockups, review notes) are defined as orchestrator-owned discovery work, not stage work.
+
 ## [0.14.0] - 2026-06-12
 
 ### Added
