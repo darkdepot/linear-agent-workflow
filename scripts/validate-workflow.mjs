@@ -1253,6 +1253,47 @@ function validateCostTelemetry() {
   }
 }
 
+function validateBriefIntegrity() {
+  // MONO-8: brief integrity — board-aligned question IDs, self-identifying
+  // option tokens, echo-back before acting, no closure by silence, and the
+  // post-approval delta list. Pins anchor the contract prose and the
+  // user-facing shapes; decoding an owner's answer stays judgment work.
+  for (const required of [
+    "## Целостность брифа (Brief Integrity)",
+    "mirror board section IDs exactly",
+    "section-scoped suffixes",
+    "(1a, 1b)",
+    "Cross-section renumbering is forbidden",
+    "1a-КАРТОЧКА / 1a-МОДАЛКА",
+    "valid without its number",
+    "вопрос → выбранный вариант (дословно)",
+    "numbering fault",
+    "one-line re-confirm",
+    "never closed by silence",
+    "no answer means asked again, not resolved",
+    "Изменилось после твоего одобрения:",
+  ]) {
+    assertIncludes("templates/orchestrator-brief.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "mirror board section IDs exactly",
+    "section-scoped suffixes",
+    "(1a, 1b)",
+    "Cross-section renumbering is forbidden",
+    "1a-КАРТОЧКА / 1a-МОДАЛКА",
+    "valid without its number",
+    "вопрос → выбранный вариант (дословно)",
+    "numbering fault",
+    "one-line re-confirm",
+    "never closed by silence",
+    "no answer means asked again, not resolved",
+    "Изменилось после твоего одобрения:",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1268,6 +1309,7 @@ validateRealBackendContractSampling();
 validateGoalContractBinding();
 validateReviewLoopHygiene();
 validateCostTelemetry();
+validateBriefIntegrity();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");

@@ -47,6 +47,53 @@ product content, correct states, side-by-side variants where a genuine choice
 exists (`/design-html` when the runtime provides it), and an internal
 design-review pass already applied. Never bring a first draft.
 
+## Целостность брифа (Brief Integrity)
+
+These rules bind every Decision Brief and UX checkpoint that asks
+numbered questions against a board or prototype. Wave-1 precedent: a
+brief numbered 7 questions against a 5-section board; the owner's
+«2) B» decoded to one option under brief numbering and to a different
+one under board numbering — a possibly inverted product decision — and
+the contested question was then closed by silence after a fallback line.
+
+- Board-aligned IDs: question IDs mirror board section IDs exactly.
+  Multiple questions inside one section get section-scoped suffixes
+  (1a, 1b). Cross-section renumbering is forbidden: a question with no
+  board section gets its own explicitly labeled block, never a number
+  shifted from another section.
+- Self-identifying tokens: every option carries a token rendered on
+  both the board and the brief, e.g. «1a-КАРТОЧКА / 1a-МОДАЛКА». An
+  answer is valid without its number when the token or the verbatim
+  option text identifies it.
+- Echo-back: before acting on the answers, post a mapping table
+  «вопрос → выбранный вариант (дословно)». An answer whose text does
+  not match the addressed question's option set is a numbering fault —
+  a mandatory one-line re-confirm precedes any work on that item.
+- No closure by silence: an item routed to a checkpoint as contested is
+  never closed by silence — no answer means asked again, not resolved.
+  A fallback line («если не ответишь — делаю X») does not resolve a
+  contested item.
+- Post-approval delta: any spec change after a package approval that
+  alters user-visible behavior appears as an explicit
+  «Изменилось после твоего одобрения:» delta list at the next owner
+  touch — never only as a fait-accompli status line.
+
+Echo-back shape (posted before acting on the answers):
+
+```text
+Сверка ответов — вопрос → выбранный вариант (дословно):
+- 1a: «<текст выбранного варианта>»
+- 2: «<текст выбранного варианта>»
+Если где-то не то — поправь одной строкой; спорные пункты в работу не беру до подтверждения.
+```
+
+Post-approval delta shape (at the next owner touch):
+
+```text
+Изменилось после твоего одобрения:
+- <что изменилось в видимом пользователю поведении> — <почему>
+```
+
 ## Статус (Status Update)
 
 ```text
