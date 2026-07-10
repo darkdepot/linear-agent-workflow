@@ -1076,9 +1076,15 @@ function validateRealBackendContractSampling() {
     "not just an endpoint list",
     "spec blocker, not an implementation surprise",
     "contract-verification spike Issue goes first in the wave",
+    "When unsure whether a feature qualifies, sample",
   ]) {
     assertIncludes("skills/linear-spec/SKILL.md", required, JSON.stringify(required));
   }
+  assertIncludes(
+    "templates/tech-spec.md",
+    "record the one-line omission reason",
+    '"record the one-line omission reason"'
+  );
 
   for (const required of [
     "sample of real responses from the deployed instance",
