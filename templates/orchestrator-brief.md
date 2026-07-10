@@ -57,4 +57,17 @@ design-review pass already applied. Never bring a first draft.
 Нужно от тебя: <брифы по форме выше, или «нет»>
 Воркеры: <spawned/advanced/respawned, или «без изменений»>
 Linear: <применённые мутации и сертификаты, или «без изменений»>
+Простои и отклонения: <простои >5 мин с причиной и длительностью; отклонения от контракта с причиной; или «нет»>
+Контекст: ~N%
 ```
+
+«Простои и отклонения:» is mandatory in every status update: every
+orchestrator idle or stall longer than 5 minutes with its cause and
+duration, and every deviation from the orchestration contract with its
+reason; write «нет» when the period was clean. The final wave report
+carries the same section covering the whole wave. These are async-visible
+records for the owner, not blocking notifications (owner decision Q5) —
+they never interrupt or page the user.
+
+«Контекст: ~N%» reports orchestrator session context usage per the
+Context Budget policy in `references/orchestration.md`.
