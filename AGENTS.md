@@ -22,7 +22,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - GitHub = branch, PR, review, CI, deploy, and merge history only.
 - `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
 - `linear-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
-- `linear-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate, commit state, and preflight certificate.
+- `linear-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate with risk-routed GPT-5.6 model/effort, commit state, and preflight certificate.
 - `linear-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
 - `linear-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 - `linear-orchestrate` = product-level control plane: worker dispatch, monitoring, decision routing, single Linear writer during orchestration; never does stage work itself.
@@ -38,6 +38,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Apply accepted review fixes through `linear-handoff`, explicit atomic skills, or `linear-ship`.
 - Keep `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
 - Keep `linear-orchestrate` control-plane only: it sequences stages and routes decisions but never absorbs stage ownership or implements.
+- Keep `autoreview` routing explicit and update-safe: `linear-preflight` owns the GPT-5.6 model/effort choice by risk class and never depends on the external helper's built-in default.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
 - Project repos must keep only `.agents/linear-workflow.config.json` for this workflow. Do not install, generate, or vendor `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local checkers, or updater CI into project repos.

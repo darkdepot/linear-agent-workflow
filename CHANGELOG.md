@@ -6,6 +6,14 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-07-11
+
+### Changed
+
+- `linear-preflight` now routes mandatory `autoreview` through explicit GPT-5.6 model/effort pairs derived from the existing workflow risk class, using the canonical table in `references/autoreview-routing.md`.
+- The final preflight certificate records the risk source, selected model and effort, and any upward reclassification; `ready` fails closed when explicit routing is missing or mismatched.
+- Model routing lives in the Linear workflow rather than the independently updated external `autoreview` skill, so upstream helper refreshes cannot silently restore an older model default.
+
 ## [0.16.0] - 2026-07-11
 
 Wave-1 hardening release: MONO-1 through MONO-4 close the reliability gaps found while dogfooding orchestrated delivery.

@@ -616,7 +616,16 @@ function validateDocsAndExamples() {
       "`decisions_carried_forward`",
       "`confidence_boundary`",
     ],
-    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:", "Tiny Output Profile"],
+    "references/readiness-gates.md": ["`tiny`:", "`standard`:", "`deep`:", "`risky`:", "references/autoreview-routing.md", "Tiny Output Profile"],
+    "references/autoreview-routing.md": [
+      "`tiny` | `gpt-5.6-luna` | `low`",
+      "`standard` | `gpt-5.6-luna` | `medium`",
+      "`deep` | `gpt-5.6-sol` | `medium`",
+      "`risky` | `gpt-5.6-sol` | `high`",
+      "`risky` with critical escalation | `gpt-5.6-sol` | `xhigh`",
+      "Never rely on the external `autoreview` helper's built-in model default",
+      "Do not silently fall back",
+    ],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
     "references/execution-quality.md": ["## PRD Coverage", "## Durable Issue Writing", "## Agent Readiness", "## Bug And Performance Proof", "## Architecture Lens"],
@@ -630,6 +639,7 @@ function validateDocsAndExamples() {
       ".linear-agent-workflow.lock.json",
       "LINEAR_WORKFLOW_KNOWN_ROOTS",
       "per-root",
+      "references/autoreview-routing.md",
     ],
     "references/orchestration.md": [
       "## Roles",
@@ -664,6 +674,7 @@ function validateDocsAndExamples() {
       "`Documentation workflow`",
       "`Deploy workflow`",
       "project config",
+      "references/autoreview-routing.md",
     ],
   })) {
     if (!exists(relativePath)) {
@@ -789,6 +800,7 @@ function validateAntiPatterns() {
     "Changed files: <count/list or summary>",
     "Local verification: <commands run + outcome>",
     "Autoreview: <clean|blocked|needs-human|unavailable>; final command: <selected-scope helper command>; clean result: <exit 0 + clean line or none>",
+    "Autoreview route: risk=<tiny|standard|deep|risky>; source=<Linear artifact or diff inference>; critical=<none|concrete escalation signal>; model=<gpt-5.6-luna|gpt-5.6-sol>; effort=<low|medium|high|xhigh>; reclassified=<no|summary>",
     "Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>",
     "Drift candidate: <none/summary>",
     "Not checked: <manual QA/browser/mobile/deploy/etc.>",
@@ -801,6 +813,12 @@ function validateAntiPatterns() {
     "Do not substitute Compound `ce-code-review`, built-in `/review`, ad hoc self-review, reviewer panels, or a hand-written summary",
     "Treat helper exit 0 plus the clean result",
     "Before emitting `ready`, run one final clean review for the selected durable scope",
+    "Pass `--engine codex`, `--model`, and `--thinking` explicitly on every helper invocation",
+    "never use GPT-5.5 as a normal route",
+    "Reclassify the final risk",
+    "then re-select the model and effort from `references/autoreview-routing.md`",
+    "or a new or stronger critical signal requires a higher route",
+    "the earlier clean result does not count",
     "A clean local dirty-work review alone is not sufficient",
     "Do not cap the review loop at an arbitrary round count",
     "Do not call Compound `ce-code-review` for this gate",
@@ -809,6 +827,19 @@ function validateAntiPatterns() {
     "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
     if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
+  }
+  const forbiddenRoutingCopies = [
+    "`tiny` ->",
+    "Luna/low for `tiny`",
+    "maps `tiny`/`standard` to explicit GPT-5.6 Luna",
+  ];
+  for (const relativePath of ["skills/linear-preflight/SKILL.md", "README.md", "CHANGELOG.md", "examples/zeni-dogfood.md"]) {
+    const body = read(relativePath);
+    for (const duplicate of forbiddenRoutingCopies) {
+      if (body.includes(duplicate)) {
+        fail(`${relativePath} must not duplicate the canonical autoreview routing table: ${duplicate}`);
+      }
+    }
   }
 
   const shipOutput = read("templates/ship-output.md");

@@ -21,7 +21,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `linear-review`: report-only artifact quality and risk review.
 - `linear-check`: report-only transition readiness checks.
 - `linear-implement`: Delivery Start and implementation execution from approved Issue(s).
-- `linear-preflight`: local branch readiness, targeted verification, mandatory `autoreview` clean gate, and preflight certificate.
+- `linear-preflight`: local branch readiness, targeted verification, mandatory risk-routed GPT-5.6 `autoreview` clean gate, and preflight certificate.
 - `linear-ship`: wrapper around configured project ship, documentation, review feedback, and green certificate workflows.
 - `linear-deploy`: wrapper around configured project deploy, post-ship check, Linear closeout, and learning capture workflows.
 - `linear-orchestrate`: control-plane orchestrator session per product; drives projects and Issues through worker sessions, decides technical questions itself, escalates only product decisions (scope, design, risk); runs discovery in director mode — a Second Voice reviewer agent interrogates, the orchestrator answers, and the user gets reviewed prototypes at checkpoints.
@@ -66,7 +66,7 @@ when final discovery/review plan appears
 
 /linear-preflight
 -> inspect branch/worktree/diff
--> run targeted verification and mandatory autoreview until clean
+-> classify final risk, select the explicit route from references/autoreview-routing.md, and run mandatory autoreview until clean
 -> commit when safe/configured
 -> emit preflight certificate
 
@@ -128,6 +128,12 @@ Each installed skills root contains:
 - `<skills-root>/.linear-agent-workflow.lock.json`: upstream repo, version, commit, dirty flag, installed skill paths, and copied asset hashes.
 
 `linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime. This workflow does not vendor `autoreview`; preflight blocks when the helper is missing.
+
+`linear-preflight` does not inherit the external helper's model default. It
+selects the explicit GPT-5.6 route only from the canonical table in
+`references/autoreview-routing.md`, re-selects after final risk
+reclassification, and records the route and command in the preflight
+certificate.
 
 Check every installed root without writing:
 

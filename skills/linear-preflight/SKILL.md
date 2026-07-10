@@ -17,9 +17,10 @@ Read first:
 4. `references/artifact-rules.md`
 5. `references/artifact-quality.md`
 6. `references/readiness-gates.md`
-7. `references/execution-quality.md`
-8. `references/lifecycle.md`
-9. `references/human-friendly-output.md`
+7. `references/autoreview-routing.md`
+8. `references/execution-quality.md`
+9. `references/lifecycle.md`
+10. `references/human-friendly-output.md`
 
 When to use:
 
@@ -54,12 +55,15 @@ Workflow:
      - Dirty local work: first run `<autoreview-helper> --mode local` only for the staged/unstaged/untracked tail, then apply accepted fixes and commit or intentionally leave the branch dirty with `blocked`/`needs-human`.
      - Branch or PR work: run `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
      - Already-landed or single-commit work: `<autoreview-helper> --mode commit --commit <ref>`.
-   - Leave the engine/model unchanged unless the user explicitly configured it. Codex remains the default engine when no engine is set.
+   - Classify the final diff as `tiny`, `standard`, `deep`, or `risky` using the approved Linear package and `references/readiness-gates.md`. If the implementation is riskier than the recorded class, use the higher class and record the drift.
+   - Select the model and effort only from the canonical table in `references/autoreview-routing.md`; do not restate or infer a second copy of the table in this skill.
+   - Pass `--engine codex`, `--model`, and `--thinking` explicitly on every helper invocation. Never rely on external helper or environment defaults, never use GPT-5.5 as a normal route, and never silently fall back to another engine, model, or effort.
    - Treat helper exit 0 plus the clean result (`autoreview clean: no accepted/actionable findings reported`) as the only successful review outcome.
    - Treat nonzero helper exit with accepted/actionable findings as not clean. Verify every finding against the real code, reject only unsupported findings with evidence, and apply small fixes for accepted/actionable findings at the right ownership boundary.
    - After any review-triggered code change, re-run the relevant targeted verification and re-run `autoreview`.
    - Keep looping until `autoreview` exits clean, or stop with `blocked`/`needs-human` if the helper is unavailable, cannot determine scope, repeatedly fails for tooling/capacity reasons, or still reports actionable findings that require a human decision.
-   - Before emitting `ready`, run one final clean review for the selected durable scope after all review-triggered fixes are committed: branch/PR mode for branch or PR work, or commit mode for already-landed or single-commit work. A clean local dirty-work review alone is not sufficient when the intended reviewed artifact is committed changes.
+   - Reclassify the final risk after all review-triggered fixes are committed, then re-select the model and effort from `references/autoreview-routing.md`. If risk moved upward or a new or stronger critical signal requires a higher route, the earlier clean result does not count; the final durable-scope review must use the newly selected higher route.
+   - Before emitting `ready`, run one final clean review for the selected durable scope: branch/PR mode for branch or PR work, or commit mode for already-landed or single-commit work. A clean local dirty-work review alone is not sufficient when the intended reviewed artifact is committed changes.
    - Do not mark preflight `ready` while `autoreview` is unavailable, skipped, replaced by another reviewer, or still reporting accepted/actionable findings.
 6. Commit via Compound `ce-commit` or repo convention when the branch is safe and the commit workflow is configured. If not safe, leave a precise next action.
 7. Record the full preflight certificate as a Linear comment or resource with the stable marker `linear-preflight certificate`.
@@ -82,6 +86,7 @@ Branch: <branch>; commit state: <clean/dirty/committed>
 Changed files: <count/list or summary>
 Local verification: <commands run + outcome>
 Autoreview: <clean|blocked|needs-human|unavailable>; final command: <selected-scope helper command>; clean result: <exit 0 + clean line or none>
+Autoreview route: risk=<tiny|standard|deep|risky>; source=<Linear artifact or diff inference>; critical=<none|concrete escalation signal>; model=<gpt-5.6-luna|gpt-5.6-sol>; effort=<low|medium|high|xhigh>; reclassified=<no|summary>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
 Decision needed: <none | точное решение по-русски>
@@ -103,6 +108,7 @@ Rules:
 - Do not call Compound `ce-code-review` for this gate. It is not an acceptable replacement for `autoreview` inside `linear-preflight`.
 - Do not auto-apply broad rewrites, release-sensitive changes, or fixes that the agent cannot defend after reading the relevant code and contracts.
 - Do not silently reject a repeated `autoreview` finding and mark `ready`. If `autoreview` does not return clean, the certificate must be `blocked` or `needs-human`.
+- Do not mark preflight `ready` when the final `autoreview` command omits explicit `--engine codex`, `--model`, or `--thinking`, selects a non-GPT-5.6 model, or does not match the final risk class in `references/autoreview-routing.md`.
 - Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include a checked/not-checked boundary. Local tests do not imply browser QA, production smoke, mobile QA, deploy verification, or user acceptance.
 - Do not summarize the certificate away in Linear. A fresh `linear-ship` agent must be able to recover the full certificate from Linear comments or resources.
@@ -119,6 +125,7 @@ Branch: <branch>; commit state: <clean/dirty/committed>
 Changed files: <count/list or summary>
 Local verification: <commands run + outcome>
 Autoreview: <clean|blocked|needs-human|unavailable>; final command: <selected-scope helper command>; clean result: <exit 0 + clean line or none>
+Autoreview route: risk=<tiny|standard|deep|risky>; source=<Linear artifact or diff inference>; critical=<none|concrete escalation signal>; model=<gpt-5.6-luna|gpt-5.6-sol>; effort=<low|medium|high|xhigh>; reclassified=<no|summary>
 Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>
 Drift candidate: <none/summary>
 Decision needed: <none | точное решение по-русски>
@@ -138,6 +145,7 @@ Final response must include:
 - Whether local code is committed, dirty, or blocked.
 - Tests/checks run and not run.
 - Autoreview command and outcome.
+- Autoreview risk route, model, reasoning effort, source, and any upward reclassification.
 - Autoreview loop iterations, accepted findings fixed, and residual actionable findings.
 - Drift candidate summary.
 - Next workflow recommendation.
