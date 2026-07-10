@@ -220,3 +220,8 @@ Final response (status update) must include, per
   duration, contract deviations with reason, or «нет» when clean.
 - «Контекст: ~N%» — orchestrator session context usage per the Context
   Budget policy in `references/orchestration.md`.
+- Cost telemetry: the per-Issue cost tail in the status table («цена: ~N
+  тыс. out-токенов, M циклов ревью», or «цена: н/д» when data is missing)
+  and, in the final wave report, the «Цена волны» block — per the Cost
+  Telemetry policy in `references/orchestration.md`. Cost is telemetry,
+  not a gate: it never blocks, pauses, or pages.
