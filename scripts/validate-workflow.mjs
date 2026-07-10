@@ -817,6 +817,7 @@ function validateAntiPatterns() {
     "never use GPT-5.5 as a normal route",
     "Reclassify the final risk",
     "then re-select the model and effort from `references/autoreview-routing.md`",
+    "or a new or stronger critical signal requires a higher route",
     "the earlier clean result does not count",
     "A clean local dirty-work review alone is not sufficient",
     "Do not cap the review loop at an arbitrary round count",
