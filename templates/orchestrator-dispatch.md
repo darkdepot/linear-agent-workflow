@@ -12,6 +12,21 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 - Worker session name: `<ISSUE-KEY>: <stage>`
 - Chip title (user-visible, Russian): `<ISSUE-KEY>: <стадия по-русски>`
 
+## Goal Contract
+
+- Outcome: <one sentence — the durable end-state that must be true when this
+  stage is done>
+- Verification surface: <the executable commands/checks lifted verbatim from
+  the Issue's «Как проверить», one per line, each runnable as written>
+- Constraints: <what must not change or break — pinned contracts, protected
+  files, statuses, and gates this stage must leave intact>
+- Blocked protocol: when stuck, write a mailbox report with status
+  `needs-decision`, include your own recommendation, and stop. You never
+  judge your own "done": a failing or skipped verification item is reported,
+  not waved through.
+- Stage budget: <stage time guidance from the Monitoring Protocol —
+  guidance, not a gate>
+
 ## Engine
 
 - Transport: <codex-cli | claude-code-desktop | fallback>
