@@ -181,6 +181,7 @@ function validateTemplateSections() {
     "templates/tech-spec.md": [
       "## Исходные требования",
       "## Контракты и границы",
+      "### Реальные ответы бэкенда",
       "## Единицы реализации",
       "## Влияние на остальную систему",
       "## Что может сломаться и как защищаемся",
@@ -1069,6 +1070,43 @@ function validateLiveQaGateContract() {
   assertIncludes("templates/deploy-output.md", "Live QA:", "Live QA line in deploy status block");
 }
 
+function validateRealBackendContractSampling() {
+  for (const required of [
+    "sample of real responses from the deployed instance",
+    "not just an endpoint list",
+    "spec blocker, not an implementation surprise",
+    "contract-verification spike Issue goes first in the wave",
+    "When unsure whether a feature qualifies, sample",
+  ]) {
+    assertIncludes("skills/linear-spec/SKILL.md", required, JSON.stringify(required));
+  }
+  assertIncludes(
+    "templates/tech-spec.md",
+    "record the one-line omission reason",
+    '"record the one-line omission reason"'
+  );
+
+  for (const required of [
+    "sample of real responses from the deployed instance",
+    "\"Endpoint exists\" is not contract verification",
+    "sampling date and deployed SHA/version",
+    "contract-verification spike Issue",
+  ]) {
+    assertIncludes("references/artifact-quality.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "домены enum",
+    "крайние записи",
+    "дата выборки и SHA/версия деплоя",
+    "sampled real responses from the deployed instance",
+    "An endpoint list alone does not verify the contract",
+    "contract-verification spike Issue that goes first in the wave",
+  ]) {
+    assertIncludes("templates/tech-spec.md", required, JSON.stringify(required));
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1080,6 +1118,7 @@ validateAntiPatterns();
 validateHeartbeatContract();
 validateHonestLedgerContract();
 validateLiveQaGateContract();
+validateRealBackendContractSampling();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");
