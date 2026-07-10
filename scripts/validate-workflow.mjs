@@ -827,12 +827,18 @@ function validateAntiPatterns() {
   ]) {
     if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
   }
-  if (preflight.includes("`tiny` ->") || preflight.includes("Luna/low for `tiny`")) {
-    fail("linear-preflight must not duplicate the canonical autoreview routing table");
-  }
-  const readme = read("README.md");
-  if (readme.includes("Luna/low for `tiny`") || readme.includes("`tiny` ->")) {
-    fail("README must not duplicate the canonical autoreview routing table");
+  const forbiddenRoutingCopies = [
+    "`tiny` ->",
+    "Luna/low for `tiny`",
+    "maps `tiny`/`standard` to explicit GPT-5.6 Luna",
+  ];
+  for (const relativePath of ["skills/linear-preflight/SKILL.md", "README.md", "CHANGELOG.md", "examples/zeni-dogfood.md"]) {
+    const body = read(relativePath);
+    for (const duplicate of forbiddenRoutingCopies) {
+      if (body.includes(duplicate)) {
+        fail(`${relativePath} must not duplicate the canonical autoreview routing table: ${duplicate}`);
+      }
+    }
   }
 
   const shipOutput = read("templates/ship-output.md");

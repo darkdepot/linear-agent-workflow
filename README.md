@@ -66,7 +66,7 @@ when final discovery/review plan appears
 
 /linear-preflight
 -> inspect branch/worktree/diff
--> classify final risk, select the explicit GPT-5.6 Luna/Sol route, and run mandatory autoreview until clean
+-> classify final risk, select the explicit route from references/autoreview-routing.md, and run mandatory autoreview until clean
 -> commit when safe/configured
 -> emit preflight certificate
 

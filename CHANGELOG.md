@@ -10,7 +10,7 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ### Changed
 
-- `linear-preflight` now routes mandatory `autoreview` through explicit GPT-5.6 model/effort pairs derived from the existing workflow risk class: Luna/low for `tiny`, Luna/medium for `standard`, Sol/medium for `deep`, Sol/high for `risky`, and Sol/xhigh only for a recorded critical escalation within `risky`.
+- `linear-preflight` now routes mandatory `autoreview` through explicit GPT-5.6 model/effort pairs derived from the existing workflow risk class, using the canonical table in `references/autoreview-routing.md`.
 - The final preflight certificate records the risk source, selected model and effort, and any upward reclassification; `ready` fails closed when explicit routing is missing or mismatched.
 - Model routing lives in the Linear workflow rather than the independently updated external `autoreview` skill, so upstream helper refreshes cannot silently restore an older model default.
 
