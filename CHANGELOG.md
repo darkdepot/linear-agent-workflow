@@ -6,6 +6,21 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-11
+
+Wave-1 hardening release: MONO-1 through MONO-4 close the reliability gaps found while dogfooding orchestrated delivery.
+
+### Added
+
+- Orchestrator heartbeat (MONO-1): external tick via `scripts/watch-workers.mjs` tailing worker session logs and emitting `EVENT:<stall|dead|spawn-fail>` lines; spawn watchdog that catches missing `thread.started` / empty `thread_id` on worker spawn; healing ladder nudge → respawn → session rotation with user alerts only after the ladder is exhausted. Dispatch prompts are passed via file only (`"$(cat <dispatch-prompt-file>)" < /dev/null`), and the worker model and reasoning effort are pinned explicitly in the spawn command (`-c 'model=...'`, `-c 'model_reasoning_effort=...'`) so CLI default drift cannot silently switch models.
+- Honest ledger (MONO-2): ledger entries carry the timestamp of the actual moment of writing, backfilled events are marked `recorded-late`, and corrections are new lines, never edits. Status updates disclose orchestrator idle windows in the «Простои и отклонения» brief section; Linear Write Verification requires reading back the mutated entity after every write (a success response alone is not confirmation); `## Context Budget` defines «Контекст: ~N%» reporting with 70%/85% thresholds and rotation that never happens mid-dispatch.
+- Mandatory Live QA gate in deploy closeout (MONO-3): before Linear closeout, verify the deployed version matches the certified merged SHA, walk the PRD acceptance criteria of the shipped Issue on the live app, and check the console for errors. Design acceptance is judged autonomously against the prototype approved at the UX checkpoint, never the agent's own taste. Defects fix-forward through an immediate hotfix Issue out of queue that closes only after its own live pass is green. New optional `workflows.qa` / `qaAuth` project config fields, plus a narrow control-plane exception (explicit owner mandate; feature code never qualifies).
+- Real-backend contract sampling in Tech Spec (MONO-4): for features integrating with an existing API or backend, the Tech Spec must include a sample of real responses from the deployed instance — enum value domains, object shapes, edge records — not just an endpoint list; a spec-vs-reality mismatch is a spec blocker, not an implementation surprise. New «Реальные ответы бэкенда» subsection in `templates/tech-spec.md`, the matching quality bar in `references/artifact-quality.md` ("endpoint exists" is not contract verification), and the degradation rule: when the deployed instance is unreachable during discovery, a contract-verification spike Issue goes first in the wave.
+
+### Changed
+
+- `scripts/validate-workflow.mjs` pins all wave-1 contracts (`validateHeartbeatContract`, `validateHonestLedgerContract`, `validateLiveQaGateContract`, `validateRealBackendContractSampling`); each pin set is proven by a break/restore negative-test protocol recorded in `docs/spikes/` (`mono-1-watcher-spike.md`, `mono-2-pin-tests.md`, `mono-3-pin-tests.md`, `mono-4-pin-tests.md`).
+
 ## [0.15.0] - 2026-07-09
 
 ### Added

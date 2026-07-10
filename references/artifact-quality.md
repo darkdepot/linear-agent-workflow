@@ -35,6 +35,7 @@ Required quality:
 - Traces back to PRD requirements.
 - Uses stable implementation unit IDs (`U1`, `U2`, ...).
 - Describes architecture, contracts, system-wide impact, failure modes, validation, rollout, and rollback.
+- For features integrating with an existing API or backend, includes a sample of real responses from the deployed instance: enum value domains, object shapes, and edge records, with the sampling date and deployed SHA/version. "Endpoint exists" is not contract verification — value domains and shapes must come from observed responses. If the deployed instance was unreachable, the spec names the contract-verification spike Issue that goes first in the wave.
 - For deep or risky work, identifies the stable interface or seam and avoids shallow pass-through modules.
 - Preserves explicit no-spec exceptions only for tiny, low-risk work.
 - Avoids historical transcript summaries and repair archaeology.

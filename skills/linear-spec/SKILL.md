@@ -32,6 +32,8 @@ Rules:
 - Trace implementation decisions back to PRD requirement IDs.
 - Use stable implementation unit IDs (`U1`, `U2`, ...).
 - Include system-wide impact, contracts, failure modes, validation, rollout, and rollback.
+- For features integrating with an existing API or backend, the Tech Spec MUST include a sample of real responses from the deployed instance — enum value domains, object shapes, edge records — not just an endpoint list. Discovery that only proves an endpoint exists has not verified the contract. A spec-vs-reality mismatch is a spec blocker, not an implementation surprise.
+- If the deployed instance is unreachable during discovery, do not guess the contract: a contract-verification spike Issue goes first in the wave, and Issues that consume the contract depend on it.
 - For standard, deep, risky, or review-sensitive packages, make requirement trace, validation, rollback, and failure modes concrete enough for `linear-review artifact` to inspect. Do not add review workflow sections to the Tech Spec body.
 - Use explicit no-spec exception only for truly simple, low-risk work.
 - Do not use no-spec exception for risky, cross-cutting, data, auth, release, or multi-surface work.
@@ -50,6 +52,7 @@ Self-review before finishing:
 - Does every important HOW decision trace back to PRD requirements or a cross-cutting technical need?
 - Did the spec introduce product behavior that belongs in PRD? If yes, stop and update PRD first.
 - Are deferred implementation details clearly marked instead of guessed?
+- For backend-integrating work, does the spec carry sampled real responses from the deployed instance, or name the contract-verification spike that opens the wave?
 - For deep/risky work, does the spec explain the stable interface or seam that implementation and tests should exercise?
 - Is the body free of workflow mechanics and lifecycle/readiness instructions?
 - Run or report `linear-check discovery` for standalone use, or `linear-check handoff` when this skill is being used inside `linear-handoff`.
