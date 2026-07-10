@@ -1220,7 +1220,7 @@ function validateCostTelemetry() {
   for (const required of [
     "## Cost Telemetry",
     "LAST `turn.completed` event",
-    "cumulative for the thread",
+    "sum ACROSS attempts",
     "Review cycles",
     "ship-stage report",
     "Stage wall-clock",

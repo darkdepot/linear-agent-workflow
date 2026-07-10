@@ -379,17 +379,21 @@ Model-tiering policy has no data without this telemetry.
 
 Per-Issue collection, performed by the orchestrator:
 
-- Worker tokens: read the LAST `turn.completed` event of each stage JSONL
-  log (`logs/<ISSUE-KEY>-<stage>-a<attempt>.jsonl`, latest attempt); its
-  token usage is cumulative for the thread — record input, cached, and
-  output as reported there. Do not sum events across the log.
+- Worker tokens: read the LAST `turn.completed` event of each attempt log
+  of the stage (`logs/<ISSUE-KEY>-<stage>-a<attempt>.jsonl`); each is
+  cumulative for its own thread — record input, cached, and output as
+  reported there, and sum ACROSS attempts (a respawn or rotation starts a
+  fresh thread whose spend must not vanish). Never sum events within one
+  log.
 - Review cycles: the count of review submissions handled during the ship
   stage, taken from the ship-stage report and PR review history.
 - Stage wall-clock: derived from the ledger's write-time entries for stage
   dispatch and stage close; honest write-time discipline (see Mailbox And
-  Ledger) is what makes this derivable.
+  Ledger) is what makes this derivable. For `recorded-late` entries, use
+  the marker's estimated event time, not the late write-time.
 
-Record the collected numbers per stage in the ledger at stage close, on
+Record the collected numbers per stage in the ledger at stage close; a
+  missing number is recorded with the reason it could not be collected, on
 the same stage-close entry or an adjacent line. Judgment note, stated
 honestly: collection is manual agent work — reading logs, counting review
 submissions, subtracting timestamps — not a pin-enforceable mechanism;
