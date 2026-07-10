@@ -61,7 +61,8 @@ threads (`codex exec resume <thread_id>`) instead of respawning them.
     "stage": "<linear-implement | linear-preflight | linear-ship>",
     "spawned_at": "<ISO 8601>",
     "last_activity_at": "<ISO 8601>",
-    "log": "<absolute path to the worker's JSONL log, or null>"
+    "log": "<absolute path to the worker's JSONL log, or null>",
+    "pid": "<OS pid of the codex-cli background process, or null>"
   }
 }
 ```
