@@ -355,6 +355,31 @@ whom, why the decision is needed now, completed proof (tests, autoreview, CI,
 certificates as applicable), recommendation with rationale, exact options.
 Ask immediately and interactively; unblocked work continues in parallel.
 
+Brief integrity — five rules bind every brief and UX checkpoint; the
+user-facing shapes live in `templates/orchestrator-brief.md`
+(«Целостность брифа»):
+
+- Question IDs mirror board section IDs exactly. Multiple questions
+  inside one section get section-scoped suffixes (1a, 1b).
+  Cross-section renumbering is forbidden.
+- Every option carries a self-identifying token rendered on both the
+  board and the brief (e.g. «1a-КАРТОЧКА / 1a-МОДАЛКА»); an answer is
+  valid without its number when the token or the verbatim option text
+  identifies it.
+- Echo-back: before acting on answers, the orchestrator posts a mapping
+  table «вопрос → выбранный вариант (дословно)»; an answer whose text
+  does not match the addressed question's option set is a numbering fault
+  and requires a mandatory one-line re-confirm before any work on that
+  item.
+- An item routed to a checkpoint as contested is never closed by silence:
+  no answer means asked again, not resolved. A fallback line never
+  resolves a contested item.
+- Any spec change after a package approval that alters user-visible
+  behavior appears as an explicit «Изменилось после твоего одобрения:»
+  delta list at the next owner touch, never only as a fait-accompli
+  status line. When in doubt whether a change is user-visible, include
+  it in the delta.
+
 ## Context Budget
 
 Orchestrator session context usage is a first-class operational metric,
