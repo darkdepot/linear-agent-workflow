@@ -49,8 +49,9 @@ design-review pass already applied. Never bring a first draft.
 
 ## Целостность брифа (Brief Integrity)
 
-These rules bind every Decision Brief and UX checkpoint that asks
-numbered questions against a board or prototype. Wave-1 precedent: a
+These rules bind every Decision Brief and UX checkpoint that offers
+numbered or lettered options — with or without a board or prototype
+(a plain package-approval brief included). Wave-1 precedent: a
 brief numbered 7 questions against a 5-section board; the owner's
 «2) B» decoded to one option under brief numbering and to a different
 one under board numbering — a possibly inverted product decision — and
@@ -76,7 +77,8 @@ the contested question was then closed by silence after a fallback line.
 - Post-approval delta: any spec change after a package approval that
   alters user-visible behavior appears as an explicit
   «Изменилось после твоего одобрения:» delta list at the next owner
-  touch — never only as a fait-accompli status line.
+  touch — never only as a fait-accompli status line. When in doubt
+  whether a change is user-visible, include it in the delta.
 
 Echo-back shape (posted before acting on the answers):
 

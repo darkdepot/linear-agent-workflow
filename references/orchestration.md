@@ -377,7 +377,8 @@ user-facing shapes live in `templates/orchestrator-brief.md`
 - Any spec change after a package approval that alters user-visible
   behavior appears as an explicit «Изменилось после твоего одобрения:»
   delta list at the next owner touch, never only as a fait-accompli
-  status line.
+  status line. When in doubt whether a change is user-visible, include
+  it in the delta.
 
 ## Context Budget
 

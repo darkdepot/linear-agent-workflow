@@ -1272,6 +1272,7 @@ function validateBriefIntegrity() {
     "never closed by silence",
     "no answer means asked again, not resolved",
     "Изменилось после твоего одобрения:",
+    "When in doubt\n  whether a change is user-visible, include it in the delta",
   ]) {
     assertIncludes("templates/orchestrator-brief.md", required, JSON.stringify(required));
   }
