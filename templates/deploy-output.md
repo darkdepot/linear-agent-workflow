@@ -15,6 +15,7 @@ Deploy status:
 - Merged SHA: <sha or none>.
 - Deploy target: <url/environment or none>.
 - Deploy verification: <passed/failed/unavailable + evidence>.
+- Live QA: <passed/failed/skipped + evidence or recorded skip reason>.
 - Post-ship check: <PASS/FAIL/BLOCKED + human meaning>.
 - Linear closeout: <Done/not done + reason>.
 - Learnings recorded: <none or keys>.
@@ -44,6 +45,7 @@ Deploy workflow:
 Merged SHA:
 Deploy target:
 Verification:
+Live QA:
 Post-ship check:
 Linear closeout:
 Learnings recorded:

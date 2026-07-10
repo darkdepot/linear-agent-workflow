@@ -142,7 +142,13 @@ Workflow states:
 7. `deploy-and-closeout`
    - When a worker reports `green` (linear-ship green certificate), run
      `linear-deploy` from this session per the configured Deploy workflow
-     and `deployApproval` policy.
+     and `deployApproval` policy, including its mandatory Live QA gate
+     (`skills/linear-deploy/SKILL.md`). The live sweep runs
+     orchestrator-side — workers have no browser.
+   - On a live defect, file an immediate hotfix Issue and dispatch it
+     out of queue ahead of queued work (fix-forward); the shipped Issue
+     moves to `Done` only after its own live pass is green, and the hotfix
+     Issue gets its own live verification.
    - Record ledger entries; verify Linear closeout happened per stage skill
      contracts.
 
@@ -152,6 +158,11 @@ Rules:
   in this session; delegate that to workers. Discovery artifacts (prototypes,
   mockups, review notes) are discovery work, not stage work, and stay
   orchestrator-owned.
+- Narrow control-plane exception: under an explicit owner mandate the
+  orchestrator MAY author operational and deploy-repair changes directly —
+  deploy scripts, infra config, docs address sweeps — and every such change
+  is ALWAYS recorded in the ledger as a control-plane exception naming the
+  mandate. Feature code NEVER qualifies; it always routes through workers.
 - Single Linear writer: all Linear mutations during orchestration happen in
   this session; workers never write to Linear and queue every stage-required
   mutation in their reports.

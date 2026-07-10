@@ -57,6 +57,14 @@ under «Решил сам:» with a one-line reason:
 - Merge/deploy for risk classes the configured `deployApproval` allows (all
   classes under `never`).
 
+Narrow control-plane exception: under an explicit owner mandate the
+orchestrator may author operational and deploy-repair changes directly —
+deploy scripts, infra config, docs address sweeps. Every such change is
+always recorded in the ledger as a control-plane exception naming the
+mandate; feature code never qualifies and always routes through workers.
+Wave-1 precedent: deploy-repair ops PRs authored under the owner's explicit
+«исправь» mandate and honestly ledgered.
+
 The user can override any recorded orchestrator decision later; reopen the
 affected stage when that happens.
 

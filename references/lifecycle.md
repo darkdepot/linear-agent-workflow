@@ -182,6 +182,10 @@ Required:
 - Confirm the configured `Deploy workflow` exists and is not `None`.
 - Delegate merge/deploy to the configured Deploy workflow.
 - Capture merged SHA, deploy target, and deploy verification evidence.
+- Before the live sweep, verify the deployed version matches the certified merged SHA.
+- Run the live QA sweep on the deployed app for user-facing changes: functional smoke over the shipped Issue's PRD acceptance criteria plus design acceptance against the approved UX-checkpoint prototype.
+- Move a user-facing Issue to `Done` only after its own live pass is green.
+- On a live defect, file an immediate hotfix Issue out of queue and dispatch it (fix-forward); the defect Issue does not block the original Issue's `Done`.
 - Run or report `linear-check post-ship` after deploy evidence is known.
 - Move the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
 - Consult prior operational learnings through `gstack-learnings-search` before delegating merge/deploy, advisory only.
@@ -190,6 +194,7 @@ Required:
 Forbidden:
 
 - Deploying when the PR head SHA differs from the green certificate.
+- Closing an Issue as `Done` with a failed or skipped live pass on a user-facing change and no explicit recorded skip reason.
 - Running repo documentation workflow; repo docs belong before ship green.
 - Running interactive `/learn prune`, `/learn export`, or `/learn stats` automatically.
 - Inventing a merge/deploy path when `Deploy workflow` is missing or `None`.

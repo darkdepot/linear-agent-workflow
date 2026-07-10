@@ -92,12 +92,14 @@ The project config is JSON:
     "ship": "gstack ship",
     "documentation": "gstack document-release",
     "reviewFeedback": "compound-engineering:ce-resolve-pr-feedback",
-    "deploy": "gstack land-and-deploy"
+    "deploy": "gstack land-and-deploy",
+    "qa": null
   },
   "prerequisites": {
     "autoreviewHelper": true
   },
   "deployApproval": "always",
+  "qaAuth": "cookie-import",
   "orchestration": {
     "transport": "codex-cli",
     "maxParallelWorkers": 3
@@ -136,8 +138,10 @@ The JSON config should record:
 - `workflows.documentation`: documentation workflow for `linear-ship`, or `null`.
 - `workflows.reviewFeedback`: review feedback workflow for `linear-ship`, or `null`.
 - `workflows.deploy`: deploy workflow for `linear-deploy`, or `null`.
+- `workflows.qa` (optional): the live-sweep instrument for the `linear-deploy` Live QA gate, e.g. an installed browser-automation skill; `null` or absent means the orchestrator uses whatever browser automation the runtime provides.
 - `prerequisites.autoreviewHelper`: must be `true`; `linear-preflight` blocks if the helper is unavailable.
 - `deployApproval` (optional): deploy approval policy — `"always"` (default), `"risky-only"` (approval required for `standard`, `deep`, and `risky` risk classes; only `tiny` proceeds without asking), or `"never"`.
+- `qaAuth` (optional): how the Live QA sweep authenticates — `"cookie-import"`, `"test-account"`, or `"owner-session"`. `"owner-session"` is explicitly marked as involving the owner: the sweep drives the owner's real authenticated session and must never be assumed without asking. `null` or absent means no authenticated sweep is configured; the sweep covers unauthenticated surfaces only.
 - `orchestration` (optional): `linear-orchestrate` policy. `transport` — worker transport (`"codex-cli"`, `"claude-code-desktop"`, or `"fallback"`); when absent the orchestrator detects the runtime per `references/orchestration.md`. `maxParallelWorkers` — concurrent worker cap (default 3).
 
 ## Checks

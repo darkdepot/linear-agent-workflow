@@ -43,16 +43,30 @@ Workflow:
      ```
 7. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
 8. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
-9. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
-10. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
-11. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
-12. Return the concise report in `templates/deploy-output.md`.
+9. `live-qa`: run the Live QA gate below on the deployed artifact. A user-facing change cannot proceed to closeout without a green live pass or an explicit recorded skip reason.
+10. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
+11. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy (or an explicit accepted delivery policy says merge is delivery for this repo) and, for user-facing changes, a green live pass per the Live QA gate.
+12. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
+13. Return the concise report in `templates/deploy-output.md`.
 
 Deploy workflow config:
 
 - Read `workflows.deploy` from `.agents/linear-workflow.config.json` when present.
 - Treat missing, placeholder, or `None` Deploy workflow as `blocked`; do not invent a merge/deploy path.
 - Do not accept `Land workflow` as a compatibility alias. Projects must migrate to `workflows.deploy`.
+
+Live QA gate:
+
+Deploy closeout for a user-facing change is not complete without a live QA pass on the real deployed artifact. The gate runs after deploy verification and before Linear closeout.
+
+- Precondition — version match: before any sweep, verify the deployed version matches the certified merged SHA (deployment metadata, version endpoint/marker, or Deploy workflow evidence). If the deployed content predates the certified version — wave-1 precedent: prod content predated the certified version during an environment migration — stop, treat delivery as unverified, and resolve the deploy before sweeping.
+- Functional smoke: on the real deployed app with real data, walk the PRD acceptance criteria of the shipped Issue and check the console for errors.
+- Design acceptance: compare the live result against the prototype approved at the UX checkpoint and repo design standards; judge autonomously against that approved baseline, never your own taste. When no UX-checkpoint prototype exists (non-UI or tiny work), functional smoke alone suffices.
+- Defect handling — fix-forward: on a live defect, file an immediate hotfix Issue out of queue and dispatch it. The new defect Issue does not block the original Issue's `Done`, but the shipped Issue moves to `Done` only after its own live pass is green. The hotfix Issue gets its own live verification when it ships.
+- Flake adjudication: verify on clean state before calling something a defect (fresh session/reload, cleared transient state). A known-flaky failure outside the shipped diff becomes a separate tiny Issue, not a gate failure (wave-1 pattern).
+- Non-web and non-user-facing surfaces: the gate's spirit is "verify the delivered artifact live". For a skill-pack repo, `node scripts/install-local.mjs --check` green against the delivered version counts as the live pass. Map other surfaces the same way: exercise the delivered artifact where its consumers use it.
+- Instrument and auth: use the `workflows.qa` instrument from `.agents/linear-workflow.config.json` when configured; `null` or absent means use whatever browser automation the runtime provides. Authenticate per `qaAuth` (`cookie-import` | `test-account` | `owner-session`); `owner-session` involves the owner and must be asked for, never assumed.
+- Skipping the gate requires an explicit recorded reason in the deploy closeout (for example: no user-facing surface changed); a silent skip is a contract violation.
 
 Learning capture:
 
@@ -79,6 +93,7 @@ Merged SHA: <sha or none>
 Deploy workflow: <name>
 Deploy target: <url/environment or none>
 Deploy verification: <passed/failed/unavailable + evidence>
+Live QA: <passed/failed/skipped + evidence or recorded skip reason>
 Post-ship check: <PASS/FAIL/BLOCKED + meaning>
 Linear closeout: <Done/not done + reason>
 Learnings recorded: <none/list>
@@ -105,6 +120,7 @@ Rules:
 - Do not deploy if the current PR head SHA differs from the certificate head SHA.
 - Do not run repo documentation workflow here; repo documentation must happen in `linear-ship` before final green certification.
 - Do not close Linear as `Done` before deploy evidence exists, unless the project policy explicitly says merge is delivery and that acceptance is recorded.
+- Do not close an Issue as `Done` with a failed or skipped live pass on a user-facing change; a skip requires an explicit recorded reason in the deploy closeout.
 - Do not use Project Updates as a required gate; record closeout in Linear comments/resources and status.
 - Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include checked/not-checked boundaries. Deploy success does not imply manual browser QA, mobile QA, or production smoke unless those actually ran.
@@ -115,6 +131,7 @@ Final response must include:
 - PR URL, reviewed head SHA, and merged SHA when present.
 - Deploy workflow and target.
 - Verification evidence.
+- Live QA result (or the recorded skip reason).
 - Linear closeout outcome.
 - Learnings recorded.
 - Checked and not-checked boundary.
