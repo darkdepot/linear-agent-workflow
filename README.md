@@ -129,11 +129,11 @@ Each installed skills root contains:
 
 `linear-preflight` also requires the external `autoreview` skill/helper in the agent runtime. This workflow does not vendor `autoreview`; preflight blocks when the helper is missing.
 
-`linear-preflight` does not inherit the external helper's model default. It pins
-GPT-5.6 routing from the existing workflow risk class: Luna/low for `tiny`,
-Luna/medium for `standard`, Sol/medium for `deep`, Sol/high for `risky`, and
-Sol/xhigh only for a `risky` scope with a recorded critical escalation.
-The final preflight certificate records the selected route and explicit command.
+`linear-preflight` does not inherit the external helper's model default. It
+selects the explicit GPT-5.6 route only from the canonical table in
+`references/autoreview-routing.md`, re-selects after final risk
+reclassification, and records the route and command in the preflight
+certificate.
 
 Check every installed root without writing:
 

@@ -816,6 +816,8 @@ function validateAntiPatterns() {
     "Pass `--engine codex`, `--model`, and `--thinking` explicitly on every helper invocation",
     "never use GPT-5.5 as a normal route",
     "Reclassify the final risk",
+    "then re-select the model and effort from `references/autoreview-routing.md`",
+    "the earlier clean result does not count",
     "A clean local dirty-work review alone is not sufficient",
     "Do not cap the review loop at an arbitrary round count",
     "Do not call Compound `ce-code-review` for this gate",
@@ -824,6 +826,13 @@ function validateAntiPatterns() {
     "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
     if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
+  }
+  if (preflight.includes("`tiny` ->") || preflight.includes("Luna/low for `tiny`")) {
+    fail("linear-preflight must not duplicate the canonical autoreview routing table");
+  }
+  const readme = read("README.md");
+  if (readme.includes("Luna/low for `tiny`") || readme.includes("`tiny` ->")) {
+    fail("README must not duplicate the canonical autoreview routing table");
   }
 
   const shipOutput = read("templates/ship-output.md");

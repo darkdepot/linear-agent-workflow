@@ -31,6 +31,9 @@ effort when a selected route is unavailable.
    `standard`.
 4. Reclassify before the final durable-scope review when review-triggered fixes
    materially change the files, owner boundary, or risk surface.
+5. After that final classification, select the route again from the canonical
+   table. An earlier clean result is stale when the risk class or critical
+   signal now requires a higher route.
 
 Within `risky`, escalate from `high` to `xhigh` only when at least one critical
 signal is concrete in the final scope: irreversible production or data

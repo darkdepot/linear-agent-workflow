@@ -56,13 +56,13 @@ Workflow:
      - Branch or PR work: run `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
      - Already-landed or single-commit work: `<autoreview-helper> --mode commit --commit <ref>`.
    - Classify the final diff as `tiny`, `standard`, `deep`, or `risky` using the approved Linear package and `references/readiness-gates.md`. If the implementation is riskier than the recorded class, use the higher class and record the drift.
-   - Select the model and effort from `references/autoreview-routing.md`: `tiny` -> `gpt-5.6-luna`/`low`; `standard` -> `gpt-5.6-luna`/`medium`; `deep` -> `gpt-5.6-sol`/`medium`; `risky` -> `gpt-5.6-sol`/`high`; only a `risky` scope with a recorded critical escalation -> `gpt-5.6-sol`/`xhigh`.
+   - Select the model and effort only from the canonical table in `references/autoreview-routing.md`; do not restate or infer a second copy of the table in this skill.
    - Pass `--engine codex`, `--model`, and `--thinking` explicitly on every helper invocation. Never rely on external helper or environment defaults, never use GPT-5.5 as a normal route, and never silently fall back to another engine, model, or effort.
    - Treat helper exit 0 plus the clean result (`autoreview clean: no accepted/actionable findings reported`) as the only successful review outcome.
    - Treat nonzero helper exit with accepted/actionable findings as not clean. Verify every finding against the real code, reject only unsupported findings with evidence, and apply small fixes for accepted/actionable findings at the right ownership boundary.
    - After any review-triggered code change, re-run the relevant targeted verification and re-run `autoreview`.
    - Keep looping until `autoreview` exits clean, or stop with `blocked`/`needs-human` if the helper is unavailable, cannot determine scope, repeatedly fails for tooling/capacity reasons, or still reports actionable findings that require a human decision.
-   - Reclassify the final risk after all review-triggered fixes are committed.
+   - Reclassify the final risk after all review-triggered fixes are committed, then re-select the model and effort from `references/autoreview-routing.md`. If risk moved upward, the earlier clean result does not count; the final durable-scope review must use the newly selected higher route.
    - Before emitting `ready`, run one final clean review for the selected durable scope: branch/PR mode for branch or PR work, or commit mode for already-landed or single-commit work. A clean local dirty-work review alone is not sufficient when the intended reviewed artifact is committed changes.
    - Do not mark preflight `ready` while `autoreview` is unavailable, skipped, replaced by another reviewer, or still reporting accepted/actionable findings.
 6. Commit via Compound `ce-commit` or repo convention when the branch is safe and the commit workflow is configured. If not safe, leave a precise next action.
