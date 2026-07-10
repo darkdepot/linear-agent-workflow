@@ -1214,6 +1214,45 @@ function validateReviewLoopHygiene() {
   }
 }
 
+function validateCostTelemetry() {
+  // MONO-7: cost is telemetry, not a gate. Pins anchor the policy text;
+  // collection itself is manual agent work and stays judgment, not a pin.
+  for (const required of [
+    "## Cost Telemetry",
+    "LAST `turn.completed` event",
+    "sum ACROSS attempts",
+    "Review cycles",
+    "ship-stage report",
+    "Stage wall-clock",
+    "ledger at stage close",
+    "not a pin-enforceable mechanism",
+    "Cost is telemetry, not a gate: no thresholds, no blocking, visibility\nonly.",
+    "Never pause, steer, or fail a worker because of cost numbers",
+    "never let cost collection delay a stage advance",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "цена: ~N тыс. out-токенов, M циклов ревью",
+    "«цена: н/д»",
+    "## Цена волны (Wave Cost Summary)",
+    "Цена волны:",
+    "never blocking, never a gate",
+    "Cost Telemetry in `references/orchestration.md`",
+  ]) {
+    assertIncludes("templates/orchestrator-brief.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "Cost telemetry: the per-Issue cost tail in the status table",
+    "«Цена волны» block",
+    "Cost is telemetry,\n  not a gate: it never blocks, pauses, or pages.",
+  ]) {
+    assertIncludes("skills/linear-orchestrate/SKILL.md", required, JSON.stringify(required));
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1228,6 +1267,7 @@ validateLiveQaGateContract();
 validateRealBackendContractSampling();
 validateGoalContractBinding();
 validateReviewLoopHygiene();
+validateCostTelemetry();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");

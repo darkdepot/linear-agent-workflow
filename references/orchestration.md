@@ -369,6 +369,44 @@ of a 1M-token window with no signal to the owner.
 - At ≥85% usage, the handoff becomes the immediate priority: finish only
   the atomic action in flight, bring the ledger up to date, and hand off.
 
+## Cost Telemetry
+
+Per-feature cost is a first-class operational metric, same as context
+usage. Wave-1 precedent: a full production wave ran with zero cost
+visibility — one Issue consumed 49M input tokens (97% cached), one PR
+accumulated 59 review submissions, and none of it appeared in any report.
+Model-tiering policy has no data without this telemetry.
+
+Per-Issue collection, performed by the orchestrator:
+
+- Worker tokens: read the LAST `turn.completed` event of each attempt log
+  of the stage (`logs/<ISSUE-KEY>-<stage>-a<attempt>.jsonl`); each is
+  cumulative for its own thread — record input, cached, and output as
+  reported there, and sum ACROSS attempts (a respawn or rotation starts a
+  fresh thread whose spend must not vanish). Never sum events within one
+  log.
+- Review cycles: the count of review submissions handled during the ship
+  stage, taken from the ship-stage report and PR review history.
+- Stage wall-clock: derived from the ledger's write-time entries for stage
+  dispatch and stage close; honest write-time discipline (see Mailbox And
+  Ledger) is what makes this derivable. For `recorded-late` entries, use
+  the marker's estimated event time, not the late write-time.
+
+Record the collected numbers per stage in the ledger at stage close; a
+  missing number is recorded with the reason it could not be collected, on
+the same stage-close entry or an adjacent line. Judgment note, stated
+honestly: collection is manual agent work — reading logs, counting review
+submissions, subtracting timestamps — not a pin-enforceable mechanism;
+pins can anchor this policy text, not the collection itself.
+
+Cost is telemetry, not a gate: no thresholds, no blocking, visibility
+only. Never pause, steer, or fail a worker because of cost numbers, and
+never let cost collection delay a stage advance; a missing number is
+recorded as unavailable, never blocks, and never pages the user. Cost
+data feeds status updates and the final wave report per
+`templates/orchestrator-brief.md` («цена: …» per Issue, «Цена волны» for
+the wave) — async-visible records for the owner, nothing more.
+
 ## Resume
 
 A fresh orchestrator session rebuilds state without loss:

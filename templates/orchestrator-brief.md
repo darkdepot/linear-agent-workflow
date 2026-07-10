@@ -51,7 +51,7 @@ design-review pass already applied. Never bring a first draft.
 
 ```text
 Статус (<продукт>, <N> задач):
-- <ISSUE-KEY> — <стадия> — <одна строка состояния>
+- <ISSUE-KEY> — <стадия> — <одна строка состояния> — цена: ~N тыс. out-токенов, M циклов ревью
 
 Решил сам: <решения с прошлого апдейта, по строке с причиной, или «ничего»>
 Нужно от тебя: <брифы по форме выше, или «нет»>
@@ -71,3 +71,27 @@ they never interrupt or page the user.
 
 «Контекст: ~N%» reports orchestrator session context usage per the
 Context Budget policy in `references/orchestration.md`.
+
+The per-Issue cost tail «— цена: ~N тыс. out-токенов, M циклов ревью» is
+compact telemetry per the Cost Telemetry policy in
+`references/orchestration.md`: include it only when the data is
+available; write «цена: н/д» otherwise. Cost lines are async-visible
+records for the owner — never blocking, never a gate, never a reason to
+interrupt work.
+
+## Цена волны (Wave Cost Summary)
+
+The final wave report includes a «Цена волны» summary block — per-feature
+tokens, review cycles, and wall-clock, plus wave totals:
+
+```text
+Цена волны:
+- <ISSUE-KEY> — ~N тыс. out-токенов (in ~N тыс., cached ~N%), M циклов ревью, wall-clock <часы:минуты>
+- …
+Итого: ~N тыс. out-токенов, M циклов ревью, wall-clock <часы:минуты>
+```
+
+Numbers come from the per-stage ledger entries recorded at stage close
+(Cost Telemetry in `references/orchestration.md`); a feature with missing
+data gets «н/д» for the missing field instead of a guess. Like «Простои и
+отклонения:», this block is async-visible and never blocking.
