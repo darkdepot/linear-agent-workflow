@@ -65,6 +65,31 @@ upstream version or commit than the current checkout.
 must have the `autoreview` skill/helper installed, for example
 `~/.codex/skills/autoreview/scripts/autoreview`. This workflow does not vendor `autoreview`; preflight must exit `blocked` when the helper is unavailable.
 
+## Install-Source Verification (Deploy)
+
+When `install-local` runs as a deploy step — delivering a just-merged PR —
+the installing checkout's HEAD must equal the expected merge SHA. Compare
+`git rev-parse HEAD` against the PR's merge commit before installing.
+A mismatch is a DEPLOY BLOCKER, not a warning: resolve the checkout state
+first, then install. Precedent (the MONO-3 deploy incident): a foreign
+commit on local main made `git pull --ff-only` fail with its output
+swallowed, and the pack briefly installed from the wrong source, without
+the just-merged contract — caught only via a version anomaly.
+
+Guarded one-liner pattern (verify SHA → install → `--check`). The expected
+SHA comes from the PR merge record (`gh`), never from the local checkout —
+deriving it locally makes the guard tautological:
+
+```bash
+EXPECTED=$(gh pr view <N> --json mergeCommit -q .mergeCommit.oid); [ "$(git rev-parse HEAD)" = "$EXPECTED" ] \
+  && node scripts/install-local.mjs --remove-stale \
+  && node scripts/install-local.mjs --check
+```
+
+If the guard fails, do not install: fetch, inspect the divergence (a
+silently failed pull or a foreign local commit are the precedent causes),
+bring the checkout to the merge SHA, and rerun the guard.
+
 ## Project Config
 
 Create, migrate, or check a project config from this upstream checkout:
