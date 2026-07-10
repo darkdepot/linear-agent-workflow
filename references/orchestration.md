@@ -202,7 +202,8 @@ Desktop, then `fallback`. Per-runtime bindings:
     and a silently switched model voids the dispatch contract.
 
   Parse the `thread.started` event from the log for the thread id and record
-  it in the worker registry. Continue or steer the same thread with
+  it in the worker registry, together with the background process pid (`$!`)
+  so the heartbeat watcher can probe writer liveness. Continue or steer the same thread with
   `codex exec resume <thread-id> "<message>"` using the same
   `--cd`/`--sandbox`/`--add-dir` flags; the thread keeps its context across
   stages. Ship-stage spawns and resumes add

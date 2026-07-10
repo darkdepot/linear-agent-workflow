@@ -268,6 +268,10 @@ function checkLog(log, reportsDir, registry, nowMs) {
 
 function checkRegistry(registry, nowMs) {
   for (const [issueKey, entry] of Object.entries(registry)) {
+    // Log-based liveness only applies to codex-cli workers: desktop and
+    // fallback transports have no JSONL log by design and are monitored
+    // through their own runtime signals.
+    if (entry?.transport && entry.transport !== "codex-cli") continue;
     const logPath = entry && typeof entry.log === "string" ? path.resolve(expandHome(entry.log)) : null;
     if (!logPath || !fs.existsSync(logPath)) {
       emitEvent(
