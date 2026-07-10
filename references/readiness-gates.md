@@ -6,6 +6,10 @@ Readiness gates protect the Linear lifecycle without turning every small change 
 
 Use `tiny`, `standard`, `deep`, or `risky`.
 
+The same class controls the mandatory `autoreview` model and reasoning effort
+through `references/autoreview-routing.md`. When approved artifacts and the
+final diff disagree, use the higher risk class for review routing.
+
 `tiny`:
 
 - One narrow artifact update.

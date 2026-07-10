@@ -119,6 +119,12 @@ checks fail. When the field is present but the helper is unavailable in the
 agent runtime, `linear-preflight` stops `blocked` instead of replacing the
 review gate.
 
+The helper remains external and independently updateable. Model selection is
+therefore owned by this workflow: `linear-preflight` passes the explicit
+GPT-5.6 model and reasoning effort defined in
+`references/autoreview-routing.md` for the final risk class. Project config
+does not duplicate this technical routing table.
+
 Example Zeni project config:
 
 ```json
