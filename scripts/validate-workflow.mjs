@@ -231,6 +231,7 @@ function validateTemplateSections() {
     ],
     "templates/orchestrator-dispatch.md": [
       "## Assignment",
+      "## Goal Contract",
       "## Engine",
       "## Context Snapshot",
       "## AFK Contract",
@@ -254,6 +255,7 @@ function validateTemplateSections() {
       "\"issue\"",
       "\"stage\"",
       "\"status\"",
+      "\"verification_items\"",
       "\"question\"",
       "\"recommendation\"",
       "\"linear_mutations_pending\"",
@@ -1138,6 +1140,49 @@ function validateRealBackendContractSampling() {
   }
 }
 
+function validateGoalContractBinding() {
+  assertIncludes(
+    "skills/linear-orchestrate/SKILL.md",
+    "wholesale\n     deferral with no `pass` items, is treated as non-green",
+    '"wholesale deferral is non-green"'
+  );
+  // "## Goal Contract" (dispatch) and "\"verification_items\"" (report) are
+  // structural pins owned by validateTemplateSections; phrase pins live here.
+  for (const required of [
+    "the durable end-state",
+    "lifted verbatim from",
+    "each runnable as written",
+    "what must not change or break",
+    "judge your own \"done\"",
+    "guidance, not a gate",
+  ]) {
+    assertIncludes("templates/orchestrator-dispatch.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "pass | deferred | not-run",
+    "optional in shape but mandatory in coverage",
+    "enumerate every «Как проверить» item",
+    "require a reason in `evidence`",
+    "silently missing",
+    "replaces the report `status` set",
+  ]) {
+    assertIncludes("templates/orchestrator-report.md", required, JSON.stringify(required));
+  }
+
+  for (const relativePath of ["skills/linear-implement/SKILL.md", "skills/linear-preflight/SKILL.md"]) {
+    for (const required of [
+      "enumerates every «Как проверить» item",
+      "pass | deferred | not-run",
+      "verification_items",
+      "cannot claim completion while an item is silently missing",
+      "only with a recorded reason",
+    ]) {
+      assertIncludes(relativePath, required, JSON.stringify(required));
+    }
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1150,6 +1195,7 @@ validateHeartbeatContract();
 validateHonestLedgerContract();
 validateLiveQaGateContract();
 validateRealBackendContractSampling();
+validateGoalContractBinding();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");

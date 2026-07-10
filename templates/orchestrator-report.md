@@ -1,7 +1,9 @@
 # Worker Report And Ledger Shapes
 
 Machine-facing shapes for the `linear-orchestrate` mailbox. The worker report
-JSON is English only. Ledger entries are English except the fixed domain term
+JSON is English only, except `verification_items[].item`, which carries the
+Issue's «Как проверить» lines verbatim in their original language. Ledger
+entries are English except the fixed domain term
 «Решил сам:» / `решил сам` from `references/orchestration.md`. No secrets in
 either shape.
 
@@ -17,6 +19,9 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
   "branch": "<branch>",
   "changed_files": ["<path>"],
   "tests": { "run": "<commands>", "result": "<outcome>" },
+  "verification_items": [
+    { "item": "<verbatim from Как проверить>", "status": "pass | deferred | not-run", "evidence": "<one line>" }
+  ],
   "question": "<question text, or null>",
   "recommendation": "<the worker's own recommended answer, or null>",
   "linear_mutations_pending": ["<comment/status text the worker could not apply>"],
@@ -29,6 +34,14 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
 `notes` is optional free text for runtime facts the fixed fields cannot
 carry — e.g. an engine or workflow substitution because the configured skill
 was not available in the worker runtime. It never replaces a status.
+
+`verification_items` is optional in shape but mandatory in coverage: a
+stage-terminal report for `linear-implement` or `linear-preflight` MUST
+enumerate every «Как проверить» item of the Issue, each with status
+`pass | deferred | not-run` and one line of evidence. `deferred` and
+`not-run` require a reason in `evidence`; a stage cannot claim completion
+while an item is silently missing. The field is additive — it never changes
+or replaces the report `status` set.
 
 Status semantics:
 

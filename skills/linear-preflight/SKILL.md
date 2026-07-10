@@ -108,6 +108,7 @@ Rules:
 - Do not call Compound `ce-code-review` for this gate. It is not an acceptable replacement for `autoreview` inside `linear-preflight`.
 - Do not auto-apply broad rewrites, release-sensitive changes, or fixes that the agent cannot defend after reading the relevant code and contracts.
 - Do not silently reject a repeated `autoreview` finding and mark `ready`. If `autoreview` does not return clean, the certificate must be `blocked` or `needs-human`.
+- The stage exit report enumerates every «Как проверить» item of the Issue, each with a `pass | deferred | not-run` status and one line of evidence (under orchestration this is the `verification_items` array of the mailbox report). The stage cannot claim completion while an item is silently missing; `deferred`/`not-run` are valid only with a recorded reason in the evidence.
 - Do not mark preflight `ready` when the final `autoreview` command omits explicit `--engine codex`, `--model`, or `--thinking`, selects a non-GPT-5.6 model, or does not match the final risk class in `references/autoreview-routing.md`.
 - Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include a checked/not-checked boundary. Local tests do not imply browser QA, production smoke, mobile QA, deploy verification, or user acceptance.

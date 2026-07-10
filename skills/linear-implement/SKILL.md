@@ -118,6 +118,7 @@ Rules:
 - Do not create PRs directly from `linear-implement`.
 - Do not run or claim `linear-review pre-ship` or `linear-check pre-ship`; those belong to `linear-ship`.
 - If material drift appears, stop as `scope-drift-needs-handoff`.
+- The stage exit report enumerates every «Как проверить» item of the Issue, each with a `pass | deferred | not-run` status and one line of evidence (under orchestration this is the `verification_items` array of the mailbox report). The stage cannot claim completion while an item is silently missing; `deferred`/`not-run` are valid only with a recorded reason in the evidence.
 - Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 
 Implementation-start comment shape:
