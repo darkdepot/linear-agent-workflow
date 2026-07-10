@@ -622,11 +622,19 @@ function validateDocsAndExamples() {
     "references/autoreview-routing.md": [
       "`tiny` | `gpt-5.6-luna` | `low`",
       "`standard` | `gpt-5.6-luna` | `medium`",
-      "`deep` | `gpt-5.6-sol` | `medium`",
+      "`deep` | `gpt-5.6-sol` | `high`",
       "`risky` | `gpt-5.6-sol` | `high`",
       "`risky` with critical escalation | `gpt-5.6-sol` | `xhigh`",
       "Never rely on the external `autoreview` helper's built-in model default",
       "Do not silently fall back",
+      "at least as capable as the code's producer",
+      "PROVISIONAL pending live-QA validation of the",
+      "hermes-dashboard waves",
+      "if live QA surfaces defects that Luna-reviewed code shipped",
+      "`standard` re-tiers to `gpt-5.6-sol` / `medium`",
+      "`gpt-5.6-sol` (same-model review)",
+      "no-test-edits rule",
+      "cross-vendor review whenever the worker",
     ],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
@@ -785,6 +793,7 @@ function validateAntiPatterns() {
     "Готов деплоить",
     "gstack-learnings-search",
     "Learnings consulted:",
+    "re-tier review per `references/autoreview-routing.md`",
   ]) {
     if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }
@@ -1198,6 +1207,7 @@ function validateReviewLoopHygiene() {
     "This submitted-check is a green-certificate precondition",
     "No pending (unsubmitted) review drafts remain for the worker's own reviews",
     "After the authorized final resolver cycle",
+    "binds this path too",
     "When in doubt whether a finding is blocking-class, escalate",
     "get deferral replies, filed as a follow-up issue when warranted",
     "proceeds to terminal status",

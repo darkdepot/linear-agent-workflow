@@ -6,6 +6,24 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-11
+
+Wave-2 hardening release: MONO-5 through MONO-10 close the contract, hygiene, telemetry, integrity, and ops gaps found while dogfooding orchestrated delivery, and amend the autoreview model routing.
+
+### Added
+
+- Goal contract and verification binding (MONO-5): `templates/orchestrator-dispatch.md` gains a `## Goal Contract` section — the durable end-state lifted verbatim from the Issue, runnable verification commands, and what must not change or break — so a worker can judge its own "done" against the contract instead of vibes. `templates/orchestrator-report.md` gains `verification_items` (`pass | deferred | not-run`, optional in shape but mandatory in coverage): stage exit reports in `linear-implement` and `linear-preflight` enumerate every «Как проверить» item and cannot claim completion while an item is silently missing; the orchestrator audits `verification_items` coverage before advancing a stage-terminal report.
+- Review-loop hygiene (MONO-6): before the first resolver cycle the review bots' configuration is checked and config-class noise is fixed via configuration, never burned down with resolver cycles; duplicate findings are deduplicated without consuming the cycle budget, guarded by a double fail-safe (in doubt = novel, dedup must never dismiss real findings); a published-replies submitted-check (no pending draft reviews) becomes a green-certificate precondition; after the authorized final resolver cycle convergence is non-blocking — remaining threads get deferral replies and a follow-up issue when warranted.
+- Per-feature cost telemetry (MONO-7): `references/orchestration.md` gains a `## Cost Telemetry` section — tokens summed across all attempts of a stage from the last `turn.completed` event per thread, review cycles counted, stage wall-clock from ledger timestamps with `recorded-late` entries honestly marked; status updates carry a per-Issue cost tail and the wave closeout a «Цена волны» block. Cost is telemetry, not a gate: no thresholds, no blocking, visibility only.
+- Brief integrity (MONO-8): decision briefs mirror board section IDs exactly with section-scoped suffixes (1a, 1b) and cross-section renumbering forbidden; option tokens are self-identifying (valid without their number); owner answers are echoed back as «вопрос → выбранный вариант (дословно)» with a one-line re-confirm on any numbering doubt — in doubt, re-ask; questions are never closed by silence; anything changed after approval is disclosed under «Изменилось после твоего одобрения:».
+- Ops lessons (MONO-9): install-source SHA blocker — the installing checkout's HEAD must equal the expected merge SHA taken from the gh merge record (`git rev-parse HEAD` provenance, verify SHA → install → `--check`), and a mismatch is a DEPLOY BLOCKER, not a warning; after any interruption PR state is reconstructed exclusively via `gh` commands against the exact head SHA, never from thread memory; a forced mid-wave resume drill is defined as a planned one-time operational act (not a recurring gate) that records every reconstruction discrepancy in the ledger and feeds the PRD wave-1 success criteria.
+- Autoreview routing amendments (MONO-10, `references/autoreview-routing.md`): the reviewer-vs-producer principle — a review model must be at least as capable as the code's producer for the gate to add signal; the `standard` → `gpt-5.6-luna`/`medium` route is marked PROVISIONAL pending live-QA validation of the hermes-dashboard waves, with an explicit re-tier trigger to `gpt-5.6-sol`/`medium` if live QA surfaces defects that Luna-reviewed code shipped; the same-model limitation at `risky` (Sol reviewing Sol, METR reward-hacking context) is documented together with its compensations (live QA gate, no-test-edits rule, cross-vendor review when the worker engine is not Codex).
+
+### Changed
+
+- The `deep` risk class now routes autoreview at reasoning effort `high` instead of `medium` (`gpt-5.6-sol`/`high`), aligning the canonical table with the tiering research and strengthening the gate; no route was weakened.
+- `scripts/validate-workflow.mjs` pins all wave-2 contracts (`validateGoalContractBinding`, `validateReviewLoopHygiene`, `validateCostTelemetry`, `validateBriefIntegrity`, `validateOpsLessons`) plus the MONO-10 routing pins (updated deep row, PROVISIONAL marking, re-tier trigger, same-model limitation); each pin set is proven by a break/restore negative-test protocol recorded in `docs/spikes/` (`mono-5-pin-tests.md` through `mono-10-pin-tests.md`).
+
 ## [0.17.0] - 2026-07-11
 
 ### Changed
