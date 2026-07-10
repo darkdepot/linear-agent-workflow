@@ -1183,6 +1183,37 @@ function validateGoalContractBinding() {
   }
 }
 
+function validateReviewLoopHygiene() {
+  for (const required of [
+    "Before the first resolver cycle on a PR, check the review bots' configuration",
+    "fixed via configuration or recorded as an environment fact",
+    "never burned down with resolver cycles",
+    "does not consume the resolver cycle budget and does not restart the quiet period",
+    "Resolver cycle budgets count only novel findings",
+    "treat it as novel and keep the thread open",
+    "Dedup must never become a channel for dismissing real findings",
+    "published, not a pending draft",
+    "gh api repos/<owner>/<repo>/pulls/<n>/reviews --jq '.[] | select(.state==\"PENDING\")'",
+    "Unpublished rationales count as unresolved threads",
+    "This submitted-check is a green-certificate precondition",
+    "No pending (unsubmitted) review drafts remain for the worker's own reviews",
+    "After the authorized final resolver cycle",
+    "When in doubt whether a finding is blocking-class, escalate",
+    "get deferral replies, filed as a follow-up issue when warranted",
+    "proceeds to terminal status",
+    "always escalate instead",
+  ]) {
+    assertIncludes("references/ship-feedback-loop.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "Review Bot Configuration Check, Finding Dedup with its fail-safe, Published Replies, and Non-Blocking Convergence rules in `references/ship-feedback-loop.md`",
+    "the Published Replies submitted-check is an additional green-certificate precondition",
+  ]) {
+    assertIncludes("skills/linear-ship/SKILL.md", required, JSON.stringify(required));
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1196,6 +1227,7 @@ validateHonestLedgerContract();
 validateLiveQaGateContract();
 validateRealBackendContractSampling();
 validateGoalContractBinding();
+validateReviewLoopHygiene();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");
