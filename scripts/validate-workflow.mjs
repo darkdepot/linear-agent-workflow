@@ -1306,6 +1306,7 @@ function validateOpsLessons() {
       "the installing checkout's HEAD must equal the expected merge SHA",
       "git rev-parse HEAD",
       "a DEPLOY BLOCKER, not a warning",
+    "never from the local checkout",
       "verify SHA → install → `--check`",
     ]) {
       assertIncludes(relativePath, required, JSON.stringify(required));
