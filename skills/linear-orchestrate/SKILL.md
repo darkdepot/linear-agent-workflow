@@ -131,6 +131,10 @@ Workflow states:
    - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
      `needs-decision`, `scope-drift-needs-handoff`) to `decide-or-escalate`
      instead of advancing.
+   - Audit `verification_items` coverage before advancing a stage-terminal
+     report: missing coverage of the Issue's «Как проверить», or wholesale
+     deferral with no `pass` items, is treated as non-green regardless of the
+     report status.
    - On `timed-out`: treat as a stuck worker; rebuild stage state from Linear
      and the last mailbox report and respawn per the Monitoring Protocol.
 6. `decide-or-escalate`

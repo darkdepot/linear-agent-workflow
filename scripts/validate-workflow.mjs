@@ -1141,6 +1141,11 @@ function validateRealBackendContractSampling() {
 }
 
 function validateGoalContractBinding() {
+  assertIncludes(
+    "skills/linear-orchestrate/SKILL.md",
+    "wholesale\n     deferral with no `pass` items, is treated as non-green",
+    '"wholesale deferral is non-green"'
+  );
   // "## Goal Contract" (dispatch) and "\"verification_items\"" (report) are
   // structural pins owned by validateTemplateSections; phrase pins live here.
   for (const required of [

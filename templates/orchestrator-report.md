@@ -1,7 +1,9 @@
 # Worker Report And Ledger Shapes
 
 Machine-facing shapes for the `linear-orchestrate` mailbox. The worker report
-JSON is English only. Ledger entries are English except the fixed domain term
+JSON is English only, except `verification_items[].item`, which carries the
+Issue's «Как проверить» lines verbatim in their original language. Ledger
+entries are English except the fixed domain term
 «Решил сам:» / `решил сам` from `references/orchestration.md`. No secrets in
 either shape.
 
