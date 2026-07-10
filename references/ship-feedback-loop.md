@@ -52,7 +52,7 @@ A finding already adjudicated on this PR — accepted-and-fixed, or rejected wit
 - A deduplicated re-emission does not consume the resolver cycle budget and does not restart the quiet period.
 - Resolver cycle budgets count only novel findings. A wave of re-emitted findings on a new head is not a new resolver round.
 - A finding that moves its target (the same cosmetic complaint demanding a different value each wave) is one adjudicated finding, not a stream of novel ones.
-- Fail-safe: when in doubt whether a finding is novel, treat it as novel and keep the thread open. Dedup must never become a channel for dismissing real findings; a genuinely new angle on an old area is novel.
+- Fail-safe: when in doubt whether a finding is novel, treat it as novel and keep the thread open. Dedup must never become a channel for dismissing real findings. Review-triggered fixes in resolver cycles must never weaken, delete, or bypass tests to reach green (the no-test-edits rule in `references/autoreview-routing.md` binds this path too); a genuinely new angle on an old area is novel.
 
 ## Non-Blocking Convergence
 

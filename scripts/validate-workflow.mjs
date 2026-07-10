@@ -793,6 +793,7 @@ function validateAntiPatterns() {
     "Готов деплоить",
     "gstack-learnings-search",
     "Learnings consulted:",
+    "re-tier review per `references/autoreview-routing.md`",
   ]) {
     if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
   }
@@ -1206,6 +1207,7 @@ function validateReviewLoopHygiene() {
     "This submitted-check is a green-certificate precondition",
     "No pending (unsubmitted) review drafts remain for the worker's own reviews",
     "After the authorized final resolver cycle",
+    "binds this path too",
     "When in doubt whether a finding is blocking-class, escalate",
     "get deferral replies, filed as a follow-up issue when warranted",
     "proceeds to terminal status",
