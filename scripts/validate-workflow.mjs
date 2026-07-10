@@ -1198,6 +1198,7 @@ function validateReviewLoopHygiene() {
     "This submitted-check is a green-certificate precondition",
     "No pending (unsubmitted) review drafts remain for the worker's own reviews",
     "After the authorized final resolver cycle",
+    "When in doubt whether a finding is blocking-class, escalate",
     "get deferral replies, filed as a follow-up issue when warranted",
     "proceeds to terminal status",
     "always escalate instead",

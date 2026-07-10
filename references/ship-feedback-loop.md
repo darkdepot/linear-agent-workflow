@@ -58,7 +58,7 @@ A finding already adjudicated on this PR — accepted-and-fixed, or rejected wit
 
 After the authorized final resolver cycle, further new non-blocking findings — cosmetic or nit-class: naming, styling values, phrasing, optional refactors — get deferral replies, filed as a follow-up issue when warranted, and the stage proceeds to terminal status.
 
-Blocking-class findings — correctness, security, data loss, broken contracts — always escalate instead; they are never deferred by this rule.
+Blocking-class findings — correctness, security, data loss, broken contracts — always escalate instead; they are never deferred by this rule. When in doubt whether a finding is blocking-class, escalate — the convergence rule must never become a channel for deferring a real defect. Record the deferral list and the published-replies check result in the green certificate.
 
 ## Published Replies
 
