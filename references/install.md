@@ -76,10 +76,12 @@ commit on local main made `git pull --ff-only` fail with its output
 swallowed, and the pack briefly installed from the wrong source, without
 the just-merged contract — caught only via a version anomaly.
 
-Guarded one-liner pattern (verify SHA → install → `--check`):
+Guarded one-liner pattern (verify SHA → install → `--check`). The expected
+SHA comes from the PR merge record (`gh`), never from the local checkout —
+deriving it locally makes the guard tautological:
 
 ```bash
-EXPECTED=<merge-sha>; [ "$(git rev-parse HEAD)" = "$EXPECTED" ] \
+EXPECTED=$(gh pr view <N> --json mergeCommit -q .mergeCommit.oid); [ "$(git rev-parse HEAD)" = "$EXPECTED" ] \
   && node scripts/install-local.mjs --remove-stale \
   && node scripts/install-local.mjs --check
 ```
