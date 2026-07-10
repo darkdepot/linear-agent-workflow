@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "projectName": "Linear Agent Workflow",
+  "linearTeam": "Mono",
+  "languages": {
+    "linear": "Russian",
+    "repo": "English"
+  },
+  "artifactRoots": ["plans"],
+  "workflows": {
+    "implementation": null,
+    "ship": "gstack ship",
+    "documentation": null,
+    "reviewFeedback": "compound-engineering:ce-resolve-pr-feedback",
+    "deploy": "gh merge + node scripts/install-local.mjs --all-roots, verify with --check (skill-pack delivery)"
+  },
+  "deployApproval": "risky-only",
+  "prerequisites": {
+    "autoreviewHelper": true
+  },
+  "orchestration": {
+    "transport": "codex-cli",
+    "maxParallelWorkers": 3
+  }
+}
