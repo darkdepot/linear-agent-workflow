@@ -204,6 +204,12 @@ function validateConfig(config, failures) {
         failures.push(`Project config workflows.${field} must be a string or null`);
       }
     }
+    if ("qa" in config.workflows) {
+      const value = config.workflows.qa;
+      if (value !== null && (typeof value !== "string" || value.trim().length === 0)) {
+        failures.push("Project config workflows.qa must be a string or null");
+      }
+    }
   }
   if (!config.prerequisites || config.prerequisites.autoreviewHelper !== true) {
     failures.push("Project config must set prerequisites.autoreviewHelper to true");
@@ -212,6 +218,12 @@ function validateConfig(config, failures) {
     const allowed = ["always", "risky-only", "never"];
     if (!allowed.includes(config.deployApproval)) {
       failures.push(`Project config deployApproval must be one of: ${allowed.join(", ")}`);
+    }
+  }
+  if ("qaAuth" in config) {
+    const allowed = ["cookie-import", "test-account", "owner-session"];
+    if (config.qaAuth !== null && !allowed.includes(config.qaAuth)) {
+      failures.push(`Project config qaAuth must be one of: ${allowed.join(", ")}`);
     }
   }
   if ("orchestration" in config) {

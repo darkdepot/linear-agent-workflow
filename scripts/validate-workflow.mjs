@@ -505,6 +505,33 @@ function validateProjectConfigBehavior() {
     config.deployApproval = "always";
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
+    config.workflows.qa = "gstack qa-only";
+    config.qaAuth = "cookie-import";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
+    config.qaAuth = "shared-password";
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    expectCommandFailure(
+      "project-config --check invalid qaAuth fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "qaAuth"
+    );
+
+    config.qaAuth = "owner-session";
+    config.workflows.qa = 42;
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    expectCommandFailure(
+      "project-config --check invalid workflows.qa fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "workflows.qa"
+    );
+
+    delete config.workflows.qa;
+    delete config.qaAuth;
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
     for (const removed of [
       ".agents/linear-workflow.config.md",
       ".agents/linear-workflow-check.mjs",
@@ -973,6 +1000,75 @@ function validateHonestLedgerContract() {
   }
 }
 
+function validateLiveQaGateContract() {
+  for (const required of [
+    "Live QA gate",
+    "verify the deployed version matches the certified merged SHA",
+    "walk the PRD acceptance criteria of the shipped Issue and check the console for errors",
+    "prototype approved at the UX checkpoint",
+    "never your own taste",
+    "functional smoke alone suffices",
+    "immediate hotfix Issue out of queue",
+    "fix-forward",
+    "only after its own live pass is green",
+    "own live verification",
+    "verify on clean state before calling something a defect",
+    "not a gate failure",
+    "verify the delivered artifact live",
+    "counts as the live pass",
+    "workflows.qa",
+    "qaAuth",
+    "explicit recorded reason",
+  ]) {
+    assertIncludes("skills/linear-deploy/SKILL.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "verify the deployed version matches the certified merged SHA",
+    "live QA sweep on the deployed app for user-facing changes",
+    "only after its own live pass is green",
+    "immediate hotfix Issue out of queue",
+    "fix-forward",
+    "may excuse only a sweep that did not run, never a failed one",
+  ]) {
+    assertIncludes("references/lifecycle.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "\"qa\"",
+    "`workflows.qa` (optional)",
+    "`qaAuth` (optional)",
+    "cookie-import",
+    "test-account",
+    "owner-session",
+    "involving the owner",
+  ]) {
+    assertIncludes("references/install.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "Live QA gate",
+    "workers have no browser",
+    "out of queue",
+    "control-plane exception",
+    "explicit owner mandate",
+    "Feature code NEVER",
+  ]) {
+    assertIncludes("skills/linear-orchestrate/SKILL.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "control-plane exception",
+    "explicit owner mandate",
+    "deploy scripts, infra config, docs address sweeps",
+    "feature code never qualifies",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+
+  assertIncludes("templates/deploy-output.md", "Live QA:", "Live QA line in deploy status block");
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -983,6 +1079,7 @@ validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
 validateHonestLedgerContract();
+validateLiveQaGateContract();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");
