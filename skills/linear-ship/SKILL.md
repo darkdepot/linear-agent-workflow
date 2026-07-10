@@ -150,6 +150,7 @@ Rules:
 - After PR creation, enter review stabilization whenever PR checks/reviews can be inspected. Missing Documentation or Review feedback workflows are reported as `not configured`; they are not a reason to skip the green/blocked/timed-out/needs-human outcome.
 - If Review feedback workflow is absent, wait for checks/reviews once; stop with `needs-human` if actionable feedback appears, otherwise create the green certificate when strict conditions are met.
 - Stop with `needs-human` when feedback asks for product, UX, business, or scope decisions.
+- PR state after interruption — gh only: after ANY turn interruption (provider capacity error, crash, resume, respawn), the worker or orchestrator reconstructs PR/CI/review state exclusively via `gh` commands against the exact head SHA — never from thread memory; state assumed from memory is treated as unverified. Re-verify PR existence, head SHA, CI checks, review threads, and merge state with `gh` before continuing stabilization or recording a green certificate (HD-46 precedent: a ship turn died on a provider capacity error after push + PR creation, and PR state had to be reconciled via `gh`).
 - Review-loop hygiene: follow the Review Bot Configuration Check, Finding Dedup with its fail-safe, Published Replies, and Non-Blocking Convergence rules in `references/ship-feedback-loop.md`; the Published Replies submitted-check is an additional green-certificate precondition.
 - Final verdict `green` always means "ready for `linear-deploy`", not merged or deployed.
 

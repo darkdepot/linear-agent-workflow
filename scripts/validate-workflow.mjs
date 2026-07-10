@@ -1295,6 +1295,42 @@ function validateBriefIntegrity() {
   }
 }
 
+function validateOpsLessons() {
+  // MONO-9: operational lessons — install-source SHA blocker (MONO-3 deploy
+  // incident), gh-only PR state after interruptions (HD-46), and the forced
+  // mid-wave resume drill. Pins anchor the contract prose; resolving a bad
+  // checkout, reconciling a PR via gh, and running the drill stay judgment
+  // and operational work, not pin-enforceable mechanisms.
+  for (const relativePath of ["skills/linear-deploy/SKILL.md", "references/install.md"]) {
+    for (const required of [
+      "the installing checkout's HEAD must equal the expected merge SHA",
+      "git rev-parse HEAD",
+      "a DEPLOY BLOCKER, not a warning",
+      "verify SHA → install → `--check`",
+    ]) {
+      assertIncludes(relativePath, required, JSON.stringify(required));
+    }
+  }
+
+  for (const required of [
+    "exclusively via `gh` commands against the exact head SHA",
+    "never from thread memory",
+    "state assumed from memory is treated as unverified",
+  ]) {
+    assertIncludes("skills/linear-ship/SKILL.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "Forced mid-wave resume drill",
+    "a planned one-time operational act",
+    "not a recurring gate",
+    "records every reconstruction discrepancy in the ledger",
+    "feeds the PRD wave-1 success criteria",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -1311,6 +1347,7 @@ validateGoalContractBinding();
 validateReviewLoopHygiene();
 validateCostTelemetry();
 validateBriefIntegrity();
+validateOpsLessons();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");

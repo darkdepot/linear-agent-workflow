@@ -451,3 +451,15 @@ A fresh orchestrator session rebuilds state without loss:
    it; rebind to surviving `codex-cli` workers by thread id
    (`codex exec resume`) instead of respawning them.
 6. Output the rebuilt status table before taking any new action.
+
+Forced mid-wave resume drill — a planned one-time operational act,
+not a recurring gate: during the next wave the orchestrator deliberately
+performs a clean handoff to a fresh session mid-wave, at a safe boundary
+per Context Budget (after the current monitoring pass or stage advance
+completes, never mid-dispatch), runs this Resume procedure for real, and
+records every reconstruction discrepancy in the ledger — unverified
+ledger claims, lost thread bindings, unapplied Linear mutations, report
+gaps; "no discrepancies" is a valid result only after actively looking.
+The drill result feeds the PRD wave-1 success criteria. Rationale: the
+wave-1 orchestrator session peaked at 92% of a 1M context window and a
+forced mid-wave resume has never been tested.
