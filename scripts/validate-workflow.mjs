@@ -1029,7 +1029,7 @@ function validateLiveQaGateContract() {
     "only after its own live pass is green",
     "immediate hotfix Issue out of queue",
     "fix-forward",
-    "failed or skipped live pass on a user-facing change and no explicit recorded skip reason",
+    "may excuse only a sweep that did not run, never a failed one",
   ]) {
     assertIncludes("references/lifecycle.md", required, JSON.stringify(required));
   }

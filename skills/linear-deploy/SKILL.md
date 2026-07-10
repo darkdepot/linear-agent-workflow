@@ -43,9 +43,9 @@ Workflow:
      ```
 7. `deploy`: delegate merge/deploy to the configured Deploy workflow. Default Zeni/GStack workflow is `gstack land-and-deploy`.
 8. `verify`: capture merge SHA, deployment URL/environment, deploy status, and verification evidence from the Deploy workflow.
-9. `live-qa`: run the Live QA gate below on the deployed artifact. A user-facing change cannot proceed to closeout without a green live pass or an explicit recorded skip reason.
+9. `live-qa`: run the Live QA gate below on the deployed artifact. A user-facing change cannot proceed to closeout without a green live pass or an explicit recorded skip reason; a recorded reason may excuse only a sweep that did not run, never a failed one.
 10. `post-ship`: run or report `linear-check post-ship` after deploy evidence is known.
-11. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy (or an explicit accepted delivery policy says merge is delivery for this repo) and, for user-facing changes, a green live pass per the Live QA gate.
+11. `linear-closeout`: update the Linear Issue to `Done` only after verified deploy (or an explicit accepted delivery policy says merge is delivery for this repo) and, for user-facing changes, a green live pass per the Live QA gate (or the gate's explicit recorded not-run skip).
 12. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
 13. Return the concise report in `templates/deploy-output.md`.
 
@@ -66,7 +66,7 @@ Deploy closeout for a user-facing change is not complete without a live QA pass 
 - Flake adjudication: verify on clean state before calling something a defect (fresh session/reload, cleared transient state). A known-flaky failure outside the shipped diff becomes a separate tiny Issue, not a gate failure (wave-1 pattern).
 - Non-web and non-user-facing surfaces: the gate's spirit is "verify the delivered artifact live". For a skill-pack repo, `node scripts/install-local.mjs --check` green against the delivered version counts as the live pass. Map other surfaces the same way: exercise the delivered artifact where its consumers use it.
 - Instrument and auth: use the `workflows.qa` instrument from `.agents/linear-workflow.config.json` when configured; `null` or absent means use whatever browser automation the runtime provides. Authenticate per `qaAuth` (`cookie-import` | `test-account` | `owner-session`); `owner-session` involves the owner and must be asked for, never assumed.
-- Skipping the gate requires an explicit recorded reason in the deploy closeout (for example: no user-facing surface changed); a silent skip is a contract violation.
+- Skipping the gate requires an explicit recorded reason in the deploy closeout (for example: no user-facing surface changed); a silent skip is a contract violation. A failed sweep can never be converted into a skip; failures follow the defect path above.
 
 Learning capture:
 

@@ -183,7 +183,7 @@ Required:
 - Delegate merge/deploy to the configured Deploy workflow.
 - Capture merged SHA, deploy target, and deploy verification evidence.
 - Before the live sweep, verify the deployed version matches the certified merged SHA.
-- Run the live QA sweep on the deployed app for user-facing changes: functional smoke over the shipped Issue's PRD acceptance criteria plus design acceptance against the approved UX-checkpoint prototype.
+- Run the live QA sweep on the deployed app for user-facing changes: functional smoke over the shipped Issue's PRD acceptance criteria plus design acceptance against the approved UX-checkpoint prototype (functional smoke alone when no prototype was approved).
 - Move a user-facing Issue to `Done` only after its own live pass is green.
 - On a live defect, file an immediate hotfix Issue out of queue and dispatch it (fix-forward); the defect Issue does not block the original Issue's `Done`.
 - Run or report `linear-check post-ship` after deploy evidence is known.
@@ -194,7 +194,7 @@ Required:
 Forbidden:
 
 - Deploying when the PR head SHA differs from the green certificate.
-- Closing an Issue as `Done` with a failed or skipped live pass on a user-facing change and no explicit recorded skip reason.
+- Closing an Issue as `Done` with a failed live pass on a user-facing change — a recorded reason may excuse only a sweep that did not run, never a failed one. A skipped sweep without an explicit recorded reason is equally forbidden.
 - Running repo documentation workflow; repo docs belong before ship green.
 - Running interactive `/learn prune`, `/learn export`, or `/learn stats` automatically.
 - Inventing a merge/deploy path when `Deploy workflow` is missing or `None`.
