@@ -173,10 +173,33 @@ Desktop, then `fallback`. Per-runtime bindings:
     --cd <worktree> \
     --sandbox workspace-write \
     --add-dir ~/.linear-agent-workflow/orchestrator/<product> \
+    -c 'model="<pinned model>"' \
     -c 'model_reasoning_effort="high"' \
-    "$(cat <dispatch-prompt-file>)" \
-    > ~/.linear-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>.jsonl 2>&1 &
+    "$(cat <dispatch-prompt-file>)" < /dev/null \
+    > ~/.linear-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.jsonl 2>&1 &
   ```
+
+  Spawn verification, mandatory for every spawn attempt:
+
+  - The dispatch prompt is passed only as a file
+    (`"$(cat <dispatch-prompt-file>)" < /dev/null`); inline prompts are
+    forbidden. Quoting drift silently truncates inline prompts, and without
+    `< /dev/null` a mis-parsed command drops the CLI into interactive stdin
+    mode instead of failing.
+  - `thread.started` must appear in the log within 60 seconds of spawn;
+    otherwise kill the process and retry as the next attempt.
+  - A first log line that is not JSON (does not start with `{`) is an
+    immediate spawn failure — kill and retry; never wait out the timeout.
+  - Recording "ok" or a live thread in the worker registry or ledger with an
+    empty `thread_id` is forbidden; write the registry entry only after
+    `thread.started` is parsed.
+  - Log files are numbered from the first attempt
+    (`logs/<ISSUE-KEY>-<stage>-a1.jsonl`, retries `-a2`, `-a3`, ...) so a
+    retry never overwrites the failed attempt's evidence.
+  - The worker model and reasoning effort are pinned explicitly in the spawn
+    command (`-c 'model=...'`, `-c 'model_reasoning_effort=...'`); CLI
+    defaults drift between versions (the wave-1 `model_switch` precedent),
+    and a silently switched model voids the dispatch contract.
 
   Parse the `thread.started` event from the log for the thread id and record
   it in the worker registry. Continue or steer the same thread with
@@ -223,8 +246,9 @@ transport feature the runtime lacks.
   the worker writes the same JSON to
   `<worktree>/.orchestrator/<ISSUE-KEY>-<stage>.json` (never committed); the
   orchestrator sweeps both locations.
-- Logs: `logs/<ISSUE-KEY>-<stage>.jsonl` per spawn — the worker's JSONL event
-  stream; the timestamp of the last event is the liveness heartbeat.
+- Logs: `logs/<ISSUE-KEY>-<stage>-a<attempt>.jsonl` per spawn attempt,
+  numbered from the first attempt (`-a1`) — the worker's JSONL event stream;
+  the timestamp of the last event is the liveness heartbeat.
 - No secrets in any of them. No routine polling entries in the ledger.
 
 ## Monitoring Protocol
@@ -246,6 +270,37 @@ transport feature the runtime lacks.
   whose turn ends before green is resumed with «continue stabilization».
 - Material scope drift: stop the worker and escalate through
   `scope-drift-needs-handoff`; scope is always the user's decision.
+
+## Heartbeat
+
+The Monitoring Protocol defines when to intervene; the heartbeat is the
+external pulse that notices dying workers without spending orchestrator
+turns. `scripts/watch-workers.mjs` (this repo) is a zero-dependency,
+read-only watcher over the orchestrator root: it reads `logs/`, `reports/`,
+and `workers.json`, writes nothing, and emits one stable line per liveness
+event to stdout —
+`<ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>`.
+
+- At wave start — before the first worker spawn — the orchestrator must
+  start the watcher against the mailbox root:
+  `node scripts/watch-workers.mjs --root ~/.linear-agent-workflow/orchestrator/<product>`.
+  Run it through the runtime's monitor primitive (Claude Code: the Monitor
+  tool with `persistent: true`); a runtime without one falls back to a
+  background process plus a periodic wakeup that reads its stdout. Record
+  the degraded binding in the ledger.
+- Watcher events are Monitoring Protocol triggers: treat `stall`, `dead`,
+  and `spawn-fail` lines exactly like a worker-reported blocker — read the
+  worker's latest state first, then act. `spawn-fail` feeds the spawn
+  verification kill+retry rule in Worker Transports.
+- The stall threshold is at least 90 seconds (default 120); lower values
+  misread normal turn gaps as stalls, and the watcher refuses them.
+- Healing ladder, in order: nudge (resume the thread demanding a report) →
+  respawn (rebuild stage state per the Monitoring Protocol) →
+  session rotation (fresh thread and fresh attempt-numbered log). Alert the
+  owner only when the ladder is exhausted (owner decision Q3); never page
+  on the first stall.
+- Every healing step and its result are mandatory ledger entries — a
+  watcher event that triggered intervention is never routine polling.
 
 ## Decision Briefs
 

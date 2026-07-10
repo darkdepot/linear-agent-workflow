@@ -94,14 +94,23 @@ Workflow states:
      decision; record it explicitly (the bundled-approval rule from
      `linear-implement` applies).
 4. `dispatch`
+   - Start the heartbeat watcher before the first spawn of a wave:
+     `node scripts/watch-workers.mjs --root ~/.linear-agent-workflow/orchestrator/<product>`
+     via the runtime Monitor primitive (Heartbeat in
+     `references/orchestration.md`); no worker spawns until it is running.
    - One Issue per worker. Spawn through the runtime transport with
      `templates/orchestrator-dispatch.md`: full context snapshot, AFK
      contract, engine block, mailbox path, authorization. Include the
      no-sub-delegation rule in every dispatch prompt.
    - For `codex-cli` and `fallback` transports, create the worker's worktree
      before spawn per `references/orchestration.md` Worker Transports.
+   - Verify every spawn per Worker Transports in
+     `references/orchestration.md`: prompt passed as a file, `thread.started`
+     in the log within 60s (else kill+retry), attempt-numbered logs from
+     `-a1`, model and reasoning effort pinned in the command.
    - Record every spawn in `workers.json` (transport, thread id, worktree,
-     branch, stage); update it on stage advance and respawn.
+     branch, stage); update it on stage advance and respawn. Never record a
+     live worker with an empty thread id.
    - Cap concurrent workers at `orchestration.maxParallelWorkers` (default 3);
      queue the rest.
    - Respect Issue dependencies; queue dependents until their blockers
@@ -114,6 +123,11 @@ Workflow states:
      `codex exec resume` and treat process exit plus report as the normal
      advance signal (liveness ladder in `references/orchestration.md`).
    - Follow the Monitoring Protocol in `references/orchestration.md`. Do not steer an actively progressing worker.
+   - Heartbeat watcher events (`stall`, `dead`, `spawn-fail`) are Monitoring
+     Protocol triggers: read the worker's latest state, then heal through
+     the ladder nudge → respawn → session rotation; alert the user only when
+     the ladder is exhausted. Record every healing step and its result in
+     the ledger (Heartbeat in `references/orchestration.md`).
    - Route non-green reports (`blocked`, `needs-human`, `drift-candidate`,
      `needs-decision`, `scope-drift-needs-handoff`) to `decide-or-escalate`
      instead of advancing.
@@ -160,6 +174,10 @@ Rules:
   `scope-drift-needs-handoff` routes through `linear-handoff` with the user.
 - A stuck or dead worker is respawned from Linear plus the last mailbox
   report; continue the stage, do not restart the Issue.
+- The heartbeat watcher (`scripts/watch-workers.mjs`) is started before the
+  first spawn and runs for the whole wave; running a wave without it is a
+  degradation recorded in the ledger (Heartbeat in
+  `references/orchestration.md`).
 - Keep the ledger free of secrets and routine polling entries.
 - Keep user-facing output in the project config language (Russian by
   default); ledger and mailbox stay English except the fixed «Решил сам:»

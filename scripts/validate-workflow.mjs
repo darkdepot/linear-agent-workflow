@@ -911,6 +911,38 @@ function validateAntiPatterns() {
   assertIncludes("references/install.md", "maxParallelWorkers");
 }
 
+function validateHeartbeatContract() {
+  if (!exists("scripts/watch-workers.mjs")) {
+    fail("Missing scripts/watch-workers.mjs");
+  }
+  assertIncludes("scripts/verify.mjs", "watch-workers.mjs", "node --check step for scripts/watch-workers.mjs");
+
+  for (const required of [
+    "## Heartbeat",
+    "thread.started",
+    "< /dev/null",
+    "empty `thread_id`",
+    "watch-workers.mjs",
+    "-a1.jsonl",
+    "EVENT:<stall|dead|spawn-fail>",
+    "nudge",
+    "session rotation",
+    "model_reasoning_effort",
+  ]) {
+    assertIncludes("references/orchestration.md", required);
+  }
+
+  for (const required of [
+    "watch-workers.mjs",
+    "Heartbeat in",
+    "before the first spawn",
+    "nudge → respawn → session rotation",
+    "an empty thread id",
+  ]) {
+    assertIncludes("skills/linear-orchestrate/SKILL.md", required, `heartbeat contract: ${JSON.stringify(required)}`);
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -919,6 +951,7 @@ validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
+validateHeartbeatContract();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");
