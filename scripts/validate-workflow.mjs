@@ -943,6 +943,36 @@ function validateHeartbeatContract() {
   }
 }
 
+function validateHonestLedgerContract() {
+  for (const required of [
+    "One event per line",
+    "actual moment of writing",
+    "`recorded-late`",
+    "Corrections are new lines",
+    "longer than 5 minutes",
+    "## Linear Write Verification",
+    "read back the mutated entity",
+    "a success response alone is not confirmation",
+    "silent success-no-op",
+    "marked unverified",
+    "## Context Budget",
+    "«Контекст: ~N%»",
+    "70%",
+    "85%",
+    "never mid-dispatch",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+
+  for (const required of ["Простои и отклонения:", "Контекст: ~N%", "not blocking notifications"]) {
+    assertIncludes("templates/orchestrator-brief.md", required);
+  }
+
+  for (const required of ["«Простои и отклонения:»", "«Контекст: ~N%»"]) {
+    assertIncludes("skills/linear-orchestrate/SKILL.md", required, `status update contract: ${required}`);
+  }
+}
+
 validateSkills();
 validateTemplateSections();
 validateReviewCheckBoundary();
@@ -952,6 +982,7 @@ validateProjectConfigBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
+validateHonestLedgerContract();
 
 if (failures.length > 0) {
   console.error("Linear workflow validation failed:");

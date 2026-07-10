@@ -237,6 +237,24 @@ transport feature the runtime lacks.
 - Ledger: `ledger.md` — dated, high-level entries: dispatches, «Решил сам:»
   decisions, user decisions, lands, deploys, exact blockers. Only the
   orchestrator writes the ledger.
+- Ledger format, mandatory:
+  - One event per line, appended in write order; the timestamp is the
+    actual moment of writing (ISO 8601 with timezone offset). Recording an
+    event under the time it "should have happened" is forbidden. An event
+    noticed late keeps its append position, carries the true write-time,
+    and adds a `recorded-late` marker with the estimated event time
+    (wave-1 precedent: a "07:50 respawned, thread live" entry written at
+    11:43 hid a 4-hour idle gap from the final wave report).
+  - Only observed facts: never record an action as done before observing
+    its effect. A dispatch is recorded only after `thread.started` is
+    parsed, a Linear mutation only after its read-back per Linear Write
+    Verification — never on intent.
+  - Corrections are new lines that reference the corrected entry; editing
+    or rewriting existing lines is forbidden.
+  - Any orchestrator idle or stall longer than 5 minutes — waiting on
+    quota, on the user, or on its own scheduling — is a mandatory ledger
+    entry with the cause. These entries feed «Простои и отклонения:» in
+    status updates and the final wave report.
 - Worker registry: `workers.json` beside the ledger — orchestrator-owned
   runtime metadata, one entry per Issue: `transport`, `thread_id`,
   `worktree`, `branch`, `stage`, `spawned_at`, `last_activity_at`, `log`
@@ -251,6 +269,17 @@ transport feature the runtime lacks.
   numbered from the first attempt (`-a1`) — the worker's JSONL event stream;
   the timestamp of the last event is the liveness heartbeat.
 - No secrets in any of them. No routine polling entries in the ledger.
+
+## Linear Write Verification
+
+Verify-after-write, mandatory for every Linear mutation the orchestrator
+applies: after the write, read back the mutated entity and confirm the
+change actually applied — a success response alone is not confirmation.
+Wave-1 precedent: `save_project` returned success while the project status
+stayed unchanged (silent success-no-op). On a failed read-back, retry the
+mutation once; if the read-back still shows the old state, record a ledger
+failure entry naming both attempts and treat the mutation as pending —
+never report it as applied.
 
 ## Monitoring Protocol
 
@@ -318,6 +347,20 @@ whom, why the decision is needed now, completed proof (tests, autoreview, CI,
 certificates as applicable), recommendation with rationale, exact options.
 Ask immediately and interactively; unblocked work continues in parallel.
 
+## Context Budget
+
+Orchestrator session context usage is a first-class operational metric,
+not an implementation detail. Wave-1 precedent: the session peaked at 92%
+of a 1M-token window with no signal to the owner.
+
+- Report current usage as «Контекст: ~N%» in every status update; a rough
+  estimate is fine — the trend matters more than precision.
+- At ≥70% usage, plan a clean handoff to a fresh orchestrator session via
+  the Resume procedure at the next safe boundary — after the current
+  monitoring pass or stage advance completes, never mid-dispatch.
+- At ≥85% usage, the handoff becomes the immediate priority: finish only
+  the atomic action in flight, bring the ledger up to date, and hand off.
+
 ## Resume
 
 A fresh orchestrator session rebuilds state without loss:
@@ -327,7 +370,13 @@ A fresh orchestrator session rebuilds state without loss:
    certificates.
 3. Read `ledger.md` and all mailbox reports; apply queued Linear mutations
    that were never applied.
-4. Read `workers.json` and list live worker sessions when the runtime allows
+4. Corroborate key ledger claims — dispatches, stage advances, deploys —
+   against worker log and report timestamps. A ledger line with no
+   supporting evidence is marked unverified and its state is re-derived
+   from Linear plus logs instead of being trusted. This is a judgment rule
+   for the resuming session, not a pin-enforceable check: it defines how
+   much to trust the ledger, not a mechanical validation.
+5. Read `workers.json` and list live worker sessions when the runtime allows
    it; rebind to surviving `codex-cli` workers by thread id
    (`codex exec resume`) instead of respawning them.
-5. Output the rebuilt status table before taking any new action.
+6. Output the rebuilt status table before taking any new action.

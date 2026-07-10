@@ -201,3 +201,7 @@ Final response (status update) must include, per
 - «Нужно от тебя:» — decision briefs, or «нет».
 - Workers: spawned/advanced/respawned since the last update.
 - Linear: mutations applied and certificates recorded.
+- «Простои и отклонения:» — idle periods over 5 minutes with cause and
+  duration, contract deviations with reason, or «нет» when clean.
+- «Контекст: ~N%» — orchestrator session context usage per the Context
+  Budget policy in `references/orchestration.md`.
