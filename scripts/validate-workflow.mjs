@@ -995,6 +995,7 @@ function validateHeartbeatContract() {
     "watch-workers.mjs",
     "-a1.jsonl",
     "EVENT:<stall|dead|spawn-fail>",
+    "retired Issues' logs are outside its scope",
     "nudge",
     "session rotation",
     "model_reasoning_effort",
