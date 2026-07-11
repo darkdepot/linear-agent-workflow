@@ -570,6 +570,185 @@ function validateProjectConfigBehavior() {
   }
 }
 
+function validateIssueOnlyLaneBehavior() {
+  // String pins: the doc fixes the marker line, the five marker fields, the
+  // 5-field contract, the marker ≠ route-record boundary, and the fail-closed
+  // invariant.
+  for (const pin of [
+    "linear-issue-only marker",
+    "Marker version: 1",
+    "Scope fingerprint",
+    "Acceptance IDs",
+    "Risk class",
+    "Approval",
+    "маркер ≠ route-record",
+    "route_revision",
+    "assurance_vector",
+    "required_artifacts",
+    "package_kind",
+    "lifecycle_state_entity",
+    "behavioral_oracle",
+    "issue-verification",
+    "risk_class",
+    "approval_status",
+    "no marker ⇒ `package_kind=project-first`",
+    "scripts/resolve-issue-context.mjs",
+    "Not a spine-resolver",
+  ]) {
+    assertIncludes("references/issue-only-lane.md", pin);
+  }
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-issue-only-"));
+  try {
+    const issuePath = path.join(dir, "issue.md");
+    const markerPath = path.join(dir, "marker.md");
+    fs.writeFileSync(
+      issuePath,
+      [
+        "# Fixture Issue",
+        "",
+        "## Acceptance",
+        "",
+        "- AC1: resolver prints five fields",
+        "- AC2: missing marker yields project-first",
+        "",
+        "## How to verify",
+        "",
+        "1. run resolver on a valid marker",
+        "2. run resolver with no marker",
+        "",
+      ].join("\n")
+    );
+
+    const writeMarker = (fields) =>
+      fs.writeFileSync(markerPath, `${["linear-issue-only marker", ...fields].join("\n")}\n`);
+
+    // Fixture 1 — legacy-unchanged: a project-first issue (no marker) resolves
+    // to project-first. The lane never activates without a marker.
+    const legacy = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath]));
+    if (legacy.package_kind !== "project-first") fail("resolve-issue-context legacy issue must be project-first");
+    if (legacy.lifecycle_state_entity !== "project") fail("resolve-issue-context project-first must read the Project lifecycle entity");
+    if (legacy.behavioral_oracle !== null) fail("resolve-issue-context project-first must have no behavioral oracle");
+    if (legacy.risk_class !== null) fail("resolve-issue-context project-first must not synthesize a risk class");
+    if (legacy.approval_status !== "absent") fail("resolve-issue-context project-first approval must be absent");
+
+    // Compute the correct fingerprint via the resolver's own helper so the
+    // happy fixture never duplicates the hash.
+    const fingerprint = runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--emit-fingerprint"]).trim();
+
+    // Fixture 2 — happy: a valid marker resolves the five fields correctly.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint} (approved by owner)`,
+    ]);
+    const happy = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]));
+    if (happy.package_kind !== "issue-only") fail("resolve-issue-context valid marker must be issue-only");
+    if (happy.lifecycle_state_entity !== "issue") fail("resolve-issue-context issue-only must read the Issue lifecycle entity");
+    if (!happy.behavioral_oracle || happy.behavioral_oracle.kind !== "issue-verification") {
+      fail("resolve-issue-context issue-only oracle kind must be issue-verification");
+    }
+    if (JSON.stringify(happy.behavioral_oracle?.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context issue-only oracle must carry the Issue acceptance IDs");
+    }
+    if (!Array.isArray(happy.behavioral_oracle?.verify_steps) || happy.behavioral_oracle.verify_steps.length !== 2) {
+      fail("resolve-issue-context issue-only oracle must carry the Issue verify steps");
+    }
+    if (happy.risk_class !== "standard") fail("resolve-issue-context issue-only must read the recorded risk class");
+    if (happy.approval_status !== "approved-fresh") {
+      fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
+    }
+
+    // Fixture 3 — missing-marker: a marker source without the marker line is
+    // fail-closed to project-first (never silently issue-only).
+    const emptyMarkerPath = path.join(dir, "empty.md");
+    fs.writeFileSync(emptyMarkerPath, "no marker here\n");
+    const missing = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", emptyMarkerPath])
+    );
+    if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
+
+    // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
+    writeMarker([
+      "Marker version: 1",
+      "Scope fingerprint: deadbeef12ab",
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context stale fingerprint fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: stale marker"
+    );
+
+    // Guard: a structurally broken marker (unknown version) is a hard violation.
+    writeMarker([
+      "Marker version: 2",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context broken marker version fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: the marker ≠ route-record boundary is executable — a route-record
+    // field is rejected.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "route_revision: 7",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context forbidden route-record field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: stale approval is reachable and does not block resolution.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: risky",
+      "Approval: 0000deadbeef (approved by owner for an older scope)",
+    ]);
+    const staleApproval = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]));
+    if (staleApproval.approval_status !== "stale") {
+      fail("resolve-issue-context must report stale approval when the approved fingerprint is superseded");
+    }
+    if (staleApproval.risk_class !== "risky") fail("resolve-issue-context must read the recorded risk class verbatim");
+
+    // Guard: config opt-out forces project-first even with a valid marker.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    const configPath = path.join(dir, "config.json");
+    fs.writeFileSync(configPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: false } }, null, 2)}\n`);
+    const disabled = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", configPath])
+    );
+    if (disabled.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when the lane is disabled by config");
+    }
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function validateDocsAndExamples() {
   for (const [relativePath, texts] of Object.entries({
     "README.md": [
@@ -1352,6 +1531,7 @@ validateReviewCheckBoundary();
 validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
+validateIssueOnlyLaneBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
