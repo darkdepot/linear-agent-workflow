@@ -1405,6 +1405,44 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must recognize Markdown task-list acceptance criteria");
     }
 
+    // Guard: a re-tier chain in "risk history" cannot LOWER the authoritative class
+    // — "risky; previous history: tiny→standard" stays risky.
+    const historyGate = reGateA.replace("Risk: standard; deep review was considered but not required", "risky; previous history: tiny→standard");
+    const historyPath = path.join(dir, "issue-history.md");
+    fs.writeFileSync(historyPath, historyGate);
+    const hyFp = emitFingerprint(historyPath);
+    const hyMarkerPath = path.join(dir, "marker-hy.md");
+    fs.writeFileSync(hyMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hyFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context risk-history fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", historyPath, "--marker", hyMarkerPath,
+          "--label", "issue-only", "--approval-verified", hyFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: sections hidden inside an HTML comment are invisible — an Issue whose
+    // Acceptance and How-to-verify are commented out has no oracle and is rejected.
+    const commentedOraclePath = path.join(dir, "issue-commented-oracle.md");
+    fs.writeFileSync(
+      commentedOraclePath,
+      ["# CO", "", "## Что сделать", "", "- do it", "", "<!--", "## Критерии приёмки", "", "- AC1: hidden criterion", "", "## Как проверить", "", "1. hidden step", "-->", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const coFp = emitFingerprint(commentedOraclePath);
+    const coMarkerPath = path.join(dir, "marker-co.md");
+    fs.writeFileSync(coMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${coFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${coFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context commented-oracle fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", commentedOraclePath, "--marker", coMarkerPath,
+          "--label", "issue-only", "--approval-verified", coFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

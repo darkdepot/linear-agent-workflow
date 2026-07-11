@@ -159,7 +159,24 @@ function extractSection(text, headingRe) {
   let capturing = false;
   let capturedDepth = 0;
   let fence = null;
-  for (const line of lines) {
+  let inComment = false;
+  for (const rawLine of lines) {
+    // HTML comments are invisible: a heading or content inside <!-- ... --> is
+    // never a real section, consistent with the completeness gate. Skip fully
+    // commented lines and strip inline comment spans before parsing.
+    let line = rawLine;
+    if (inComment) {
+      const close = line.indexOf("-->");
+      if (close < 0) continue;
+      line = line.slice(close + 3);
+      inComment = false;
+    }
+    line = line.replace(/<!--[^]*?-->/g, "");
+    const open = line.indexOf("<!--");
+    if (open >= 0) {
+      line = line.slice(0, open);
+      inComment = true;
+    }
     const nextFence = fenceTransition(line, fence);
     if (nextFence !== fence) {
       fence = nextFence; // this line opened or closed a fenced block
@@ -416,36 +433,52 @@ function computeScope(issueText) {
 // then required to match this, so the marker cannot silently downgrade the Issue.
 function extractReviewGateClass(issueText) {
   const body = stripMarkerBlock(issueText);
-  // Count EXACT authoritative review-gate headings. Zero → nothing to verify
-  // against; two or more → an ambiguous duplicate. Either way, return null so the
-  // resolver fails closed rather than guessing across sections.
+  // Count EXACT authoritative review-gate headings (fenced and HTML-commented ones
+  // don't count). Zero → nothing to verify against; two or more → an ambiguous
+  // duplicate. Either way return null so the resolver fails closed.
   let fence = null;
+  let inComment = false;
   let count = 0;
-  for (const raw of body.split(/\r?\n/)) {
-    const nextFence = fenceTransition(raw, fence);
+  for (const rawLine of body.split(/\r?\n/)) {
+    let line = rawLine;
+    if (inComment) {
+      const close = line.indexOf("-->");
+      if (close < 0) continue;
+      line = line.slice(close + 3);
+      inComment = false;
+    }
+    line = line.replace(/<!--[^]*?-->/g, "");
+    const openIdx = line.indexOf("<!--");
+    if (openIdx >= 0) {
+      line = line.slice(0, openIdx);
+      inComment = true;
+    }
+    const nextFence = fenceTransition(line, fence);
     if (nextFence !== fence) {
       fence = nextFence;
       continue;
     }
     if (fence) continue;
-    const h = /^ {0,3}#{1,6}\s+(.*)$/.exec(raw);
+    const h = /^ {0,3}#{1,6}\s+(.*)$/.exec(line);
     if (h && REVIEW_GATE_HEADING_RE.test(h[1].trim())) count += 1;
   }
   if (count !== 1) return null;
   const text = normalizeLines(extractSection(body, REVIEW_GATE_HEADING_RE)).toLowerCase();
-  // A re-classification CHAIN "A→B→C" records the HIGHEST class among ALL its
-  // elements — ambiguity moves upward, never downward, so "tiny→standard→deep" is
-  // deep, not standard. Otherwise the FIRST class word is the recorded class: a
-  // later prose mention ("deep review was considered but not required") does not
-  // override it.
-  const chain = /(?:tiny|standard|deep|risky)(?:\s*(?:→|->)\s*(?:tiny|standard|deep|risky))+/.exec(text);
-  if (chain) {
-    return [...chain[0].matchAll(/(tiny|standard|deep|risky)/g)]
-      .map((m) => m[1])
-      .reduce((hi, cls) => (RISK_CLASSES.indexOf(cls) > RISK_CLASSES.indexOf(hi) ? cls : hi));
-  }
+  const classAt = (cls) => RISK_CLASSES.indexOf(cls);
+  // The recorded class is the FIRST class word, and a re-classification chain
+  // "A→B→C" can only RAISE it (ambiguity moves upward, never downward). So the
+  // result is the max of the first class and every class named in ANY re-tier
+  // chain — never lower than the authoritative class or any recorded re-tier. A
+  // later non-chain prose mention ("deep considered but not required") is neither.
   const first = /\b(tiny|standard|deep|risky)\b/.exec(text);
-  return first ? first[1] : null;
+  if (!first) return null;
+  let result = first[1];
+  for (const chain of text.matchAll(/(?:tiny|standard|deep|risky)(?:\s*(?:→|->)\s*(?:tiny|standard|deep|risky))+/g)) {
+    for (const m of chain[0].matchAll(/(tiny|standard|deep|risky)/g)) {
+      if (classAt(m[1]) > classAt(result)) result = m[1];
+    }
+  }
+  return result;
 }
 
 // Locate the most-recent marker block (most-recent-wins) and parse its contiguous
