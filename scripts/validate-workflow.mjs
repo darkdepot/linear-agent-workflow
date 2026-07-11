@@ -806,6 +806,24 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context fingerprint must include scope after a fenced code block (a fence must not truncate the section)");
     }
 
+    // Guard: semantic indentation is part of the fingerprint — re-indenting a
+    // fenced code block in the scope changes the hash, so no meaning-changing
+    // whitespace edit can slip past an existing approval.
+    const indentA = ["# Ind", "", "## Что сделать", "", "```python", "def f():", "    return 1", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const indentAPath = path.join(dir, "issue-indent-a.md");
+    const indentBPath = path.join(dir, "issue-indent-b.md");
+    fs.writeFileSync(indentAPath, indentA);
+    fs.writeFileSync(indentBPath, indentA.replace("    return 1", "        return 1"));
+    if (emitFingerprint(indentAPath) === emitFingerprint(indentBPath)) {
+      fail("resolve-issue-context fingerprint must be sensitive to semantic indentation in the scope");
+    }
+
+    // Guard: the full 64-hex sha256 is emitted, never a truncated hash (a short
+    // hash is a collision target for the approval binding).
+    if (!/^[0-9a-f]{64}$/.test(emitFingerprint(indentAPath))) {
+      fail("resolve-issue-context must emit the full 64-hex sha256 fingerprint");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
@@ -963,6 +981,18 @@ function validateIssueOnlyLaneBehavior() {
     expectCommandFailure(
       "resolve-issue-context unparseable line fixture",
       () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: unparseable line"
+    );
+
+    // Guard: an unparseable line BEFORE the first field is rejected too — a
+    // punctuation-keyed line cannot hide ahead of Marker version.
+    fs.writeFileSync(
+      markerPath,
+      `${["linear-issue-only marker", "Notes.v2: hidden", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context pre-field unparseable line fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs]),
       "issue-only-lane: broken marker: unparseable line"
     );
 

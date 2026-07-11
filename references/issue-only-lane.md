@@ -31,11 +31,15 @@ either is missing.
 
   linear-issue-only marker
   Marker version: 1
-  Scope fingerprint: 0c9c800bd1c3
+  Scope fingerprint: 3f8a1c0b9d2e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c
   Acceptance IDs: AC1, AC2
   Risk class: standard
-  Approval: 0c9c800bd1c3 (approved by owner 2026-07-11)
+  Approval: 3f8a1c0b9d2e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c (approved by owner 2026-07-11)
   ```
+
+  The `Scope fingerprint` and the approved fingerprint are the full 64-hex
+  sha256, never truncated — a short hash would be a collision target for the
+  approval binding.
 
 - **Fields — EXACTLY these five, no more:**
   - `Marker version: 1` — the versioned schema of the marker itself. An unknown
@@ -154,13 +158,15 @@ seam. It mirrors the deterministic-config-script structure of
     and exits; used to author markers and to build fixtures without duplicating
     the hash.
 - **Output:** the 5-field contract as pretty JSON on stdout, exit `0`.
-- **Fingerprint:** `sha256` over the **full normalized Issue contract** —
-  objective (`Цель PR`), scope (`Что сделать`), desired behavior, acceptance
-  criteria (`Критерии приёмки`), verification instructions (`Как проверить`),
-  non-goals (`Что не входит`), and the review-gate risk (`Ревью-гейт`) —
-  truncated for a human-readable marker while staying deterministic. Binding the
-  full contract, not just acceptance + verify, is what makes an approval fail
-  when the objective, scope, non-goals, or recorded risk change.
+- **Fingerprint:** the full `sha256` (64 hex, never truncated — a short hash is a
+  collision target for the approval binding) over the **full normalized Issue
+  contract** — objective (`Цель PR`), scope (`Что сделать`), desired behavior,
+  acceptance criteria (`Критерии приёмки`), verification instructions
+  (`Как проверить`), non-goals (`Что не входит`), and the review-gate risk
+  (`Ревью-гейт`). Normalization preserves semantic indentation (nested lists,
+  fenced code), so a meaning-changing re-indentation also invalidates an approval.
+  Binding the full contract, not just acceptance + verify, is what makes an
+  approval fail when the objective, scope, non-goals, or recorded risk change.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
   - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒

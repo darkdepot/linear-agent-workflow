@@ -132,6 +132,22 @@ function normalizeLines(lines) {
     .join("\n");
 }
 
+// Fingerprint-grade normalization: preserve SEMANTIC indentation (nested lists,
+// fenced Python/YAML). Only strip trailing whitespace, collapse runs of blank
+// lines to one, and drop leading/trailing blanks — so a meaning-changing
+// re-indentation changes the fingerprint, closing a scope-drift bypass that a
+// whitespace-collapsing normalizer would leave open.
+function normalizeForFingerprint(lines) {
+  const out = [];
+  for (const raw of lines) {
+    const line = raw.replace(/[ \t]+$/g, "");
+    if (line === "" && (out.length === 0 || out[out.length - 1] === "")) continue;
+    out.push(line);
+  }
+  while (out.length && out[out.length - 1] === "") out.pop();
+  return out.join("\n");
+}
+
 function parseAcceptanceIds(lines) {
   const ids = [];
   const seen = new Set();
@@ -177,12 +193,11 @@ function computeScope(issueText) {
   const verifyLines = extractSection(issueText, /(?:как проверить|how to verify|verify)/i);
   const acceptanceIds = parseAcceptanceIds(acceptanceLines);
   const verifySteps = parseVerifySteps(verifyLines);
-  const parts = CONTRACT_SECTION_RES.map((re) => normalizeLines(extractSection(issueText, re)));
-  const fingerprint = crypto
-    .createHash("sha256")
-    .update(parts.join("\n---\n"))
-    .digest("hex")
-    .slice(0, 12);
+  // Indentation-preserving normalization so semantic whitespace changes the hash,
+  // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
+  // collision target for the approval trust boundary.
+  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(issueText, re)));
+  const fingerprint = crypto.createHash("sha256").update(parts.join("\n---\n")).digest("hex");
   return { acceptanceIds, verifySteps, fingerprint };
 }
 
@@ -228,11 +243,11 @@ function findMarkerBlock(markerText) {
     // character the parser would otherwise skip past as end-of-block.
     const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*(.*)$/.exec(line);
     if (!kv) {
-      // Inside the machine block, a nonblank line that is not a field is a
-      // malformed marker — never an implicit terminator that could hide a sixth
-      // field spelled with punctuation the key charset excludes (e.g. "Notes.v2:").
-      if (started) violation(`broken marker: unparseable line "${line}"`);
-      continue;
+      // A nonblank line inside the machine block that is not a field is a
+      // malformed marker — whether it appears BEFORE the first field (hiding a
+      // punctuation-keyed field ahead of "Marker version") or after (a trailing
+      // sixth field). Never an implicit terminator or a silently-skipped line.
+      violation(`broken marker: unparseable line "${line}"`);
     }
     started = true;
     const key = kv[1].trim();
