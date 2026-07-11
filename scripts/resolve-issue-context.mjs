@@ -214,13 +214,25 @@ function normalizeForFingerprint(lines) {
   return out.join("\n");
 }
 
+// Collect only DECLARED acceptance IDs — an id that leads its own line/item
+// ("- AC1: ...", "AC2 ..."), not a cross-reference inside prose ("described by
+// AC99") and not an id inside a fenced example. Otherwise the marker would have to
+// declare referenced-but-nonexistent ids and the oracle would over-report.
 function parseAcceptanceIds(lines) {
   const ids = [];
   const seen = new Set();
-  for (const match of normalizeLines(lines).matchAll(/\bAC\d+\b/g)) {
-    if (!seen.has(match[0])) {
-      seen.add(match[0]);
-      ids.push(match[0]);
+  let fence = null;
+  for (const raw of lines) {
+    const nextFence = fenceTransition(raw, fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      continue;
+    }
+    if (fence) continue; // a fenced example is not a declaration
+    const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(AC\d+)\b/.exec(raw);
+    if (m && !seen.has(m[1])) {
+      seen.add(m[1]);
+      ids.push(m[1]);
     }
   }
   return ids;
@@ -361,11 +373,14 @@ function extractReviewGateClass(issueText) {
   const text = normalizeLines(
     extractSection(stripMarkerBlock(issueText), SECTION_RE.reviewGate)
   ).toLowerCase();
-  let found = null;
-  for (const cls of RISK_CLASSES) {
-    if (new RegExp(`\\b${cls}\\b`).test(text)) found = cls;
-  }
-  return found;
+  // An explicit re-tier "A→B" / "A->B" records B (the target) as authoritative —
+  // ambiguity moves upward. Otherwise the FIRST class word is the recorded class:
+  // a later mention (e.g. "deep review was considered but not required") is prose,
+  // not the classification, so it never overrides the recorded class.
+  const retier = /(tiny|standard|deep|risky)\s*(?:→|->)\s*(tiny|standard|deep|risky)/.exec(text);
+  if (retier) return retier[2];
+  const first = /\b(tiny|standard|deep|risky)\b/.exec(text);
+  return first ? first[1] : null;
 }
 
 // Locate the most-recent marker block (most-recent-wins) and parse its contiguous

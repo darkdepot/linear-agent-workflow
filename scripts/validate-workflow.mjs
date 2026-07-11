@@ -1193,6 +1193,53 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must strip an inline marker with a leading blank line before its fields so it resolves issue-only");
     }
 
+    // Guard: only DECLARED acceptance IDs are collected — a cross-reference in a
+    // criterion's prose ("described by AC99") and an id in a fenced example are not
+    // declarations, so the oracle reports exactly the declared ids.
+    const crossRefBody = ["# CR", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: preserve behavior described by AC99", "- AC2: also see AC1", "", "```", "AC77: fenced example", "```", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const crossRefPath = path.join(dir, "issue-crossref.md");
+    fs.writeFileSync(crossRefPath, crossRefBody);
+    const crFp = emitFingerprint(crossRefPath);
+    const crMarkerPath = path.join(dir, "marker-cr.md");
+    fs.writeFileSync(crMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${crFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${crFp}`].join("\n")}\n`);
+    const cr = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", crossRefPath, "--marker", crMarkerPath, "--label", "issue-only", "--approval-verified", crFp])
+    );
+    if (cr.package_kind !== "issue-only") fail("resolve-issue-context cross-reference fixture must resolve issue-only with declared ids only");
+    if (JSON.stringify(cr.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context must collect only declared acceptance IDs (not cross-references or fenced examples)");
+    }
+
+    // Guard: review-gate class is the first class word — a later "considered but
+    // not required" mention does not override the recorded classification.
+    const reGateA = ["# RG", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "Risk: standard; deep review was considered but not required", ""].join("\n");
+    const reGateAPath = path.join(dir, "issue-regate-a.md");
+    fs.writeFileSync(reGateAPath, reGateA);
+    const rgaFp = emitFingerprint(reGateAPath);
+    const rgaMarkerPath = path.join(dir, "marker-rga.md");
+    fs.writeFileSync(rgaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rgaFp}`].join("\n")}\n`);
+    const rga = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateAPath, "--marker", rgaMarkerPath, "--label", "issue-only", "--approval-verified", rgaFp])
+    );
+    if (rga.package_kind !== "issue-only" || rga.risk_class !== "standard") {
+      fail("resolve-issue-context must read the recorded review-gate class (standard), not a later 'deep' mention");
+    }
+
+    // And an explicit re-tier "standard→deep" records the target deep (out of the
+    // Phase-1 envelope → project-first).
+    const reGateB = reGateA.replace("Risk: standard; deep review was considered but not required", "standard→deep (new abstraction)");
+    const reGateBPath = path.join(dir, "issue-regate-b.md");
+    fs.writeFileSync(reGateBPath, reGateB);
+    const rgbFp = emitFingerprint(reGateBPath);
+    const rgbMarkerPath = path.join(dir, "marker-rgb.md");
+    fs.writeFileSync(rgbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgbFp}`, "Acceptance IDs: AC1", "Risk class: deep", `Approval: ${rgbFp}`].join("\n")}\n`);
+    const rgb = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateBPath, "--marker", rgbMarkerPath, "--label", "issue-only", "--approval-verified", rgbFp])
+    );
+    if (rgb.package_kind !== "project-first") {
+      fail("resolve-issue-context must read a 'standard→deep' re-tier as deep (out of Phase-1 envelope → project-first)");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
