@@ -61,6 +61,11 @@ const BEHAVIOR_HEADING_RES = [
   /^(?:что сделать|scope|what to do)\s*:?\s*$/i,
   /^(?:желаемое поведение|desired behaviou?rs?)\s*:?\s*$/i,
 ];
+// EXACT authoritative review-gate heading for the risk cross-check (the loose
+// SECTION_RE.reviewGate is only for the fingerprint). Exact matching stops a
+// heading like "Review gate considerations" from being unioned into the class
+// read, which could otherwise mask the authoritative class and downgrade risk.
+const REVIEW_GATE_HEADING_RE = /^(?:ревью-гейт|ревью гейт|review gate)\s*:?\s*$/i;
 
 function usage(exitCode = 2) {
   console.error(
@@ -227,6 +232,7 @@ function isSubstantiveText(s) {
 function parseAcceptanceIds(lines) {
   const ids = [];
   const seen = new Set();
+  let duplicate = false;
   let fence = null;
   for (const raw of lines) {
     const nextFence = fenceTransition(raw, fence);
@@ -236,12 +242,18 @@ function parseAcceptanceIds(lines) {
     }
     if (fence) continue; // a fenced example is not a declaration
     const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(AC\d+)\b\s*:?\s*(.*)$/.exec(raw);
-    if (m && !seen.has(m[1]) && isSubstantiveText(m[2])) {
-      seen.add(m[1]);
-      ids.push(m[1]);
+    if (m && isSubstantiveText(m[2])) {
+      // A duplicate declaration is ambiguous — the id can no longer uniquely
+      // reference one criterion — so it is a hard violation, like a duplicate id
+      // in the marker.
+      if (seen.has(m[1])) duplicate = true;
+      else {
+        seen.add(m[1]);
+        ids.push(m[1]);
+      }
     }
   }
-  return ids;
+  return { ids, duplicate };
 }
 
 // Parse verify steps WITHOUT losing multi-line content and WITHOUT mis-splitting:
@@ -390,7 +402,7 @@ function computeScope(issueText) {
   const body = stripMarkerBlock(issueText);
   const acceptanceLines = extractSection(body, SECTION_RE.acceptance);
   const verifyLines = extractSection(body, SECTION_RE.verify);
-  const acceptanceIds = parseAcceptanceIds(acceptanceLines);
+  const { ids: acceptanceIds, duplicate: acceptanceDuplicate } = parseAcceptanceIds(acceptanceLines);
   const verifySteps = parseVerifySteps(verifyLines);
   // Indentation-preserving normalization so semantic whitespace changes the hash,
   // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
@@ -404,6 +416,7 @@ function computeScope(issueText) {
   // and a bare heading with no body under it does not satisfy either.
   return {
     acceptanceIds,
+    acceptanceDuplicate,
     verifySteps,
     fingerprint,
     hasBehavior: hasDescribedBehavior(body),
@@ -417,14 +430,28 @@ function computeScope(issueText) {
 // null when the section names no known class. The marker's Risk class field is
 // then required to match this, so the marker cannot silently downgrade the Issue.
 function extractReviewGateClass(issueText) {
-  const text = normalizeLines(
-    extractSection(stripMarkerBlock(issueText), SECTION_RE.reviewGate)
-  ).toLowerCase();
+  const body = stripMarkerBlock(issueText);
+  // Count EXACT authoritative review-gate headings. Zero → nothing to verify
+  // against; two or more → an ambiguous duplicate. Either way, return null so the
+  // resolver fails closed rather than guessing across sections.
+  let fence = null;
+  let count = 0;
+  for (const raw of body.split(/\r?\n/)) {
+    const nextFence = fenceTransition(raw, fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      continue;
+    }
+    if (fence) continue;
+    const h = /^ {0,3}#{1,6}\s+(.*)$/.exec(raw);
+    if (h && REVIEW_GATE_HEADING_RE.test(h[1].trim())) count += 1;
+  }
+  if (count !== 1) return null;
+  const text = normalizeLines(extractSection(body, REVIEW_GATE_HEADING_RE)).toLowerCase();
   // An explicit re-tier "A→B" / "A->B" records the HIGHER of the two classes —
-  // ambiguity moves upward, never downward, so a "deep→standard" gate stays deep.
-  // Otherwise the FIRST class word is the recorded class: a later mention (e.g.
-  // "deep review was considered but not required") is prose, not the
-  // classification, so it never overrides the recorded class.
+  // ambiguity moves upward, never downward. Otherwise the FIRST class word is the
+  // recorded class: a later mention ("deep review was considered but not
+  // required") is prose, not the classification.
   const retier = /(tiny|standard|deep|risky)\s*(?:→|->)\s*(tiny|standard|deep|risky)/.exec(text);
   if (retier) {
     return RISK_CLASSES.indexOf(retier[1]) >= RISK_CLASSES.indexOf(retier[2]) ? retier[1] : retier[2];
@@ -665,6 +692,9 @@ function resolve(args) {
   // also rejects a marker whose "Acceptance IDs: ," parses to an empty list.
   if (scope.acceptanceIds.length === 0 || scope.verifySteps.length === 0) {
     violation("broken marker: issue-only requires at least one acceptance ID and one verify step");
+  }
+  if (scope.acceptanceDuplicate) {
+    violation("broken marker: duplicate Acceptance ID declared in issue body");
   }
   // A self-contained Issue must also describe its behavior and its non-goals —
   // otherwise the lane would bypass Project/PRD/Spec with an undescribed contract.

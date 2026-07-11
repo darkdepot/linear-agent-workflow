@@ -1332,6 +1332,47 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must treat 0-3 space indented list items as separate verify steps");
     }
 
+    // Guard: only the EXACT authoritative "Review gate" heading sets the class — an
+    // earlier "Review gate considerations" section cannot mask the deep class and
+    // downgrade the package into the lane.
+    const gateDupPath = path.join(dir, "issue-gate-dup.md");
+    fs.writeFileSync(
+      gateDupPath,
+      ["# GD", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Review gate considerations", "", "- standard was rejected", "", "## Review gate", "", "- deep", ""].join("\n")
+    );
+    const gdFp = emitFingerprint(gateDupPath);
+    const gdMarkerPath = path.join(dir, "marker-gd.md");
+    fs.writeFileSync(gdMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${gdFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${gdFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context review-gate considerations fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", gateDupPath, "--marker", gdMarkerPath,
+          "--label", "issue-only", "--approval-verified", gdFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a duplicate Acceptance ID declared in the issue body is ambiguous and
+    // rejected, like a duplicate id in the marker.
+    const dupAcPath = path.join(dir, "issue-dup-ac.md");
+    fs.writeFileSync(
+      dupAcPath,
+      ["# DA", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: first criterion", "- AC1: second criterion, same id", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const daFp = emitFingerprint(dupAcPath);
+    const daMarkerPath = path.join(dir, "marker-da.md");
+    fs.writeFileSync(daMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${daFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${daFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context duplicate body acceptance id fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", dupAcPath, "--marker", daMarkerPath,
+          "--label", "issue-only", "--approval-verified", daFp,
+        ]),
+      "issue-only-lane: broken marker: duplicate Acceptance ID declared in issue body"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
