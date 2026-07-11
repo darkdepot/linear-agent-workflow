@@ -156,7 +156,9 @@ seam. It mirrors the deterministic-config-script structure of
   - `--config <path>` — optional project config JSON; validated for readability
     and honored for the `issueOnlyLane.enabled` opt-out.
   - `--label <names>` — trusted, caller-verified Linear labels on the Issue
-    (comma/space separated). Issue-only requires `issue-only` among them.
+    (comma-separated; a name may contain spaces). Issue-only requires the exact
+    full label `issue-only` among them — a label like `not issue-only` does not
+    count.
   - `--approval-verified <fingerprint>` — the owner-approval fingerprint the
     caller verified against the authenticated Linear comment. Issue-only requires
     it to equal the live scope fingerprint and the marker's recorded approval.

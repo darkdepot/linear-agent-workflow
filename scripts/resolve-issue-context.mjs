@@ -80,7 +80,7 @@ function usage(exitCode = 2) {
   console.error("  --issue <path>          Issue body markdown (required)");
   console.error("  --marker <path>         Marker source; defaults to the issue body when omitted");
   console.error("  --config <path>         Project config JSON; validated when provided");
-  console.error("  --label <names>         Trusted, caller-verified Linear labels on the Issue (comma/space separated)");
+  console.error("  --label <names>         Trusted, caller-verified Linear labels on the Issue (comma-separated; names may contain spaces)");
   console.error("  --approval-verified <fp>  Caller-verified owner-approval fingerprint from the authenticated Linear comment");
   console.error("  --emit-fingerprint      Print the computed scope fingerprint for --issue and exit");
   console.error("  --help, -h              Show this help and exit");
@@ -615,6 +615,16 @@ function parseIdList(value) {
     .filter(Boolean);
 }
 
+// Labels are split ONLY on commas so a full label name is compared as a whole — a
+// label like "not issue-only" or "issue-only candidate" must NOT satisfy the exact
+// "issue-only" opt-in by matching a bare word.
+function parseLabels(value) {
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
 // Compare two id lists as SETS (dedup both sides), so a repeated id can never
 // pad the length to mask a missing required id.
 function sameIdSet(a, b) {
@@ -770,7 +780,7 @@ function resolve(args) {
   // when the label is absent or unverified, the lane fails closed to
   // project-first. Atomically writing marker+label is the create-then-approve
   // intake transaction's job (a later slice).
-  const verifiedLabels = new Set(parseIdList(args.label));
+  const verifiedLabels = new Set(parseLabels(args.label));
   if (!verifiedLabels.has(ISSUE_ONLY_LABEL)) {
     return projectFirstResult();
   }

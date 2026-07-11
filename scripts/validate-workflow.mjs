@@ -715,6 +715,14 @@ function validateIssueOnlyLaneBehavior() {
     if (noLabel.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first without the verified issue-only label");
     }
+    // A full label name is matched — "not issue-only" (one label with a space) is
+    // not the "issue-only" opt-in and must not activate the lane.
+    const wrongLabel = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "not issue-only", "--approval-verified", fingerprint])
+    );
+    if (wrongLabel.package_kind !== "project-first") {
+      fail("resolve-issue-context must match the full label name, not a bare word inside a longer label");
+    }
     const noApproval = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only"])
     );
