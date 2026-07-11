@@ -625,6 +625,10 @@ function validateIssueOnlyLaneBehavior() {
         "",
         "- NONGOALS_SENTINEL skill wiring",
         "",
+        "## Ревью-гейт",
+        "",
+        "- REVIEWGATE_SENTINEL standard, pre-ship review",
+        "",
       ].join("\n")
     );
 
@@ -644,7 +648,13 @@ function validateIssueOnlyLaneBehavior() {
     // happy fixture never duplicates the hash.
     const fingerprint = runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--emit-fingerprint"]).trim();
 
-    // Fixture 2 — happy: a valid marker resolves the five fields correctly.
+    // The two trusted, caller-verified signals every issue-only resolution needs
+    // on top of a valid marker: the verified issue-only label and the owner-
+    // approval fingerprint the caller confirmed against the authenticated comment.
+    const issueOnlyArgs = ["--label", "issue-only", "--approval-verified", fingerprint];
+
+    // Fixture 2 — happy: a valid marker plus both trusted signals resolves the
+    // five fields correctly.
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
@@ -652,7 +662,9 @@ function validateIssueOnlyLaneBehavior() {
       "Risk class: standard",
       `Approval: ${fingerprint} (approved by owner)`,
     ]);
-    const happy = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]));
+    const happy = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
+    );
     if (happy.package_kind !== "issue-only") fail("resolve-issue-context valid marker must be issue-only");
     if (happy.lifecycle_state_entity !== "issue") fail("resolve-issue-context issue-only must read the Issue lifecycle entity");
     if (!happy.behavioral_oracle || happy.behavioral_oracle.kind !== "issue-verification") {
@@ -678,12 +690,42 @@ function validateIssueOnlyLaneBehavior() {
     for (const [sentinel, label] of [
       ["SCOPE_SENTINEL", "scope/what-to-do"],
       ["NONGOALS_SENTINEL", "non-goals"],
+      ["REVIEWGATE_SENTINEL", "review-gate risk"],
     ]) {
       const mutatedPath = path.join(dir, `issue-mutated-${sentinel}.md`);
       fs.writeFileSync(mutatedPath, fullBody.replace(sentinel, `${sentinel}_MUTATED`));
       if (emitFingerprint(mutatedPath) === fingerprint) {
         fail(`resolve-issue-context fingerprint must cover the ${label} section`);
       }
+    }
+
+    // Guard: issue-only requires BOTH the verified label AND a fresh caller-
+    // verified approval. Drop either and a fully valid marker fails closed to
+    // project-first — marker text alone never activates the lane.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    const noLabel = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--approval-verified", fingerprint])
+    );
+    if (noLabel.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first without the verified issue-only label");
+    }
+    const noApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only"])
+    );
+    if (noApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first without a caller-verified approval");
+    }
+    const wrongApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+    );
+    if (wrongApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when the caller-verified approval does not match the scope fingerprint");
     }
 
     // Fixture 3 — missing-marker: a marker source without the marker line is
@@ -767,7 +809,7 @@ function validateIssueOnlyLaneBehavior() {
         `Approval: ${fingerprint}`,
       ]);
       const outOfEnvelope = JSON.parse(
-        runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath])
+        runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
       );
       if (outOfEnvelope.package_kind !== "project-first") {
         fail(`resolve-issue-context must fall back to project-first for an out-of-envelope ${ineligible} marker`);
@@ -822,9 +864,48 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker: duplicate field"
     );
 
-    // Guard: stale approval is reachable and does not block resolution. Uses an
-    // in-envelope class (standard) so the case exercises stale approval, not the
-    // deep/risky project-first fallback.
+    // Guard: a field-shaped line whose key holds punctuation the charset cannot
+    // represent is a violation, not a silent block terminator that hides a field.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Notes.v2: sneaky",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context unparseable line fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: unparseable line"
+    );
+
+    // Guard: an empty behavioral oracle is rejected — issue-only needs at least
+    // one acceptance ID and one verify step, so an Issue with no acceptance IDs
+    // (and a marker whose "Acceptance IDs: ," parses empty) hard-fails.
+    const emptyOraclePath = path.join(dir, "issue-empty-oracle.md");
+    fs.writeFileSync(
+      emptyOraclePath,
+      ["# Empty oracle", "", "## Acceptance", "", "- no stable ids here", "", "## How to verify", "", "1. a step", ""].join("\n")
+    );
+    const emptyFp = runNode(["scripts/resolve-issue-context.mjs", "--issue", emptyOraclePath, "--emit-fingerprint"]).trim();
+    const emptyOracleMarkerPath = path.join(dir, "marker-empty-oracle.md");
+    fs.writeFileSync(
+      emptyOracleMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${emptyFp}`, "Acceptance IDs: ,", "Risk class: standard", `Approval: ${emptyFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context empty oracle fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyOraclePath, "--marker", emptyOracleMarkerPath,
+          "--label", "issue-only", "--approval-verified", emptyFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a stale (superseded) owner approval fails closed to project-first —
+    // the lane never activates on an approval that does not match current scope.
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
@@ -832,11 +913,12 @@ function validateIssueOnlyLaneBehavior() {
       "Risk class: standard",
       "Approval: 0000deadbeef (approved by owner for an older scope)",
     ]);
-    const staleApproval = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]));
-    if (staleApproval.approval_status !== "stale") {
-      fail("resolve-issue-context must report stale approval when the approved fingerprint is superseded");
+    const staleApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+    );
+    if (staleApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first on a stale (superseded) owner approval");
     }
-    if (staleApproval.risk_class !== "standard") fail("resolve-issue-context must read the recorded risk class verbatim");
 
     // Guard: config opt-out forces project-first even with a valid marker.
     writeMarker([
@@ -849,7 +931,7 @@ function validateIssueOnlyLaneBehavior() {
     const configPath = path.join(dir, "config.json");
     fs.writeFileSync(configPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: false } }, null, 2)}\n`);
     const disabled = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", configPath])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", configPath, ...issueOnlyArgs])
     );
     if (disabled.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first when the lane is disabled by config");
