@@ -1373,6 +1373,38 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker: duplicate Acceptance ID declared in issue body"
     );
 
+    // Guard: a re-classification CHAIN records the highest class — "tiny→standard→
+    // deep" is deep, so a standard marker cannot downgrade it into the lane.
+    const chainGate = reGateA.replace("Risk: standard; deep review was considered but not required", "tiny→standard→deep (grew twice)");
+    const chainPath = path.join(dir, "issue-chain.md");
+    fs.writeFileSync(chainPath, chainGate);
+    const chFp = emitFingerprint(chainPath);
+    const chMarkerPath = path.join(dir, "marker-ch.md");
+    fs.writeFileSync(chMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context re-tier chain fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", chainPath, "--marker", chMarkerPath,
+          "--label", "issue-only", "--approval-verified", chFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: Linear task-list acceptance criteria ("- [ ] AC1: ...") are recognized.
+    const checklistBody = ["# CL", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- [ ] AC1: resolver works", "- [x] AC2: marker parses", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const checklistPath = path.join(dir, "issue-checklist.md");
+    fs.writeFileSync(checklistPath, checklistBody);
+    const clFp = emitFingerprint(checklistPath);
+    const clMarkerPath = path.join(dir, "marker-cl.md");
+    fs.writeFileSync(clMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${clFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${clFp}`].join("\n")}\n`);
+    const cl = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", checklistPath, "--marker", clMarkerPath, "--label", "issue-only", "--approval-verified", clFp])
+    );
+    if (cl.package_kind !== "issue-only" || JSON.stringify(cl.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context must recognize Markdown task-list acceptance criteria");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

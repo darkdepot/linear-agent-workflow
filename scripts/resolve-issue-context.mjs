@@ -237,7 +237,7 @@ function parseAcceptanceIds(lines) {
       continue;
     }
     if (fence) continue; // a fenced example is not a declaration
-    const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(AC\d+)\b\s*:?\s*(.*)$/.exec(raw);
+    const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(?:\[[ xX]\]\s*)?(AC\d+)\b\s*:?\s*(.*)$/.exec(raw);
     if (m && isSubstantiveText(m[2])) {
       // A duplicate declaration is ambiguous — the id can no longer uniquely
       // reference one criterion — so it is a hard violation, like a duplicate id
@@ -433,13 +433,16 @@ function extractReviewGateClass(issueText) {
   }
   if (count !== 1) return null;
   const text = normalizeLines(extractSection(body, REVIEW_GATE_HEADING_RE)).toLowerCase();
-  // An explicit re-tier "A→B" / "A->B" records the HIGHER of the two classes —
-  // ambiguity moves upward, never downward. Otherwise the FIRST class word is the
-  // recorded class: a later mention ("deep review was considered but not
-  // required") is prose, not the classification.
-  const retier = /(tiny|standard|deep|risky)\s*(?:→|->)\s*(tiny|standard|deep|risky)/.exec(text);
-  if (retier) {
-    return RISK_CLASSES.indexOf(retier[1]) >= RISK_CLASSES.indexOf(retier[2]) ? retier[1] : retier[2];
+  // A re-classification CHAIN "A→B→C" records the HIGHEST class among ALL its
+  // elements — ambiguity moves upward, never downward, so "tiny→standard→deep" is
+  // deep, not standard. Otherwise the FIRST class word is the recorded class: a
+  // later prose mention ("deep review was considered but not required") does not
+  // override it.
+  const chain = /(?:tiny|standard|deep|risky)(?:\s*(?:→|->)\s*(?:tiny|standard|deep|risky))+/.exec(text);
+  if (chain) {
+    return [...chain[0].matchAll(/(tiny|standard|deep|risky)/g)]
+      .map((m) => m[1])
+      .reduce((hi, cls) => (RISK_CLASSES.indexOf(cls) > RISK_CLASSES.indexOf(hi) ? cls : hi));
   }
   const first = /\b(tiny|standard|deep|risky)\b/.exec(text);
   return first ? first[1] : null;
