@@ -1210,9 +1210,10 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must collect only declared acceptance IDs (not cross-references or fenced examples)");
     }
 
-    // Guard: review-gate class is the first class word — a later "considered but
-    // not required" mention does not override the recorded classification.
-    const reGateA = ["# RG", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "Risk: standard; deep review was considered but not required", ""].join("\n");
+    // Guard: a clean "standard" review-gate resolves issue-only. (This base issue
+    // is reused below by replacing the review-gate line to test re-tier / history
+    // / chain forms.)
+    const reGateA = ["# RG", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "standard", ""].join("\n");
     const reGateAPath = path.join(dir, "issue-regate-a.md");
     fs.writeFileSync(reGateAPath, reGateA);
     const rgaFp = emitFingerprint(reGateAPath);
@@ -1227,7 +1228,7 @@ function validateIssueOnlyLaneBehavior() {
 
     // And an explicit re-tier "standard→deep" records the target deep (out of the
     // Phase-1 envelope → project-first).
-    const reGateB = reGateA.replace("Risk: standard; deep review was considered but not required", "standard→deep (new abstraction)");
+    const reGateB = reGateA.replace("standard", "standard→deep (new abstraction)");
     const reGateBPath = path.join(dir, "issue-regate-b.md");
     fs.writeFileSync(reGateBPath, reGateB);
     const rgbFp = emitFingerprint(reGateBPath);
@@ -1242,7 +1243,7 @@ function validateIssueOnlyLaneBehavior() {
 
     // Guard: a DOWNWARD re-tier "deep→standard" still records the higher class
     // (deep), so a standard marker cannot downgrade it into the lane.
-    const downRetier = reGateA.replace("Risk: standard; deep review was considered but not required", "deep→standard (scope shrank)");
+    const downRetier = reGateA.replace("standard", "deep→standard (scope shrank)");
     const drPath = path.join(dir, "issue-down-retier.md");
     fs.writeFileSync(drPath, downRetier);
     const drFp = emitFingerprint(drPath);
@@ -1375,7 +1376,7 @@ function validateIssueOnlyLaneBehavior() {
 
     // Guard: a re-classification CHAIN records the highest class — "tiny→standard→
     // deep" is deep, so a standard marker cannot downgrade it into the lane.
-    const chainGate = reGateA.replace("Risk: standard; deep review was considered but not required", "tiny→standard→deep (grew twice)");
+    const chainGate = reGateA.replace("standard", "tiny→standard→deep (grew twice)");
     const chainPath = path.join(dir, "issue-chain.md");
     fs.writeFileSync(chainPath, chainGate);
     const chFp = emitFingerprint(chainPath);
@@ -1407,7 +1408,7 @@ function validateIssueOnlyLaneBehavior() {
 
     // Guard: a re-tier chain in "risk history" cannot LOWER the authoritative class
     // — "risky; previous history: tiny→standard" stays risky.
-    const historyGate = reGateA.replace("Risk: standard; deep review was considered but not required", "risky; previous history: tiny→standard");
+    const historyGate = reGateA.replace("standard", "risky; previous history: tiny→standard");
     const historyPath = path.join(dir, "issue-history.md");
     fs.writeFileSync(historyPath, historyGate);
     const hyFp = emitFingerprint(historyPath);
@@ -1442,6 +1443,55 @@ function validateIssueOnlyLaneBehavior() {
         ]),
       "issue-only-lane: broken marker"
     );
+
+    // Guard: the review-gate class is the MAX of all mentioned classes — a
+    // "standard was proposed; Risk class: risky" section reads risky, so a
+    // standard marker cannot enter the lane.
+    const maxGate = reGateA.replace("standard", "standard was proposed; Risk class: risky");
+    const maxPath = path.join(dir, "issue-max-gate.md");
+    fs.writeFileSync(maxPath, maxGate);
+    const mgFp = emitFingerprint(maxPath);
+    const mgMarkerPath = path.join(dir, "marker-mg.md");
+    fs.writeFileSync(mgMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${mgFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${mgFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context max-class review-gate fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", maxPath, "--marker", mgMarkerPath,
+          "--label", "issue-only", "--approval-verified", mgFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: an ATX heading with a closing "#" sequence ("## Ревью-гейт ##") is
+    // still recognized.
+    const closingHashBody = ["# CH", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт ##", "", "- standard", ""].join("\n");
+    const closingHashPath = path.join(dir, "issue-closing-hash.md");
+    fs.writeFileSync(closingHashPath, closingHashBody);
+    const chhFp = emitFingerprint(closingHashPath);
+    const chhMarkerPath = path.join(dir, "marker-chh.md");
+    fs.writeFileSync(chhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chhFp}`].join("\n")}\n`);
+    const chh = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", closingHashPath, "--marker", chhMarkerPath, "--label", "issue-only", "--approval-verified", chhFp])
+    );
+    if (chh.package_kind !== "issue-only") {
+      fail("resolve-issue-context must recognize ATX headings with a closing hash sequence");
+    }
+
+    // Guard: a 4-space-indented ``` is indented code, NOT a fence, so it does not
+    // hide the following normative headings.
+    const fourSpaceFenceBody = ["# FS", "", "## Что сделать", "", "    ```", "    code indented", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const fourSpacePath = path.join(dir, "issue-four-space.md");
+    fs.writeFileSync(fourSpacePath, fourSpaceFenceBody);
+    const fsFp = emitFingerprint(fourSpacePath);
+    const fsMarkerPath = path.join(dir, "marker-fs.md");
+    fs.writeFileSync(fsMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fsFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${fsFp}`].join("\n")}\n`);
+    const fs4 = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", fourSpacePath, "--marker", fsMarkerPath, "--label", "issue-only", "--approval-verified", fsFp])
+    );
+    if (fs4.package_kind !== "issue-only") {
+      fail("resolve-issue-context must not treat a 4-space-indented ``` as a fence that hides later headings");
+    }
 
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([

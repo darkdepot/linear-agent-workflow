@@ -135,7 +135,9 @@ function readFileOrFail(filePath, label) {
 // length. A mismatched or shorter fence inside the block (e.g. ~~~ inside ```) is
 // content, not a close — so it can't prematurely re-expose headings.
 function fenceTransition(line, open) {
-  const match = /^\s*(`{3,}|~{3,})\s*(.*)$/.exec(line);
+  // A fence may be indented 0-3 spaces; 4+ spaces (or a leading tab) is an indented
+  // code block, not a fence, so it never opens/closes one.
+  const match = /^ {0,3}(`{3,}|~{3,})\s*(.*)$/.exec(line);
   if (!match) return open;
   const char = match[1][0];
   const len = match[1].length;
@@ -187,8 +189,9 @@ function extractSection(text, headingRe) {
       if (capturing) out.push(line); // fenced content, never a heading
       continue;
     }
-    // Markdown allows 0-3 spaces of indentation before a heading (4+ is code).
-    const heading = /^ {0,3}(#{1,6})\s+(.*)$/.exec(line);
+    // Markdown allows 0-3 spaces of indentation before a heading (4+ is code) and
+    // an optional closing "#" sequence ("## X ##"), which is stripped from the text.
+    const heading = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (heading) {
       const depth = heading[1].length;
       if (capturing) {
@@ -366,7 +369,7 @@ function hasOwnSectionContent(text, targetRes) {
       if (depth >= 0 && !foreignDepth && isSubstantiveText(raw)) return true;
       continue;
     }
-    const heading = /^ {0,3}(#{1,6})\s+(.*)$/.exec(raw);
+    const heading = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(raw);
     if (heading) {
       const hd = heading[1].length;
       if (depth >= 0 && hd > depth) {
@@ -459,26 +462,21 @@ function extractReviewGateClass(issueText) {
       continue;
     }
     if (fence) continue;
-    const h = /^ {0,3}#{1,6}\s+(.*)$/.exec(line);
+    const h = /^ {0,3}#{1,6}\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h && REVIEW_GATE_HEADING_RE.test(h[1].trim())) count += 1;
   }
   if (count !== 1) return null;
   const text = normalizeLines(extractSection(body, REVIEW_GATE_HEADING_RE)).toLowerCase();
   const classAt = (cls) => RISK_CLASSES.indexOf(cls);
-  // The recorded class is the FIRST class word, and a re-classification chain
-  // "A→B→C" can only RAISE it (ambiguity moves upward, never downward). So the
-  // result is the max of the first class and every class named in ANY re-tier
-  // chain — never lower than the authoritative class or any recorded re-tier. A
-  // later non-chain prose mention ("deep considered but not required") is neither.
-  const first = /\b(tiny|standard|deep|risky)\b/.exec(text);
-  if (!first) return null;
-  let result = first[1];
-  for (const chain of text.matchAll(/(?:tiny|standard|deep|risky)(?:\s*(?:→|->)\s*(?:tiny|standard|deep|risky))+/g)) {
-    for (const m of chain[0].matchAll(/(tiny|standard|deep|risky)/g)) {
-      if (classAt(m[1]) > classAt(result)) result = m[1];
-    }
-  }
-  return result;
+  // The review-gate is free text with no structured class field, so the only
+  // fail-closed reading is the HIGHEST class mentioned anywhere in the section —
+  // ambiguity moves upward, never downward. Reading the first word (or only
+  // re-tier targets) could be tricked into a downgrade by "standard was proposed;
+  // Risk class: risky" or "risky; history: tiny→standard"; over-reading only ever
+  // routes to the safe project-first lane.
+  const classes = [...text.matchAll(/\b(tiny|standard|deep|risky)\b/g)].map((m) => m[1]);
+  if (classes.length === 0) return null;
+  return classes.reduce((hi, cls) => (classAt(cls) > classAt(hi) ? cls : hi));
 }
 
 // Locate the most-recent marker block (most-recent-wins) and parse its contiguous
