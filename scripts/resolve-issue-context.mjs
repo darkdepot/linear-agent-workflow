@@ -142,6 +142,67 @@ function fenceTransition(line, open) {
   return open;
 }
 
+// Column count of a line's leading indentation, expanding tabs to the next 4-column
+// stop (Markdown's rule). 4+ columns is an indented code block.
+function indentColumns(line) {
+  let col = 0;
+  for (const ch of line) {
+    if (ch === "\t") col += 4 - (col % 4);
+    else if (ch === " ") col += 1;
+    else break;
+  }
+  return col;
+}
+
+// Tokenize into visible lines. HTML comments are stripped ONLY outside fenced code
+// blocks — a `<!--` inside a fence is literal code, so it neither opens a comment
+// nor swallows the content after the fence. Fence and comment state are mutually
+// exclusive. `inFence` marks a fence-delimiter or fenced-content line (never a
+// heading); for a fully-commented line `text` is "". One tokenizer shared by every
+// section/marker scan so their fence+comment handling can't drift.
+function* contentTokens(text) {
+  const lines = text.split(/\r?\n/);
+  let fence = null;
+  let inComment = false;
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    if (inComment) {
+      const close = rawLine.indexOf("-->");
+      if (close < 0) {
+        yield { text: "", inFence: false, index };
+        continue;
+      }
+      let line = rawLine.slice(close + 3);
+      inComment = false;
+      line = line.replace(/<!--[^]*?-->/g, "");
+      const open = line.indexOf("<!--");
+      if (open >= 0) {
+        line = line.slice(0, open);
+        inComment = true;
+      }
+      yield { text: line, inFence: false, index };
+      continue;
+    }
+    const nextFence = fenceTransition(rawLine, fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      yield { text: rawLine, inFence: true, index };
+      continue;
+    }
+    if (fence) {
+      yield { text: rawLine, inFence: true, index };
+      continue;
+    }
+    let line = rawLine.replace(/<!--[^]*?-->/g, "");
+    const open = line.indexOf("<!--");
+    if (open >= 0) {
+      line = line.slice(0, open);
+      inComment = true;
+    }
+    yield { text: line, inFence: false, index };
+  }
+}
+
 // Extract the content lines of EVERY section whose heading matches, including
 // nested subsections, across the whole document. Three structures are honored so
 // nothing normative silently escapes the fingerprint:
@@ -152,41 +213,16 @@ function fenceTransition(line, open) {
 //   - Duplicates: a second matching heading re-opens capture, so both sections'
 //     content is included — a duplicate normative section is never dropped.
 function extractSection(text, headingRe) {
-  const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
   let capturedDepth = 0;
-  let fence = null;
-  let inComment = false;
-  for (const rawLine of lines) {
-    // HTML comments are invisible: a heading or content inside <!-- ... --> is
-    // never a real section, consistent with the completeness gate. Skip fully
-    // commented lines and strip inline comment spans before parsing.
-    let line = rawLine;
-    if (inComment) {
-      const close = line.indexOf("-->");
-      if (close < 0) continue;
-      line = line.slice(close + 3);
-      inComment = false;
-    }
-    line = line.replace(/<!--[^]*?-->/g, "");
-    const open = line.indexOf("<!--");
-    if (open >= 0) {
-      line = line.slice(0, open);
-      inComment = true;
-    }
-    const nextFence = fenceTransition(line, fence);
-    if (nextFence !== fence) {
-      fence = nextFence; // this line opened or closed a fenced block
-      if (capturing) out.push(line);
-      continue;
-    }
-    if (fence) {
+  for (const { text: line, inFence } of contentTokens(text)) {
+    if (inFence) {
       if (capturing) out.push(line); // fenced content, never a heading
       continue;
     }
-    // Markdown allows 0-3 spaces of indentation before a heading (4+ is code) and
-    // an optional closing "#" sequence ("## X ##"), which is stripped from the text.
+    // 0-3 spaces of indentation before a heading (4+ is code) and an optional
+    // closing "#" sequence ("## X ##"), which is stripped from the text.
     const heading = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (heading) {
       const depth = heading[1].length;
@@ -340,38 +376,14 @@ function hasOwnSectionContent(text, targetRes) {
     SECTION_RE.nonGoals,
     SECTION_RE.reviewGate,
   ];
-  const lines = text.split(/\r?\n/);
-  let fence = null;
   let depth = -1; // depth of the current target heading, or -1 when outside one
   let foreignDepth = 0; // >0 while inside a nested foreign-normative subsection
-  let inComment = false; // inside a multi-line HTML comment
-  for (const rawLine of lines) {
-    // Strip HTML comments (multi-line aware) to the visible text, then process the
-    // remainder — a comment that closes mid-line ("--> real content") must still
-    // see its tail. Consistent with extractSection.
-    let raw = rawLine;
-    if (inComment) {
-      const close = raw.indexOf("-->");
-      if (close < 0) continue;
-      raw = raw.slice(close + 3);
-      inComment = false;
-    }
-    raw = raw.replace(/<!--[^]*?-->/g, "");
-    const openIdx = raw.indexOf("<!--");
-    if (openIdx >= 0) {
-      raw = raw.slice(0, openIdx);
-      inComment = true;
-    }
-    const nextFence = fenceTransition(raw, fence);
-    if (nextFence !== fence) {
-      fence = nextFence;
+  for (const { text: line, inFence } of contentTokens(text)) {
+    if (inFence) {
+      if (depth >= 0 && !foreignDepth && isSubstantiveText(line)) return true;
       continue;
     }
-    if (fence) {
-      if (depth >= 0 && !foreignDepth && isSubstantiveText(raw)) return true;
-      continue;
-    }
-    const heading = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(raw);
+    const heading = /^ {0,3}(#{1,6})\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (heading) {
       const hd = heading[1].length;
       if (depth >= 0 && hd > depth) {
@@ -385,7 +397,7 @@ function hasOwnSectionContent(text, targetRes) {
       depth = targetRes.some((re) => re.test(heading[2])) ? hd : -1;
       continue;
     }
-    if (depth >= 0 && !foreignDepth && isSubstantiveText(raw)) return true;
+    if (depth >= 0 && !foreignDepth && isSubstantiveText(line)) return true;
   }
   return false;
 }
@@ -441,29 +453,9 @@ function extractReviewGateClass(issueText) {
   // Count EXACT authoritative review-gate headings (fenced and HTML-commented ones
   // don't count). Zero → nothing to verify against; two or more → an ambiguous
   // duplicate. Either way return null so the resolver fails closed.
-  let fence = null;
-  let inComment = false;
   let count = 0;
-  for (const rawLine of body.split(/\r?\n/)) {
-    let line = rawLine;
-    if (inComment) {
-      const close = line.indexOf("-->");
-      if (close < 0) continue;
-      line = line.slice(close + 3);
-      inComment = false;
-    }
-    line = line.replace(/<!--[^]*?-->/g, "");
-    const openIdx = line.indexOf("<!--");
-    if (openIdx >= 0) {
-      line = line.slice(0, openIdx);
-      inComment = true;
-    }
-    const nextFence = fenceTransition(line, fence);
-    if (nextFence !== fence) {
-      fence = nextFence;
-      continue;
-    }
-    if (fence) continue;
+  for (const { text: line, inFence } of contentTokens(body)) {
+    if (inFence) continue;
     const h = /^ {0,3}#{1,6}\s+(.*?)(?:\s+#+)?\s*$/.exec(line);
     if (h && REVIEW_GATE_HEADING_RE.test(h[1].trim())) count += 1;
   }
@@ -485,30 +477,10 @@ function extractReviewGateClass(issueText) {
 // fenced code block AND any HTML comment. A prose mention, a fenced example, an
 // indented-code example, or a commented-out example is never a marker — one
 // discovery rule shared by findMarkerBlock and stripMarkerBlock so they can't drift.
-function markerLineIndices(lines) {
+function markerLineIndices(text) {
   const indices = [];
-  let fence = null;
-  let inComment = false;
-  for (let i = 0; i < lines.length; i += 1) {
-    let line = lines[i];
-    if (inComment) {
-      const close = line.indexOf("-->");
-      if (close < 0) continue;
-      line = line.slice(close + 3);
-      inComment = false;
-    }
-    line = line.replace(/<!--[^]*?-->/g, "");
-    const openIdx = line.indexOf("<!--");
-    if (openIdx >= 0) {
-      line = line.slice(0, openIdx);
-      inComment = true;
-    }
-    const nextFence = fenceTransition(line, fence);
-    if (nextFence !== fence) {
-      fence = nextFence;
-      continue;
-    }
-    if (!fence && MARKER_LINE_RE.test(line)) indices.push(i);
+  for (const { text: line, inFence, index } of contentTokens(text)) {
+    if (!inFence && MARKER_LINE_RE.test(line)) indices.push(index);
   }
   return indices;
 }
@@ -519,18 +491,18 @@ function markerLineIndices(lines) {
 // project-first).
 function findMarkerBlock(markerText) {
   const lines = markerText.split(/\r?\n/);
-  const indices = markerLineIndices(lines);
+  const indices = markerLineIndices(markerText);
   if (indices.length === 0) return null;
   const markerIdx = indices[indices.length - 1]; // most-recent-wins
   const fields = {};
   const seen = new Set();
   let started = false;
   for (let i = markerIdx + 1; i < lines.length; i += 1) {
-    // A field line indented 4+ spaces (or a tab) is a Markdown indented code block,
-    // not a real field — end the block. A marker whose fields are all indented then
-    // collects no fields and fails the required-field check (fail-closed), exactly
-    // like the fenced-fields case.
-    if (/^(?: {4,}|\t)\S/.test(lines[i])) break;
+    // A field line indented 4+ columns (spaces, tabs, or a mix) is a Markdown
+    // indented code block, not a real field — end the block. A marker whose fields
+    // are all indented then collects no fields and fails the required-field check
+    // (fail-closed), exactly like the fenced-fields case.
+    if (lines[i].trim() !== "" && indentColumns(lines[i]) >= 4) break;
     const line = lines[i].trim();
     // A fence ALWAYS ends the block: a real marker's fields are plain text right
     // after the marker line, so a fence means the field-shaped lines inside it are
@@ -574,7 +546,7 @@ function stripMarkerBlock(text) {
   const recognized = new Set(REQUIRED_MARKER_FIELDS.map(normalizeKey));
   const lines = text.split(/\r?\n/);
   for (;;) {
-    const indices = markerLineIndices(lines);
+    const indices = markerLineIndices(lines.join("\n"));
     if (indices.length === 0) break;
     const markerIdx = indices[0]; // remove blocks one at a time, front to back
     // Drop the marker line and ONLY its contiguous recognized marker fields. A

@@ -1588,6 +1588,39 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a "<!--" inside a fenced code block is literal, not a comment — it must
+    // NOT swallow the real sections after the fence.
+    const commentInFenceBody = ["# CF", "", "## Что сделать", "", "```", "<!-- this is code, not a comment", "```", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cfPath = path.join(dir, "issue-comment-in-fence.md");
+    fs.writeFileSync(cfPath, commentInFenceBody);
+    const cfFp = emitFingerprint(cfPath);
+    const cfMarkerPath = path.join(dir, "marker-cf.md");
+    fs.writeFileSync(cfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cfFp}`].join("\n")}\n`);
+    const cf = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cfPath, "--marker", cfMarkerPath, "--label", "issue-only", "--approval-verified", cfFp])
+    );
+    if (cf.package_kind !== "issue-only") {
+      fail("resolve-issue-context must treat <!-- inside a fence as literal, not swallow the following sections");
+    }
+
+    // Guard: marker fields with a mixed space+tab indent reaching 4 columns are
+    // indented code, not fields — fail closed (the old space-only check missed this).
+    const tabFp = "b".repeat(64);
+    const tabFieldsPath = path.join(dir, "issue-tab-fields.md");
+    fs.writeFileSync(
+      tabFieldsPath,
+      ["# TF", "", "## Что сделать", "", "linear-issue-only marker", "", "  \tMarker version: 1", `  \tScope fingerprint: ${tabFp}`, "  \tAcceptance IDs: AC1", "  \tRisk class: standard", `  \tApproval: ${tabFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    expectCommandFailure(
+      "resolve-issue-context tab-indented marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", tabFieldsPath,
+          "--label", "issue-only", "--approval-verified", tabFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
