@@ -714,6 +714,22 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: the "exactly five fields, no more" contract is executable — an extra
+    // sixth field (even a benign one) is rejected, so the marker can't quietly grow.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Notes: sneaky sixth field",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context unknown extra field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: unknown field"
+    );
+
     // Guard: stale approval is reachable and does not block resolution.
     writeMarker([
       "Marker version: 1",

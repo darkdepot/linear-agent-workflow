@@ -252,6 +252,16 @@ function resolve(args) {
     }
   }
 
+  // EXACTLY these five, no more (references/issue-only-lane.md). Any other parsed
+  // field is a hard violation, so the marker can never quietly grow a sixth field
+  // beyond the 5-field contract and stay silently issue-only.
+  const allowedKeys = new Set(REQUIRED_MARKER_FIELDS.map(normalizeKey));
+  for (const key of normalizedKeys.keys()) {
+    if (!allowedKeys.has(key)) {
+      violation(`broken marker: unknown field "${key}" (marker carries exactly the five contract fields)`);
+    }
+  }
+
   for (const field of REQUIRED_MARKER_FIELDS) {
     if (!normalizedKeys.has(normalizeKey(field)) || normalizedKeys.get(normalizeKey(field)) === "") {
       violation(`broken marker: missing field "${field}"`);
