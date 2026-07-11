@@ -6,6 +6,14 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.19.1] - 2026-07-11
+
+Makes the code-review model policy an explicit design choice next to the newly cross-vendor Second Voice (MONO-13).
+
+### Changed
+
+- `references/autoreview-routing.md`: states that cross-vendor review is deliberately not a code-review requirement and must not be added by analogy to the Second Voice. Independence-by-different-vendor guards subjective product judgment (the Second Voice's job, where two instances of one model share priors); code review is grounded in the concrete diff, so the gate is served better by matching model strength to risk within the GPT-5.6 Luna/Terra/Sol ladder than by crossing vendors. Cross-vendor code review remains only the existing `risky`-class compensation, and only when the worker engine is not Codex. Pinned in `scripts/validate-workflow.mjs`.
+
 ## [0.19.0] - 2026-07-11
 
 Second Voice model selection is now cross-vendor and relative to the orchestrator (MONO-12), fixing a self-review echo observed live.

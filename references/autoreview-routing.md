@@ -19,6 +19,17 @@ This policy intentionally uses only the GPT-5.6 family. GPT-5.5 is not a
 normal `linear-preflight` route. Do not silently fall back to another model or
 effort when a selected route is unavailable.
 
+Cross-vendor review is deliberately not a code-review requirement, and must
+not be added by analogy to the Second Voice. Independence-by-different-vendor
+is a Second Voice property: it guards subjective product judgment, where two
+instances of one model share the same priors and one interviewing the other
+learns nothing. Code review is grounded in the concrete diff — bugs, logic,
+contract shape — so the gate is served better by matching model strength to
+risk within GPT-5.6 than by crossing vendors, and the graded Luna/Terra/Sol
+ladder exists for exactly that match. Cross-vendor code review stays only the
+specific `risky` compensation described below, and only when the worker engine
+is not Codex.
+
 A review model must be at least as capable as the code's producer for the gate
 to add signal: a weaker reviewer rubber-stamps exactly the failures the gate
 exists to catch. Under that principle the `standard` → `gpt-5.6-luna` /
