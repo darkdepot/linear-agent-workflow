@@ -20,6 +20,10 @@ import path from "node:path";
 import process from "node:process";
 
 const MARKER_LINE = "linear-issue-only marker";
+// A real marker line stands alone with 0-3 spaces of indentation. A 4+-space (or
+// tab) indent makes it a Markdown indented code block — a documentation example,
+// never an authoritative marker.
+const MARKER_LINE_RE = /^ {0,3}linear-issue-only marker[ \t]*$/;
 const MARKER_VERSION = 1;
 const ISSUE_ONLY_LABEL = "issue-only";
 const RISK_CLASSES = ["tiny", "standard", "deep", "risky"];
@@ -496,7 +500,7 @@ function findMarkerBlock(markerText) {
     }
     // A marker line inside a fenced code block is a documentation EXAMPLE, not an
     // opt-in — only a standalone line outside any fence is a real marker.
-    if (!fence && lines[i].trim() === MARKER_LINE) markerIdx = i;
+    if (!fence && MARKER_LINE_RE.test(lines[i])) markerIdx = i;
   }
   if (markerIdx < 0) return null;
   const fields = {};
@@ -554,7 +558,7 @@ function stripMarkerBlock(text) {
         fence = nextFence;
         continue;
       }
-      if (!fence && lines[i].trim() === MARKER_LINE) {
+      if (!fence && MARKER_LINE_RE.test(lines[i])) {
         markerIdx = i;
         break; // remove blocks one at a time, front to back
       }

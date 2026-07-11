@@ -1493,6 +1493,25 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must not treat a 4-space-indented ``` as a fence that hides later headings");
     }
 
+    // Guard: a marker line indented 4+ spaces is a Markdown indented code block (a
+    // documentation example), not an opt-in — even with an otherwise-valid inline
+    // marker and matching label/approval, the Issue resolves project-first.
+    const cleanImBody = ["# IM", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cleanImPath = path.join(dir, "issue-im-clean.md");
+    fs.writeFileSync(cleanImPath, cleanImBody);
+    const imFp = emitFingerprint(cleanImPath);
+    const indentedMarkerPath = path.join(dir, "issue-indented-marker.md");
+    fs.writeFileSync(
+      indentedMarkerPath,
+      `${cleanImBody}\n    linear-issue-only marker\n    Marker version: 1\n    Scope fingerprint: ${imFp}\n    Acceptance IDs: AC1\n    Risk class: standard\n    Approval: ${imFp}\n`
+    );
+    const im = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentedMarkerPath, "--label", "issue-only", "--approval-verified", imFp])
+    );
+    if (im.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a 4-space-indented marker line as project-first, not an opt-in");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
