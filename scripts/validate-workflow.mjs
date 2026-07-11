@@ -1016,6 +1016,55 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: verify_steps splits only on TOP-LEVEL items — a nested item and a
+    // fenced "2." line stay in their parent step, matching the section structure.
+    const nestedVerifyBody = ["# NV", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. Run the check:", "   - confirm the result", "   ```sh", "   2. not a step", "   ```", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedVerifyPath = path.join(dir, "issue-nested-verify.md");
+    fs.writeFileSync(nestedVerifyPath, nestedVerifyBody);
+    const nvFp = emitFingerprint(nestedVerifyPath);
+    const nvMarkerPath = path.join(dir, "marker-nv.md");
+    fs.writeFileSync(nvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nvFp}`].join("\n")}\n`);
+    const nv = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedVerifyPath, "--marker", nvMarkerPath, "--label", "issue-only", "--approval-verified", nvFp])
+    );
+    if (nv.package_kind !== "issue-only") fail("resolve-issue-context nested-verify fixture must resolve issue-only");
+    if (nv.behavioral_oracle.verify_steps.length !== 1) {
+      fail("resolve-issue-context must split verify_steps only on top-level items (nested item + fenced line are not separate steps)");
+    }
+
+    // Guard: a behavior section whose content starts with a nested subheading is
+    // still described behavior (extractSection keeps nested subsections).
+    const nestedBehaviorBody = ["# NB", "", "## Что сделать", "", "### Details", "", "- the actual scope", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedBehaviorPath = path.join(dir, "issue-nested-behavior.md");
+    fs.writeFileSync(nestedBehaviorPath, nestedBehaviorBody);
+    const nbFp = emitFingerprint(nestedBehaviorPath);
+    const nbMarkerPath = path.join(dir, "marker-nb.md");
+    fs.writeFileSync(nbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nbFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nbFp}`].join("\n")}\n`);
+    const nb = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedBehaviorPath, "--marker", nbMarkerPath, "--label", "issue-only", "--approval-verified", nbFp])
+    );
+    if (nb.package_kind !== "issue-only") {
+      fail("resolve-issue-context must count a behavior section starting with a nested subheading as described behavior");
+    }
+
+    // Guard: a behavior heading whose only content is an EMPTY fenced block has no
+    // substantive content and is rejected — a fence marker is not behavior.
+    const emptyFenceBody = ["# EF", "", "## Что сделать", "", "```", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const emptyFencePath = path.join(dir, "issue-empty-fence.md");
+    fs.writeFileSync(emptyFencePath, emptyFenceBody);
+    const efFp = emitFingerprint(emptyFencePath);
+    const efMarkerPath = path.join(dir, "marker-ef.md");
+    fs.writeFileSync(efMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${efFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${efFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty-fence behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyFencePath, "--marker", efMarkerPath,
+          "--label", "issue-only", "--approval-verified", efFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

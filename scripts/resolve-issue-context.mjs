@@ -51,23 +51,16 @@ const SECTION_RE = {
   reviewGate: /^(?:ревью-гейт|ревью гейт|review gate)/i,
 };
 
-// Strict positive-behavior heading names (exact, optional trailing colon) for the
-// self-contained completeness gate ONLY, so a negative heading like
-// "Scope exclusions" is never miscounted as described behavior. The fingerprint
-// deliberately keeps the looser SECTION_RE matching so all scope-ish content is
-// still hashed even under an unusual heading.
-const BEHAVIOR_HEADINGS = new Set([
-  "цель pr",
-  "objective",
-  "goal",
-  "goals",
-  "что сделать",
-  "scope",
-  "what to do",
-  "желаемое поведение",
-  "desired behavior",
-  "desired behaviour",
-]);
+// Strict positive-behavior heading matchers (exact heading, optional trailing
+// colon) for the self-contained completeness gate ONLY, so a negative heading
+// like "Scope exclusions" is never miscounted as described behavior. The
+// fingerprint deliberately keeps the looser SECTION_RE matching so all scope-ish
+// content is still hashed even under an unusual heading.
+const BEHAVIOR_HEADING_RES = [
+  /^(?:цель pr|objective|goals?)\s*:?\s*$/i,
+  /^(?:что сделать|scope|what to do)\s*:?\s*$/i,
+  /^(?:желаемое поведение|desired behaviou?rs?)\s*:?\s*$/i,
+];
 
 function usage(exitCode = 2) {
   console.error(
@@ -228,12 +221,16 @@ function parseAcceptanceIds(lines) {
   return ids;
 }
 
-// Parse verify steps WITHOUT losing multi-line content: each list item carries
-// its continuation, nested, and fenced-command lines, and a verification given as
-// a bare command block (no list) becomes a single step rather than being dropped.
+// Parse verify steps WITHOUT losing multi-line content and WITHOUT mis-splitting:
+// only a TOP-LEVEL list item starts a new step; nested (indented) items, fenced
+// command blocks, and plain continuations attach to the current step, and a bare
+// command block with no list becomes a single step. Classification is on the raw
+// line (indentation preserved) with fence state tracked, so a "1." inside a code
+// block is content, not a step boundary.
 function parseVerifySteps(lines) {
   const steps = [];
   let current = null;
+  let fence = null;
   const flush = () => {
     if (current !== null) {
       const text = current.replace(/\s+/g, " ").trim();
@@ -242,49 +239,46 @@ function parseVerifySteps(lines) {
     current = null;
   };
   for (const raw of lines) {
-    const line = raw.trim();
-    const item = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(line);
-    if (item) {
-      flush();
-      current = item[1];
+    const nextFence = fenceTransition(raw, fence);
+    if (nextFence !== fence) {
+      fence = nextFence; // fence marker line: skip, stay in the current step
       continue;
     }
-    if (line === "" || /^(?:```|~~~)/.test(line)) continue; // skip blanks + fence markers
-    // Continuation / nested / code line: attach to the current step, or open a
-    // step when the verification is a bare command block with no list.
-    current = current === null ? line : `${current} ${line}`;
+    if (fence) {
+      const inner = raw.trim();
+      if (inner !== "") current = current === null ? inner : `${current} ${inner}`;
+      continue;
+    }
+    const topItem = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(raw);
+    if (topItem) {
+      flush();
+      current = topItem[1];
+      continue;
+    }
+    const rest = raw.trim();
+    if (rest === "") continue;
+    current = current === null ? rest : `${current} ${rest}`;
   }
   flush();
   return steps;
 }
 
-// True when the Issue has a positive-behavior section (matched by EXACT heading)
-// with any non-empty content — the strict completeness check that a negative
-// heading like "Scope exclusions" or "Out of scope" alone cannot satisfy.
+// Substantive = a non-blank line that is not merely a fence marker, so an empty
+// fenced block never counts as content.
+function hasSubstantiveContent(lines) {
+  return lines.some((line) => {
+    const trimmed = line.trim();
+    return trimmed !== "" && !/^(?:```|~~~)/.test(trimmed);
+  });
+}
+
+// True when the Issue has a positive-behavior section (EXACT heading) with
+// substantive content. Reuses extractSection so it inherits the same fenced-block,
+// heading-depth, and nested-subsection handling — no bespoke re-scan to drift out
+// of sync (a negative heading like "Scope exclusions" cannot satisfy it, a nested
+// subsection under the heading still counts, and an empty fence does not).
 function hasDescribedBehavior(text) {
-  const lines = text.split(/\r?\n/);
-  let fence = null;
-  let capturing = false;
-  for (const line of lines) {
-    const nextFence = fenceTransition(line, fence);
-    if (nextFence !== fence) {
-      fence = nextFence;
-      if (capturing && line.trim() !== "") return true;
-      continue;
-    }
-    if (fence) {
-      if (capturing && line.trim() !== "") return true;
-      continue;
-    }
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
-    if (heading) {
-      const name = heading[2].trim().replace(/:\s*$/, "").toLowerCase();
-      capturing = BEHAVIOR_HEADINGS.has(name);
-      continue;
-    }
-    if (capturing && line.trim() !== "") return true;
-  }
-  return false;
+  return BEHAVIOR_HEADING_RES.some((re) => hasSubstantiveContent(extractSection(text, re)));
 }
 
 // Deterministic scope fingerprint = full sha256 over the normalized Issue
