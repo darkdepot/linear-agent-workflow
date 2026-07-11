@@ -1525,6 +1525,21 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must ignore a marker line inside an HTML comment (project-first, not a broken-marker error)");
     }
 
+    // Guard: content after an HTML comment closes mid-line ("--> real scope") is
+    // visible and counts — the tail after "-->" is not skipped.
+    const remainderBody = ["# RM", "", "## Что сделать", "", "<!-- placeholder note", "--> the real scope is here", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const remainderPath = path.join(dir, "issue-remainder.md");
+    fs.writeFileSync(remainderPath, remainderBody);
+    const rmFp = emitFingerprint(remainderPath);
+    const rmMarkerPath = path.join(dir, "marker-rm.md");
+    fs.writeFileSync(rmMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rmFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rmFp}`].join("\n")}\n`);
+    const rm = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", remainderPath, "--marker", rmMarkerPath, "--label", "issue-only", "--approval-verified", rmFp])
+    );
+    if (rm.package_kind !== "issue-only") {
+      fail("resolve-issue-context must see content after an HTML comment closes mid-line");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

@@ -353,16 +353,22 @@ function hasOwnSectionContent(text, targetRes) {
   let depth = -1; // depth of the current target heading, or -1 when outside one
   let foreignDepth = 0; // >0 while inside a nested foreign-normative subsection
   let inComment = false; // inside a multi-line HTML comment
-  for (const raw of lines) {
+  for (const rawLine of lines) {
+    // Strip HTML comments (multi-line aware) to the visible text, then process the
+    // remainder — a comment that closes mid-line ("--> real content") must still
+    // see its tail. Consistent with extractSection.
+    let raw = rawLine;
     if (inComment) {
-      if (raw.includes("-->")) inComment = false;
-      continue; // a line inside a multi-line comment is invisible, not content
+      const close = raw.indexOf("-->");
+      if (close < 0) continue;
+      raw = raw.slice(close + 3);
+      inComment = false;
     }
-    if (raw.includes("<!--") && !raw.includes("-->")) {
-      const before = raw.slice(0, raw.indexOf("<!--"));
-      if (depth >= 0 && !foreignDepth && isSubstantiveText(before)) return true;
+    raw = raw.replace(/<!--[^]*?-->/g, "");
+    const openIdx = raw.indexOf("<!--");
+    if (openIdx >= 0) {
+      raw = raw.slice(0, openIdx);
       inComment = true;
-      continue;
     }
     const nextFence = fenceTransition(raw, fence);
     if (nextFence !== fence) {
