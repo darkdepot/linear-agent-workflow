@@ -6,6 +6,19 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-07-11
+
+Second Voice model selection is now cross-vendor and relative to the orchestrator (MONO-12), fixing a self-review echo observed live.
+
+### Changed
+
+- `references/orchestration.md` `### Second Voice`: the reviewer model is selected relative to the orchestrator and must be a different model family — a fresh context on the *same* model inherits the same blind spots and collapses into self-review. An orchestrator on any Claude model (Fable, Opus, Sonnet, …) draws its Second Voice from `gpt-5.6-sol` at `model_reasoning_effort="high"`; an orchestrator on GPT-5.6 (`sol`, `terra`, `luna`) draws it from Claude Opus (latest) at high reasoning. Both sides run at high reasoning effort. The prior binding hardcoded an Opus-class reviewer and keyed independence on a distinct *session* rather than a distinct model, so an Opus orchestrator interviewed an Opus reviewer.
+- Fallback is explicit: only when the cross-vendor model is unreachable (no Codex auth, or no Claude access) does discovery fall back to an in-session lens pass, with the reason recorded. A same-model Second Voice is not an acceptable fallback.
+
+### Added
+
+- `scripts/validate-workflow.mjs` pins both invariants (`a different model family from the orchestrator`, `A same-model Second Voice is not an acceptable fallback`); break/restore negative test recorded in `docs/spikes/mono-12-pin-tests.md`.
+
 ## [0.18.1] - 2026-07-11
 
 Hotfix release from the first live run of the heartbeat watcher against a real orchestrator directory (MONO-11).
