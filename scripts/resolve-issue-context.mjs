@@ -40,36 +40,28 @@ const REQUIRED_MARKER_FIELDS = [
 // The marker is not a route-record. These fields belong to the spine, not here.
 const FORBIDDEN_MARKER_KEYS = ["route revision", "assurance vector", "required artifacts"];
 
-// Normative-section heading matchers, ANCHORED at the start of the heading text
-// so the English alternatives cannot overlap: unanchored `goal`/`scope` would
-// match "Non-goals"/"Out of scope" and miscount them as behavior. Anchoring alone
-// (no `\b`, which mishandles Cyrillic) excludes the negative headings. One source
-// of truth, reused by the fingerprint, the oracle, completeness, and risk read.
+// Normative-section heading matchers — EXACT (anchored, optional trailing colon)
+// so a heading like "Acceptance history", "Verify exclusions", or "Review gate
+// considerations" is never mistaken for the canonical section, and the positive
+// scope/objective matchers never pick up the negative "Non-goals" / "Out of
+// scope". Anchoring uses `$` (not `\b`, which mishandles Cyrillic). One source of
+// truth for the oracle, completeness, and risk read — the fingerprint is
+// whole-body and needs no section matching.
 const SECTION_RE = {
-  objective: /^(?:цель pr|objective|goals?)/i,
-  scope: /^(?:что сделать|scope|what to do)/i,
-  desired: /^(?:желаемое поведение|desired behaviou?r)/i,
-  acceptance: /^(?:критерии приёмки|критерии приемки|acceptance)/i,
-  verify: /^(?:как проверить|how to verify|verify)/i,
-  nonGoals: /^(?:что не входит|non-goals|out of scope)/i,
-  reviewGate: /^(?:ревью-гейт|ревью гейт|review gate)/i,
+  objective: /^(?:цель pr|objective|goals?)\s*:?\s*$/i,
+  scope: /^(?:что сделать|scope|what to do)\s*:?\s*$/i,
+  desired: /^(?:желаемое поведение|desired behaviou?rs?)\s*:?\s*$/i,
+  acceptance: /^(?:критерии приёмки|критерии приемки|acceptance criteria|acceptance)\s*:?\s*$/i,
+  verify: /^(?:как проверить|how to verify|verification|verify)\s*:?\s*$/i,
+  nonGoals: /^(?:что не входит|non-goals|out of scope)\s*:?\s*$/i,
+  reviewGate: /^(?:ревью-гейт|ревью гейт|review gate)\s*:?\s*$/i,
 };
 
-// Strict positive-behavior heading matchers (exact heading, optional trailing
-// colon) for the self-contained completeness gate ONLY, so a negative heading
-// like "Scope exclusions" is never miscounted as described behavior. The
-// fingerprint deliberately keeps the looser SECTION_RE matching so all scope-ish
-// content is still hashed even under an unusual heading.
-const BEHAVIOR_HEADING_RES = [
-  /^(?:цель pr|objective|goals?)\s*:?\s*$/i,
-  /^(?:что сделать|scope|what to do)\s*:?\s*$/i,
-  /^(?:желаемое поведение|desired behaviou?rs?)\s*:?\s*$/i,
-];
-// EXACT authoritative review-gate heading for the risk cross-check (the loose
-// SECTION_RE.reviewGate is only for the fingerprint). Exact matching stops a
-// heading like "Review gate considerations" from being unioned into the class
-// read, which could otherwise mask the authoritative class and downgrade risk.
-const REVIEW_GATE_HEADING_RE = /^(?:ревью-гейт|ревью гейт|review gate)\s*:?\s*$/i;
+// The positive-behavior headings (for the self-contained completeness gate) and
+// the authoritative review-gate heading (for the risk cross-check) — subsets of
+// the exact matchers above.
+const BEHAVIOR_HEADING_RES = [SECTION_RE.objective, SECTION_RE.scope, SECTION_RE.desired];
+const REVIEW_GATE_HEADING_RE = SECTION_RE.reviewGate;
 
 function usage(exitCode = 2) {
   console.error(
@@ -534,6 +526,11 @@ function findMarkerBlock(markerText) {
   const seen = new Set();
   let started = false;
   for (let i = markerIdx + 1; i < lines.length; i += 1) {
+    // A field line indented 4+ spaces (or a tab) is a Markdown indented code block,
+    // not a real field — end the block. A marker whose fields are all indented then
+    // collects no fields and fails the required-field check (fail-closed), exactly
+    // like the fenced-fields case.
+    if (/^(?: {4,}|\t)\S/.test(lines[i])) break;
     const line = lines[i].trim();
     // A fence ALWAYS ends the block: a real marker's fields are plain text right
     // after the marker line, so a fence means the field-shaped lines inside it are

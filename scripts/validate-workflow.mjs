@@ -1548,6 +1548,46 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must see content after an HTML comment closes mid-line");
     }
 
+    // Guard: the oracle sections use EXACT headings — "## Acceptance history" and
+    // "## Verify exclusions" are not the canonical acceptance/verify sections, so an
+    // Issue lacking the real ones has no oracle and is rejected.
+    const looseHeadingPath = path.join(dir, "issue-loose-heading.md");
+    fs.writeFileSync(
+      looseHeadingPath,
+      ["# LH", "", "## Что сделать", "", "- do it", "", "## Acceptance history", "", "- AC1: old criterion", "", "## Verify exclusions", "", "1. not a real step", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const lhFp = emitFingerprint(looseHeadingPath);
+    const lhMarkerPath = path.join(dir, "marker-lh.md");
+    fs.writeFileSync(lhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${lhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${lhFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context loose-oracle-heading fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", looseHeadingPath, "--marker", lhMarkerPath,
+          "--label", "issue-only", "--approval-verified", lhFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: marker fields indented 4+ spaces are a Markdown indented code block —
+    // an example with an unindented marker line and indented fields collects no
+    // fields and fails closed, never a silent issue-only.
+    const aFp = "a".repeat(64);
+    const indentedFieldsPath = path.join(dir, "issue-indented-fields.md");
+    fs.writeFileSync(
+      indentedFieldsPath,
+      ["# IF", "", "## Что сделать", "", "Example:", "", "linear-issue-only marker", "", `    Marker version: 1`, `    Scope fingerprint: ${aFp}`, "    Acceptance IDs: AC1", "    Risk class: standard", `    Approval: ${aFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    expectCommandFailure(
+      "resolve-issue-context indented marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", indentedFieldsPath,
+          "--label", "issue-only", "--approval-verified", aFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
