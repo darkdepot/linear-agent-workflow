@@ -1111,6 +1111,21 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a marker with duplicate Acceptance IDs (padding the count to mask a
+    // missing required id) is rejected — IDs are compared as deduped sets.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC1",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context duplicate acceptance id fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs]),
+      "issue-only-lane: broken marker: duplicate Acceptance IDs"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

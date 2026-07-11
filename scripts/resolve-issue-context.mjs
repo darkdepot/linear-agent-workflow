@@ -450,10 +450,16 @@ function parseIdList(value) {
     .filter(Boolean);
 }
 
+// Compare two id lists as SETS (dedup both sides), so a repeated id can never
+// pad the length to mask a missing required id.
 function sameIdSet(a, b) {
-  if (a.length !== b.length) return false;
-  const set = new Set(a);
-  return b.every((entry) => set.has(entry));
+  const sa = new Set(a);
+  const sb = new Set(b);
+  if (sa.size !== sb.size) return false;
+  for (const entry of sa) {
+    if (!sb.has(entry)) return false;
+  }
+  return true;
 }
 
 function readConfig(configPath) {
@@ -568,6 +574,9 @@ function resolve(args) {
   }
 
   const markerAcceptanceIds = parseIdList(normalizedKeys.get("acceptance ids"));
+  if (new Set(markerAcceptanceIds).size !== markerAcceptanceIds.length) {
+    violation("broken marker: duplicate Acceptance IDs in marker");
+  }
   if (!sameIdSet(markerAcceptanceIds, scope.acceptanceIds)) {
     violation("broken marker: acceptance IDs do not match issue body");
   }
