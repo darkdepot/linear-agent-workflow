@@ -1621,6 +1621,19 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a 4+-column-indented recognized-key line after an inline marker is
+    // Markdown code, not a field — stripMarkerBlock leaves it in the whole-body
+    // fingerprint, so changing it invalidates the approval.
+    const indentedAfterMarker = (val) =>
+      ["# IAM", "", "## Что сделать", "", "- do it", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: x", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `    Risk class: ${val}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const iamAPath = path.join(dir, "issue-iam-a.md");
+    const iamBPath = path.join(dir, "issue-iam-b.md");
+    fs.writeFileSync(iamAPath, indentedAfterMarker("keep"));
+    fs.writeFileSync(iamBPath, indentedAfterMarker("changed"));
+    if (emitFingerprint(iamAPath) === emitFingerprint(iamBPath)) {
+      fail("resolve-issue-context must keep a 4+-indent recognized-key line in the fingerprint (not strip it as a marker field)");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

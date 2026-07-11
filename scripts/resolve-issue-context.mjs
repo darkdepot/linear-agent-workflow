@@ -561,6 +561,10 @@ function stripMarkerBlock(text) {
         if (started) break; // a blank after the fields ends the block
         continue; // leading blank before the first field — same as findMarkerBlock
       }
+      // A 4+-column-indented line is Markdown code, not a marker field — end the
+      // block (same terminator as findMarkerBlock), so indented content is never
+      // stripped out of the whole-body fingerprint.
+      if (indentColumns(lines[end]) >= 4) break;
       const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*/.exec(trimmed);
       if (kv && recognized.has(normalizeKey(kv[1]))) {
         started = true;
