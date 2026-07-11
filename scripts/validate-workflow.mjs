@@ -1240,6 +1240,64 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must read a 'standard→deep' re-tier as deep (out of Phase-1 envelope → project-first)");
     }
 
+    // Guard: a DOWNWARD re-tier "deep→standard" still records the higher class
+    // (deep), so a standard marker cannot downgrade it into the lane.
+    const downRetier = reGateA.replace("Risk: standard; deep review was considered but not required", "deep→standard (scope shrank)");
+    const drPath = path.join(dir, "issue-down-retier.md");
+    fs.writeFileSync(drPath, downRetier);
+    const drFp = emitFingerprint(drPath);
+    const drMarkerPath = path.join(dir, "marker-dr.md");
+    fs.writeFileSync(drMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${drFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${drFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context downward re-tier fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", drPath, "--marker", drMarkerPath,
+          "--label", "issue-only", "--approval-verified", drFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: an empty acceptance declaration ("- AC1:" with no criterion text) is
+    // not a usable criterion — the Issue has no acceptance and is rejected.
+    const emptyAcPath = path.join(dir, "issue-empty-ac.md");
+    fs.writeFileSync(
+      emptyAcPath,
+      ["# EA", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1:", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const eaFp = emitFingerprint(emptyAcPath);
+    const eaMarkerPath = path.join(dir, "marker-ea.md");
+    fs.writeFileSync(eaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${eaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${eaFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty acceptance criterion fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyAcPath, "--marker", eaMarkerPath,
+          "--label", "issue-only", "--approval-verified", eaFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a verification placeholder ("1. <!-- TODO -->") is not a real step —
+    // the Issue has no verification and is rejected.
+    const placeholderVerifyPath = path.join(dir, "issue-placeholder-verify.md");
+    fs.writeFileSync(
+      placeholderVerifyPath,
+      ["# PV", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real criterion", "", "## Как проверить", "", "1. <!-- TODO -->", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const pvFp = emitFingerprint(placeholderVerifyPath);
+    const pvMarkerPath = path.join(dir, "marker-pv.md");
+    fs.writeFileSync(pvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${pvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${pvFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context placeholder verify fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", placeholderVerifyPath, "--marker", pvMarkerPath,
+          "--label", "issue-only", "--approval-verified", pvFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

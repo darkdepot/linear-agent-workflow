@@ -214,10 +214,16 @@ function normalizeForFingerprint(lines) {
   return out.join("\n");
 }
 
-// Collect only DECLARED acceptance IDs — an id that leads its own line/item
-// ("- AC1: ...", "AC2 ..."), not a cross-reference inside prose ("described by
-// AC99") and not an id inside a fenced example. Otherwise the marker would have to
-// declare referenced-but-nonexistent ids and the oracle would over-report.
+// Real content = at least one letter or digit after HTML comments are removed;
+// list punctuation, headings, fence markers, and comment placeholders don't count.
+function isSubstantiveText(s) {
+  return /[\p{L}\p{N}]/u.test(s.replace(/<!--[^]*?-->/g, ""));
+}
+
+// Collect only DECLARED acceptance IDs — an id that leads its own line/item with a
+// non-empty criterion after it ("- AC1: preserve X"). A cross-reference in prose
+// ("described by AC99"), an id inside a fenced example, and an empty declaration
+// ("- AC1:" or "- AC1: <!-- TODO -->") are NOT usable acceptance criteria.
 function parseAcceptanceIds(lines) {
   const ids = [];
   const seen = new Set();
@@ -229,8 +235,8 @@ function parseAcceptanceIds(lines) {
       continue;
     }
     if (fence) continue; // a fenced example is not a declaration
-    const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(AC\d+)\b/.exec(raw);
-    if (m && !seen.has(m[1])) {
+    const m = /^ {0,3}(?:[-*]|\d+[.)])?\s*(AC\d+)\b\s*:?\s*(.*)$/.exec(raw);
+    if (m && !seen.has(m[1]) && isSubstantiveText(m[2])) {
       seen.add(m[1]);
       ids.push(m[1]);
     }
@@ -251,7 +257,9 @@ function parseVerifySteps(lines) {
   const flush = () => {
     if (current !== null) {
       const text = current.replace(/\s+/g, " ").trim();
-      if (text) steps.push(text);
+      // A step must carry a real instruction — a placeholder like "1. <!-- TODO -->"
+      // or bare list punctuation is not a verification step.
+      if (isSubstantiveText(text)) steps.push(text);
     }
     current = null;
   };
@@ -266,6 +274,7 @@ function parseVerifySteps(lines) {
       if (inner !== "") current = current === null ? inner : `${current} ${inner}`;
       continue;
     }
+    if (/^ {0,3}#{1,6}\s/.test(raw)) continue; // a subsection heading is not a step
     const topItem = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(raw);
     if (topItem) {
       flush();
@@ -303,7 +312,7 @@ function hasSubstantiveContent(lines) {
     if (trimmed === "") continue;
     if (/^(?:```|~~~)/.test(trimmed)) continue; // fence marker
     if (/^#{1,6}\s/.test(trimmed)) continue; // heading (indent already trimmed away)
-    return true;
+    if (/[\p{L}\p{N}]/u.test(trimmed)) return true; // a bare "-" bullet is not content
   }
   return false;
 }
@@ -373,12 +382,15 @@ function extractReviewGateClass(issueText) {
   const text = normalizeLines(
     extractSection(stripMarkerBlock(issueText), SECTION_RE.reviewGate)
   ).toLowerCase();
-  // An explicit re-tier "A→B" / "A->B" records B (the target) as authoritative —
-  // ambiguity moves upward. Otherwise the FIRST class word is the recorded class:
-  // a later mention (e.g. "deep review was considered but not required") is prose,
-  // not the classification, so it never overrides the recorded class.
+  // An explicit re-tier "A→B" / "A->B" records the HIGHER of the two classes —
+  // ambiguity moves upward, never downward, so a "deep→standard" gate stays deep.
+  // Otherwise the FIRST class word is the recorded class: a later mention (e.g.
+  // "deep review was considered but not required") is prose, not the
+  // classification, so it never overrides the recorded class.
   const retier = /(tiny|standard|deep|risky)\s*(?:→|->)\s*(tiny|standard|deep|risky)/.exec(text);
-  if (retier) return retier[2];
+  if (retier) {
+    return RISK_CLASSES.indexOf(retier[1]) >= RISK_CLASSES.indexOf(retier[2]) ? retier[1] : retier[2];
+  }
   const first = /\b(tiny|standard|deep|risky)\b/.exec(text);
   return first ? first[1] : null;
 }
