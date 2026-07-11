@@ -6,7 +6,9 @@
 //
 //   <ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>
 //
-// Checks per scan:
+// Checks per scan (log checks apply only to Issues present in workers.json,
+// the active registry; logs of retired Issues are history and are skipped
+// silently):
 //   (a) age of the last event of each logs/<ISSUE-KEY>-<stage>[-aN].jsonl
 //       (file mtime) against --stall-sec -> stall;
 //   (b) workers.json entries without a live log file -> dead;
@@ -14,6 +16,12 @@
 //       immediately, without waiting for any age threshold;
 //   (d) a log that stopped growing with no writer process evidence
 //       (registry pid gone, or silent for 2x the stall threshold) -> dead.
+// Stall and dead (both branches) are suppressed when a mailbox report for
+// the same issue+stage shows the stage completed: report at least as fresh
+// as the log's last event, or within one stall threshold behind it (the CLI
+// appends its final shutdown events to the log just after the worker writes
+// the report), and never older than the log file's creation time (a prior
+// attempt's report proves nothing about a retry's writer).
 //
 // Read-only by contract: no LLM calls, no writes anywhere — it reads
 // logs/*.jsonl, reports/*.json, and workers.json, and emits to stdout only
@@ -207,12 +215,12 @@ function collectLatestLogs(logsDir) {
   return latestByIssue;
 }
 
-function hasFreshReport(reportsDir, log) {
+function reportMtimeMs(reportsDir, log) {
   const reportPath = path.join(reportsDir, `${log.issue}-${log.stage}.json`);
   try {
-    return fs.statSync(reportPath).mtimeMs >= log.stat.mtimeMs;
+    return fs.statSync(reportPath).mtimeMs;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -234,9 +242,17 @@ function checkLog(log, reportsDir, registry, nowMs) {
   const ageSec = Math.round((nowMs - log.stat.mtimeMs) / 1000);
   if (ageSec < args.stallSec) return;
 
-  // A worker that exited normally leaves a mailbox report at least as fresh
-  // as its log; that is the normal advance signal, not a liveness event.
-  if (hasFreshReport(reportsDir, log)) return;
+  // A worker that exited normally leaves a mailbox report for this stage —
+  // at least as fresh as the log's last event, or within one stall threshold
+  // behind it (the CLI appends its final shutdown events to the log just
+  // after the worker writes the report). That is the normal advance signal,
+  // not a liveness event, so it suppresses stall and both dead branches: a
+  // completed worker's exited pid is its normal terminal state, not death.
+  // The birthtime guard keeps a prior attempt's report from masking a fresh
+  // retry log: a report older than this log file's creation belongs to an
+  // earlier attempt and proves nothing about this writer.
+  const reportMs = reportMtimeMs(reportsDir, log);
+  if (reportMs !== null && reportMs >= log.stat.birthtimeMs && reportMs >= log.stat.mtimeMs - args.stallSec * 1000) return;
 
   const pidState = writerPidState(registry[log.issue]);
   if (pidState === "dead") {
@@ -291,6 +307,11 @@ function scan() {
   const latestLogs = collectLatestLogs(path.join(args.root, "logs"));
   const reportsDir = path.join(args.root, "reports");
   for (const log of latestLogs.values()) {
+    // The watcher observes the active registry, not the directory's history:
+    // only Issues present in workers.json are live workers. Logs whose
+    // ISSUE-KEY has no registry entry belong to retired Issues and are
+    // skipped silently instead of flooding EVENT:dead on every scan.
+    if (!Object.prototype.hasOwnProperty.call(registry, log.issue)) continue;
     checkLog(log, reportsDir, registry, nowMs);
   }
   checkRegistry(registry, nowMs);

@@ -318,6 +318,8 @@ read-only watcher over the orchestrator root: it reads `logs/`, `reports/`,
 and `workers.json`, writes nothing, and emits one stable line per liveness
 event to stdout —
 `<ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>`.
+The watcher observes the active registry (`workers.json`), not the
+directory's history; retired Issues' logs are outside its scope.
 
 - At wave start — before the first worker spawn — the orchestrator must
   start the watcher against the mailbox root:
