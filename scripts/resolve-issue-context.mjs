@@ -165,7 +165,8 @@ function extractSection(text, headingRe, includeHeadings = false) {
       if (capturing) out.push(line); // fenced content, never a heading
       continue;
     }
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    // Markdown allows 0-3 spaces of indentation before a heading (4+ is code).
+    const heading = /^ {0,3}(#{1,6})\s+(.*)$/.exec(line);
     if (heading) {
       const depth = heading[1].length;
       if (capturing) {
@@ -267,14 +268,32 @@ function parseVerifySteps(lines) {
   return steps;
 }
 
-// Substantive = a non-blank line that is neither a fence marker NOR a heading, so
-// an empty fenced block and a bare nested subheading (no body under it) never
-// count as described content.
+// Substantive = a line with visible content that is not merely a fence marker, a
+// heading, or an HTML comment — so an empty fenced block, a bare nested
+// subheading, or an invisible `<!-- ... -->` never counts as described content.
 function hasSubstantiveContent(lines) {
-  return lines.some((line) => {
-    const trimmed = line.trim();
-    return trimmed !== "" && !/^(?:```|~~~)/.test(trimmed) && !/^#{1,6}\s/.test(trimmed);
-  });
+  let inComment = false;
+  for (const rawLine of lines) {
+    let text = rawLine;
+    if (inComment) {
+      const close = text.indexOf("-->");
+      if (close < 0) continue; // the whole line is still inside a comment
+      text = text.slice(close + 3);
+      inComment = false;
+    }
+    text = text.replace(/<!--[^]*?-->/g, ""); // complete comments on this line
+    const open = text.indexOf("<!--");
+    if (open >= 0) {
+      text = text.slice(0, open);
+      inComment = true;
+    }
+    const trimmed = text.trim();
+    if (trimmed === "") continue;
+    if (/^(?:```|~~~)/.test(trimmed)) continue; // fence marker
+    if (/^#{1,6}\s/.test(trimmed)) continue; // heading (indent already trimmed away)
+    return true;
+  }
+  return false;
 }
 
 // True when the Issue has a positive-behavior section (EXACT heading) with
@@ -435,10 +454,19 @@ function stripMarkerBlock(text) {
     // "Endpoint: /admin/delete") ends the block and is never stripped, so
     // normative content after a superseded marker still binds the fingerprint.
     let end = markerIdx + 1;
+    let started = false;
     for (; end < lines.length; end += 1) {
-      const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*/.exec(lines[end].trim());
-      if (kv && recognized.has(normalizeKey(kv[1]))) continue;
-      break;
+      const trimmed = lines[end].trim();
+      if (trimmed === "") {
+        if (started) break; // a blank after the fields ends the block
+        continue; // leading blank before the first field — same as findMarkerBlock
+      }
+      const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*/.exec(trimmed);
+      if (kv && recognized.has(normalizeKey(kv[1]))) {
+        started = true;
+        continue;
+      }
+      break; // any other line ends the block and is never stripped
     }
     lines.splice(markerIdx, end - markerIdx);
   }

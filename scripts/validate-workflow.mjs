@@ -1144,6 +1144,55 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a heading with valid Markdown indentation (1-3 spaces) is recognized,
+    // so content under an indented " ## Scope" section binds the fingerprint.
+    const indentHeadingBase = (tail) =>
+      ["# IH", "", " ## Что сделать", "", tail, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const ihAPath = path.join(dir, "issue-ih-a.md");
+    const ihBPath = path.join(dir, "issue-ih-b.md");
+    fs.writeFileSync(ihAPath, indentHeadingBase("- scope A"));
+    fs.writeFileSync(ihBPath, indentHeadingBase("- scope B"));
+    if (emitFingerprint(ihAPath) === emitFingerprint(ihBPath)) {
+      fail("resolve-issue-context must recognize indented Markdown headings so their content binds the fingerprint");
+    }
+
+    // Guard: a behavior section whose only content is an HTML comment is not
+    // substantive and is rejected — an invisible comment is not described behavior.
+    const htmlCommentPath = path.join(dir, "issue-html-comment.md");
+    fs.writeFileSync(
+      htmlCommentPath,
+      ["# HC", "", "## Что сделать", "", "<!-- TODO: fill this in -->", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const hcFp = emitFingerprint(htmlCommentPath);
+    const hcMarkerPath = path.join(dir, "marker-hc.md");
+    fs.writeFileSync(hcMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hcFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hcFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context html-comment behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", htmlCommentPath, "--marker", hcMarkerPath,
+          "--label", "issue-only", "--approval-verified", hcFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: stripMarkerBlock skips the same leading blank lines findMarkerBlock
+    // allows — an inline marker with a blank line before its fields still resolves.
+    const blankInlineBody = ["# BI", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const blankInlinePath = path.join(dir, "issue-blank-inline.md");
+    fs.writeFileSync(blankInlinePath, blankInlineBody);
+    const biFp = emitFingerprint(blankInlinePath);
+    fs.writeFileSync(
+      blankInlinePath,
+      `${blankInlineBody}\nlinear-issue-only marker\n\nMarker version: 1\nScope fingerprint: ${biFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${biFp}\n`
+    );
+    const blankInline = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", blankInlinePath, "--label", "issue-only", "--approval-verified", biFp])
+    );
+    if (blankInline.package_kind !== "issue-only") {
+      fail("resolve-issue-context must strip an inline marker with a leading blank line before its fields so it resolves issue-only");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
