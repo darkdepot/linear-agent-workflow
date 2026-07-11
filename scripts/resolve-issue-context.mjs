@@ -100,12 +100,21 @@ function readFileOrFail(filePath, label) {
 }
 
 // Extract the content lines of the first flat section whose heading matches.
+// Fenced code blocks are honored: a `# comment` line inside a ``` / ~~~ fence is
+// NOT a heading, so a shell snippet in a section never truncates it and drops the
+// rest of the scope out of the fingerprint.
 function extractSection(text, headingRe) {
   const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
+  let inFence = false;
   for (const line of lines) {
-    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (/^\s*(?:```|~~~)/.test(line)) {
+      inFence = !inFence;
+      if (capturing) out.push(line);
+      continue;
+    }
+    const heading = !inFence && /^(#{1,6})\s+(.*)$/.exec(line);
     if (heading) {
       if (capturing) break; // any subsequent heading ends the flat section
       if (headingRe.test(heading[2])) capturing = true;
@@ -193,17 +202,23 @@ function extractReviewGateClass(issueText) {
   return found;
 }
 
-// Locate the most-recent marker block (most-recent-wins) and parse its
-// contiguous "Key: value" fields. Returns null when no marker line is present.
+// Locate the most-recent marker block (most-recent-wins) and parse its contiguous
+// "Key: value" fields. The marker line must stand ALONE on its own line — a mere
+// prose mention of "linear-issue-only marker" (e.g. an Issue documenting the
+// convention) is not a marker, so such an Issue still resolves to project-first.
+// Returns null when no standalone marker line is present.
 function findMarkerBlock(markerText) {
-  const idx = markerText.lastIndexOf(MARKER_LINE);
-  if (idx < 0) return null;
-  const rest = markerText.slice(idx + MARKER_LINE.length).split(/\r?\n/);
+  const lines = markerText.split(/\r?\n/);
+  let markerIdx = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].trim() === MARKER_LINE) markerIdx = i;
+  }
+  if (markerIdx < 0) return null;
   const fields = {};
   const seen = new Set();
   let started = false;
-  for (const rawLine of rest) {
-    const line = rawLine.trim();
+  for (let i = markerIdx + 1; i < lines.length; i += 1) {
+    const line = lines[i].trim();
     if (line === "" || /^(?:```|~~~)/.test(line)) {
       if (started) break;
       continue;

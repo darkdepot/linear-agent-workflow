@@ -737,6 +737,75 @@ function validateIssueOnlyLaneBehavior() {
     );
     if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
 
+    // Guard: a prose MENTION of the marker line (not standalone) is not a marker —
+    // an Issue documenting the convention still resolves to project-first, never a
+    // spurious broken-marker hard failure (this repo's own Issues do this).
+    const proseIssuePath = path.join(dir, "issue-prose-mention.md");
+    fs.writeFileSync(
+      proseIssuePath,
+      [
+        "# Prose mention",
+        "",
+        "## Что сделать",
+        "",
+        "Document the `linear-issue-only marker` convention; Marker version: 1 is inline prose.",
+        "",
+        "## Критерии приёмки",
+        "",
+        "- AC1: x",
+        "",
+        "## Как проверить",
+        "",
+        "1. step",
+        "",
+        "## Ревью-гейт",
+        "",
+        "- standard",
+        "",
+      ].join("\n")
+    );
+    const prose = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", proseIssuePath]));
+    if (prose.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a prose mention of the marker line as project-first, not a marker");
+    }
+
+    // Guard: a fenced code block inside a section does not truncate it — a
+    // `# comment` inside a ``` fence must not drop the rest of the scope out of
+    // the fingerprint, or scope drift after the fence would go undetected.
+    const fencedBase = [
+      "# Fenced",
+      "",
+      "## Что сделать",
+      "",
+      "```sh",
+      "# setup step (a comment, not a heading)",
+      "run build",
+      "```",
+      "",
+      "FENCED_TAIL after the fence is still scope.",
+      "",
+      "## Критерии приёмки",
+      "",
+      "- AC1: x",
+      "",
+      "## Как проверить",
+      "",
+      "1. step",
+      "",
+      "## Ревью-гейт",
+      "",
+      "- standard",
+      "",
+    ].join("\n");
+    const fencedPath = path.join(dir, "issue-fenced.md");
+    fs.writeFileSync(fencedPath, fencedBase);
+    const fencedFp = emitFingerprint(fencedPath);
+    const fencedMutPath = path.join(dir, "issue-fenced-mut.md");
+    fs.writeFileSync(fencedMutPath, fencedBase.replace("FENCED_TAIL", "FENCED_TAIL_MUTATED"));
+    if (emitFingerprint(fencedMutPath) === fencedFp) {
+      fail("resolve-issue-context fingerprint must include scope after a fenced code block (a fence must not truncate the section)");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
