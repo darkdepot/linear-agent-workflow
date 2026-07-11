@@ -51,6 +51,24 @@ const SECTION_RE = {
   reviewGate: /^(?:ревью-гейт|ревью гейт|review gate)/i,
 };
 
+// Strict positive-behavior heading names (exact, optional trailing colon) for the
+// self-contained completeness gate ONLY, so a negative heading like
+// "Scope exclusions" is never miscounted as described behavior. The fingerprint
+// deliberately keeps the looser SECTION_RE matching so all scope-ish content is
+// still hashed even under an unusual heading.
+const BEHAVIOR_HEADINGS = new Set([
+  "цель pr",
+  "objective",
+  "goal",
+  "goals",
+  "что сделать",
+  "scope",
+  "what to do",
+  "желаемое поведение",
+  "desired behavior",
+  "desired behaviour",
+]);
+
 function usage(exitCode = 2) {
   console.error(
     "Usage: node scripts/resolve-issue-context.mjs --issue <path> [--marker <path>] [--config <path>] [--label <names>] [--approval-verified <fp>] [--emit-fingerprint]"
@@ -210,13 +228,63 @@ function parseAcceptanceIds(lines) {
   return ids;
 }
 
+// Parse verify steps WITHOUT losing multi-line content: each list item carries
+// its continuation, nested, and fenced-command lines, and a verification given as
+// a bare command block (no list) becomes a single step rather than being dropped.
 function parseVerifySteps(lines) {
   const steps = [];
-  for (const line of lines) {
-    const item = /^\s*(?:[-*]|\d+[.)])\s+(.*\S)\s*$/.exec(line);
-    if (item) steps.push(item[1].replace(/\s+/g, " ").trim());
+  let current = null;
+  const flush = () => {
+    if (current !== null) {
+      const text = current.replace(/\s+/g, " ").trim();
+      if (text) steps.push(text);
+    }
+    current = null;
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    const item = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(line);
+    if (item) {
+      flush();
+      current = item[1];
+      continue;
+    }
+    if (line === "" || /^(?:```|~~~)/.test(line)) continue; // skip blanks + fence markers
+    // Continuation / nested / code line: attach to the current step, or open a
+    // step when the verification is a bare command block with no list.
+    current = current === null ? line : `${current} ${line}`;
   }
+  flush();
   return steps;
+}
+
+// True when the Issue has a positive-behavior section (matched by EXACT heading)
+// with any non-empty content — the strict completeness check that a negative
+// heading like "Scope exclusions" or "Out of scope" alone cannot satisfy.
+function hasDescribedBehavior(text) {
+  const lines = text.split(/\r?\n/);
+  let fence = null;
+  let capturing = false;
+  for (const line of lines) {
+    const nextFence = fenceTransition(line, fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      if (capturing && line.trim() !== "") return true;
+      continue;
+    }
+    if (fence) {
+      if (capturing && line.trim() !== "") return true;
+      continue;
+    }
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (heading) {
+      const name = heading[2].trim().replace(/:\s*$/, "").toLowerCase();
+      capturing = BEHAVIOR_HEADINGS.has(name);
+      continue;
+    }
+    if (capturing && line.trim() !== "") return true;
+  }
+  return false;
 }
 
 // Deterministic scope fingerprint = full sha256 over the normalized Issue
@@ -256,15 +324,12 @@ function computeScope(issueText) {
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
   // A self-contained issue-only package must describe its behavior (objective /
   // scope / desired behavior) and its non-goals — not just acceptance + verify.
-  const behaviorText = [SECTION_RE.objective, SECTION_RE.scope, SECTION_RE.desired]
-    .map((re) => normalizeLines(extractSection(body, re)))
-    .join("");
   const nonGoalsText = normalizeLines(extractSection(body, SECTION_RE.nonGoals));
   return {
     acceptanceIds,
     verifySteps,
     fingerprint,
-    hasBehavior: behaviorText.length > 0,
+    hasBehavior: hasDescribedBehavior(body),
     hasNonGoals: nonGoalsText.length > 0,
   };
 }

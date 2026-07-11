@@ -970,6 +970,52 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a verification given as a bare command block (no list) is a valid
+    // step, not "no steps" — the package resolves issue-only and the command is
+    // preserved in the oracle's verify_steps.
+    const cmdVerifyBody = ["# Cmd", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "```sh", "npm test", "```", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cmdVerifyPath = path.join(dir, "issue-cmd-verify.md");
+    fs.writeFileSync(cmdVerifyPath, cmdVerifyBody);
+    const cmdVerifyFp = emitFingerprint(cmdVerifyPath);
+    const cmdVerifyMarkerPath = path.join(dir, "marker-cmd-verify.md");
+    fs.writeFileSync(
+      cmdVerifyMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cmdVerifyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cmdVerifyFp}`].join("\n")}\n`
+    );
+    const cmdVerify = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cmdVerifyPath, "--marker", cmdVerifyMarkerPath, "--label", "issue-only", "--approval-verified", cmdVerifyFp])
+    );
+    if (cmdVerify.package_kind !== "issue-only") {
+      fail("resolve-issue-context must accept a bare command-block verification as a valid step");
+    }
+    if (!cmdVerify.behavioral_oracle.verify_steps.some((step) => step.includes("npm test"))) {
+      fail("resolve-issue-context must preserve command-block content in verify_steps");
+    }
+
+    // Guard: an over-broad positive-scope heading is not counted as behavior — an
+    // Issue whose only scope-ish heading is "Scope exclusions" (a negative) has no
+    // described behavior and is rejected as not self-contained.
+    const scopeExclPath = path.join(dir, "issue-scope-excl.md");
+    fs.writeFileSync(
+      scopeExclPath,
+      ["# SE", "", "## Scope exclusions", "", "- not this", "", "## Acceptance", "", "- AC1: x", "", "## How to verify", "", "1. s", "", "## Out of scope", "", "- nor that", "", "## Review gate", "", "- standard", ""].join("\n")
+    );
+    const scopeExclFp = emitFingerprint(scopeExclPath);
+    const scopeExclMarkerPath = path.join(dir, "marker-scope-excl.md");
+    fs.writeFileSync(
+      scopeExclMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${scopeExclFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${scopeExclFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context scope-exclusions heading fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", scopeExclPath, "--marker", scopeExclMarkerPath,
+          "--label", "issue-only", "--approval-verified", scopeExclFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
