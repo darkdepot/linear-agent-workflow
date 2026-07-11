@@ -635,6 +635,7 @@ function validateDocsAndExamples() {
       "`gpt-5.6-sol` (same-model review)",
       "no-test-edits rule",
       "cross-vendor review whenever the worker",
+      "Cross-vendor review is deliberately not a code-review requirement",
     ],
     "references/artifact-quality.md": ["## PRD", "## Tech Spec", "## Issue", "## Review Findings", "## Preflight Certificate"],
     "references/human-friendly-output.md": ["## Machine Blocks In Linear Comments", "## Linear Exit Comments"],
