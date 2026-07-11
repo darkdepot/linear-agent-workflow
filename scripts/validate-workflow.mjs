@@ -862,6 +862,53 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must treat a fenced marker example as project-first, not an opt-in");
     }
 
+    // Guard: fence type/length is tracked — a ~~~ line inside a ```text block does
+    // not close it, so a `# heading` inside the block cannot truncate the section.
+    const fenceTypeBase = (tail) =>
+      ["# FT", "", "## Что сделать", "", "```text", "~~~", "# not a real heading", tail, "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const fenceTypeAPath = path.join(dir, "issue-fencetype-a.md");
+    const fenceTypeBPath = path.join(dir, "issue-fencetype-b.md");
+    fs.writeFileSync(fenceTypeAPath, fenceTypeBase("payload one"));
+    fs.writeFileSync(fenceTypeBPath, fenceTypeBase("payload two"));
+    if (emitFingerprint(fenceTypeAPath) === emitFingerprint(fenceTypeBPath)) {
+      fail("resolve-issue-context fence tracking must honor fence type so nested content stays in the section");
+    }
+
+    // Guard: a duplicate normative section is not ignored — content in a SECOND
+    // `## Что сделать` is hashed too, so it cannot change post-approval unnoticed.
+    const dupBase = (second) =>
+      ["# Dup", "", "## Что сделать", "", "first scope", "", "## Что сделать", "", second, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const dupAPath = path.join(dir, "issue-dup-a.md");
+    const dupBPath = path.join(dir, "issue-dup-b.md");
+    fs.writeFileSync(dupAPath, dupBase("second scope A"));
+    fs.writeFileSync(dupBPath, dupBase("second scope B"));
+    if (emitFingerprint(dupAPath) === emitFingerprint(dupBPath)) {
+      fail("resolve-issue-context fingerprint must include duplicate normative sections");
+    }
+
+    // Guard: an issue-only package must be a self-contained Issue — missing
+    // scope/behavior or non-goals is rejected even with valid acceptance + verify.
+    const incompletePath = path.join(dir, "issue-incomplete.md");
+    fs.writeFileSync(
+      incompletePath,
+      ["# Incomplete", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const incompleteFp = emitFingerprint(incompletePath);
+    const incompleteMarkerPath = path.join(dir, "marker-incomplete.md");
+    fs.writeFileSync(
+      incompleteMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${incompleteFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${incompleteFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context incomplete contract fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", incompletePath, "--marker", incompleteMarkerPath,
+          "--label", "issue-only", "--approval-verified", incompleteFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",

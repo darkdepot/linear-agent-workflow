@@ -166,12 +166,13 @@ seam. It mirrors the deterministic-config-script structure of
   (`Как проверить`), non-goals (`Что не входит`), and the review-gate risk
   (`Ревью-гейт`). Normalization preserves semantic indentation (nested lists,
   fenced code), so a meaning-changing re-indentation also invalidates an approval.
-  Each section captures its nested subsections, and the sections are hashed with a
-  canonical, unambiguous encoding — so neither a `##` subsection nor a literal
-  `---` line can move content out of a normative field while keeping the
-  fingerprint. Binding the full contract, not just acceptance + verify, is what
-  makes an approval fail when the objective, scope, non-goals, or recorded risk
-  change.
+  Each section captures its nested subsections and any duplicate of the same
+  heading, fenced blocks are tracked by fence type and length, and the sections
+  are hashed with a canonical, unambiguous encoding — so no `##` subsection,
+  duplicate section, mismatched fence, or literal `---` line can move content out
+  of a normative field while keeping the fingerprint. Binding the full contract,
+  not just acceptance + verify, is what makes an approval fail when the objective,
+  scope, non-goals, or recorded risk change.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
   - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒
@@ -184,8 +185,9 @@ seam. It mirrors the deterministic-config-script structure of
     (unknown `Marker version`, a missing field, an unknown extra field beyond the
     five, an unparseable line inside the machine block, a duplicate field, an
     invalid `Risk class`, a `Risk class` that does not match the Issue
-    review-gate, an empty behavioral oracle, mismatched `Acceptance IDs`, or a
-    forbidden route-record field), `issue-only-lane: stale marker: scope
+    review-gate, an empty behavioral oracle, an incomplete self-contained contract
+    (no described scope/behavior or no non-goals), mismatched `Acceptance IDs`, or
+    a forbidden route-record field), `issue-only-lane: stale marker: scope
     fingerprint mismatch …`, and `issue-only-lane: invalid config: …` for a
     malformed `issueOnlyLane.enabled`. It is never silently resolved as
     issue-only.

@@ -99,36 +99,58 @@ function readFileOrFail(filePath, label) {
   }
 }
 
-// Extract the content lines of the section whose heading matches, INCLUDING its
-// nested subsections. Two structures are honored so nothing normative silently
-// escapes the fingerprint:
-//   - Fenced code blocks: a `# comment` inside a ``` / ~~~ fence is NOT a heading,
-//     so a shell snippet never truncates the section.
-//   - Heading depth: a sibling or shallower heading ends the section, but a
-//     DEEPER (nested) heading and its content stay in — so a `## Edge cases`
-//     under `# Что сделать` still participates in the hash and in AC/verify parse.
+// CommonMark-ish fenced-block tracking. A fence opens with >=3 backticks or
+// tildes; it closes ONLY on a bare line of the SAME character at >= the opening
+// length. A mismatched or shorter fence inside the block (e.g. ~~~ inside ```) is
+// content, not a close — so it can't prematurely re-expose headings.
+function fenceTransition(line, open) {
+  const match = /^\s*(`{3,}|~{3,})\s*(.*)$/.exec(line);
+  if (!match) return open;
+  const char = match[1][0];
+  const len = match[1].length;
+  if (open === null) return { char, len };
+  if (char === open.char && len >= open.len && match[2].trim() === "") return null;
+  return open;
+}
+
+// Extract the content lines of EVERY section whose heading matches, including
+// nested subsections, across the whole document. Three structures are honored so
+// nothing normative silently escapes the fingerprint:
+//   - Fenced code blocks (type/length-aware): a `# comment` inside a fence is not
+//     a heading, so a snippet never truncates the section.
+//   - Heading depth: a sibling or shallower heading ends the current section, but
+//     a DEEPER (nested) heading and its content stay in.
+//   - Duplicates: a second matching heading re-opens capture, so both sections'
+//     content is included — a duplicate normative section is never dropped.
 function extractSection(text, headingRe) {
   const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
   let capturedDepth = 0;
-  let inFence = false;
+  let fence = null;
   for (const line of lines) {
-    if (/^\s*(?:```|~~~)/.test(line)) {
-      inFence = !inFence;
+    const nextFence = fenceTransition(line, fence);
+    if (nextFence !== fence) {
+      fence = nextFence; // this line opened or closed a fenced block
       if (capturing) out.push(line);
       continue;
     }
-    const heading = !inFence && /^(#{1,6})\s+(.*)$/.exec(line);
+    if (fence) {
+      if (capturing) out.push(line); // fenced content, never a heading
+      continue;
+    }
+    const heading = /^(#{1,6})\s+(.*)$/.exec(line);
     if (heading) {
       const depth = heading[1].length;
       if (capturing) {
-        if (depth <= capturedDepth) break; // sibling/shallower heading ends it
-        out.push(line); // deeper (nested) heading stays in the section
-        continue;
+        if (depth > capturedDepth) {
+          out.push(line); // nested heading stays in the section
+          continue;
+        }
+        capturing = false; // sibling/shallower heading ends the current section
       }
       if (headingRe.test(heading[2])) {
-        capturing = true;
+        capturing = true; // (re-)open on any matching heading, so duplicates count
         capturedDepth = depth;
       }
       continue;
@@ -214,7 +236,23 @@ function computeScope(issueText) {
   // cannot shuffle text across normative fields while preserving the hash, the
   // way a raw "\n---\n" delimiter would allow.
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
-  return { acceptanceIds, verifySteps, fingerprint };
+  // A self-contained issue-only package must describe its behavior (objective /
+  // scope / desired behavior) and its non-goals — not just acceptance + verify.
+  const behaviorText = [
+    /(?:цель pr|objective|goal)/i,
+    /(?:что сделать|scope|what to do)/i,
+    /(?:желаемое поведение|desired behaviou?r)/i,
+  ]
+    .map((re) => normalizeLines(extractSection(issueText, re)))
+    .join("");
+  const nonGoalsText = normalizeLines(extractSection(issueText, /(?:что не входит|non-goals|out of scope)/i));
+  return {
+    acceptanceIds,
+    verifySteps,
+    fingerprint,
+    hasBehavior: behaviorText.length > 0,
+    hasNonGoals: nonGoalsText.length > 0,
+  };
 }
 
 // Read (never re-derive) the authoritative risk class recorded in the Issue's
@@ -241,15 +279,16 @@ function extractReviewGateClass(issueText) {
 function findMarkerBlock(markerText) {
   const lines = markerText.split(/\r?\n/);
   let markerIdx = -1;
-  let inFence = false;
+  let fence = null;
   for (let i = 0; i < lines.length; i += 1) {
-    if (/^\s*(?:```|~~~)/.test(lines[i])) {
-      inFence = !inFence;
+    const nextFence = fenceTransition(lines[i], fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
       continue;
     }
     // A marker line inside a fenced code block is a documentation EXAMPLE, not an
     // opt-in — only a standalone line outside any fence is a real marker.
-    if (!inFence && lines[i].trim() === MARKER_LINE) markerIdx = i;
+    if (!fence && lines[i].trim() === MARKER_LINE) markerIdx = i;
   }
   if (markerIdx < 0) return null;
   const fields = {};
@@ -405,6 +444,11 @@ function resolve(args) {
   // also rejects a marker whose "Acceptance IDs: ," parses to an empty list.
   if (scope.acceptanceIds.length === 0 || scope.verifySteps.length === 0) {
     violation("broken marker: issue-only requires at least one acceptance ID and one verify step");
+  }
+  // A self-contained Issue must also describe its behavior and its non-goals —
+  // otherwise the lane would bypass Project/PRD/Spec with an undescribed contract.
+  if (!scope.hasBehavior || !scope.hasNonGoals) {
+    violation("broken marker: issue-only requires a described scope/behavior and explicit non-goals (self-contained Issue)");
   }
 
   const markerAcceptanceIds = parseIdList(normalizedKeys.get("acceptance ids"));
