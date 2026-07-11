@@ -148,7 +148,7 @@ function fenceTransition(line, open) {
 //     a DEEPER (nested) heading and its content stay in.
 //   - Duplicates: a second matching heading re-opens capture, so both sections'
 //     content is included — a duplicate normative section is never dropped.
-function extractSection(text, headingRe) {
+function extractSection(text, headingRe, includeHeadings = false) {
   const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
@@ -178,6 +178,10 @@ function extractSection(text, headingRe) {
       if (headingRe.test(heading[2])) {
         capturing = true; // (re-)open on any matching heading, so duplicates count
         capturedDepth = depth;
+        // Bind the matched heading text into the output for the fingerprint, so a
+        // meaning-changing rename (e.g. "Scope" → "Scope exclusions") changes the
+        // hash even though it maps the same content into the same slot.
+        if (includeHeadings) out.push(line);
       }
       continue;
     }
@@ -263,12 +267,13 @@ function parseVerifySteps(lines) {
   return steps;
 }
 
-// Substantive = a non-blank line that is not merely a fence marker, so an empty
-// fenced block never counts as content.
+// Substantive = a non-blank line that is neither a fence marker NOR a heading, so
+// an empty fenced block and a bare nested subheading (no body under it) never
+// count as described content.
 function hasSubstantiveContent(lines) {
   return lines.some((line) => {
     const trimmed = line.trim();
-    return trimmed !== "" && !/^(?:```|~~~)/.test(trimmed);
+    return trimmed !== "" && !/^(?:```|~~~)/.test(trimmed) && !/^#{1,6}\s/.test(trimmed);
   });
 }
 
@@ -312,19 +317,19 @@ function computeScope(issueText) {
   // Indentation-preserving normalization so semantic whitespace changes the hash,
   // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
   // collision target for the approval trust boundary.
-  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(body, re)));
+  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(body, re, true)));
   // Canonical, unambiguous section encoding — a literal "---" inside a section
   // cannot shuffle text across normative fields while preserving the hash.
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
   // A self-contained issue-only package must describe its behavior (objective /
-  // scope / desired behavior) and its non-goals — not just acceptance + verify.
-  const nonGoalsText = normalizeLines(extractSection(body, SECTION_RE.nonGoals));
+  // scope / desired behavior) and its non-goals — not just acceptance + verify,
+  // and a bare heading with no body under it does not satisfy either.
   return {
     acceptanceIds,
     verifySteps,
     fingerprint,
     hasBehavior: hasDescribedBehavior(body),
-    hasNonGoals: nonGoalsText.length > 0,
+    hasNonGoals: hasSubstantiveContent(extractSection(body, SECTION_RE.nonGoals)),
   };
 }
 
@@ -402,6 +407,7 @@ function findMarkerBlock(markerText) {
 // inline renewal — must leave the hashed scope, or an old block would bind stale
 // marker metadata (its fingerprint / risk) into the fingerprint and review-gate.
 function stripMarkerBlock(text) {
+  const recognized = new Set(REQUIRED_MARKER_FIELDS.map(normalizeKey));
   const lines = text.split(/\r?\n/);
   for (;;) {
     let markerIdx = -1;
@@ -418,20 +424,14 @@ function stripMarkerBlock(text) {
       }
     }
     if (markerIdx < 0) break;
-    // Drop the marker line and its contiguous field block (fields until a blank
-    // line, a fence, or a non-field line).
+    // Drop the marker line and ONLY its contiguous recognized marker fields. A
+    // non-marker line (blank, fence, or arbitrary Issue text like
+    // "Endpoint: /admin/delete") ends the block and is never stripped, so
+    // normative content after a superseded marker still binds the fingerprint.
     let end = markerIdx + 1;
-    let started = false;
     for (; end < lines.length; end += 1) {
-      const trimmed = lines[end].trim();
-      if (trimmed === "" || /^\s*(?:```|~~~)/.test(lines[end])) {
-        if (started) break;
-        continue;
-      }
-      if (/^[A-Za-z][A-Za-z0-9 _-]*?:\s*/.test(trimmed)) {
-        started = true;
-        continue;
-      }
+      const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*/.exec(lines[end].trim());
+      if (kv && recognized.has(normalizeKey(kv[1]))) continue;
       break;
     }
     lines.splice(markerIdx, end - markerIdx);

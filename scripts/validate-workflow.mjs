@@ -1065,6 +1065,52 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: stripMarkerBlock removes ONLY recognized marker fields — normative
+    // text like "Endpoint: /admin/delete" after a (superseded) marker line stays
+    // in the fingerprint, so changing it stales the approval.
+    const afterMarker = (endpoint) =>
+      ["# AM", "", "## Что сделать", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeefdead", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `Endpoint: ${endpoint}`, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const amAPath = path.join(dir, "issue-am-a.md");
+    const amBPath = path.join(dir, "issue-am-b.md");
+    fs.writeFileSync(amAPath, afterMarker("/admin/read"));
+    fs.writeFileSync(amBPath, afterMarker("/admin/delete"));
+    if (emitFingerprint(amAPath) === emitFingerprint(amBPath)) {
+      fail("resolve-issue-context must keep non-marker content after a marker line in the fingerprint");
+    }
+
+    // Guard: a meaning-changing heading rename changes the fingerprint — the
+    // matched heading text is bound into the hash, so "Scope" vs "Scope exclusions"
+    // (mapping the same body) are distinct.
+    const renameBody = (scopeHeading) =>
+      ["# RN", "", `## ${scopeHeading}`, "", "- the body", "", "## Objective", "", "the objective", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const rnAPath = path.join(dir, "issue-rn-a.md");
+    const rnBPath = path.join(dir, "issue-rn-b.md");
+    fs.writeFileSync(rnAPath, renameBody("Scope"));
+    fs.writeFileSync(rnBPath, renameBody("Scope exclusions"));
+    if (emitFingerprint(rnAPath) === emitFingerprint(rnBPath)) {
+      fail("resolve-issue-context must bind the matched heading text into the fingerprint (a rename changes the hash)");
+    }
+
+    // Guard: a bare nested subheading with no body under it is not substantive
+    // behavior — the completeness gate rejects it.
+    const emptyNestedPath = path.join(dir, "issue-empty-nested.md");
+    fs.writeFileSync(
+      emptyNestedPath,
+      ["# EN", "", "## Что сделать", "", "### Details", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const enFp = emitFingerprint(emptyNestedPath);
+    const enMarkerPath = path.join(dir, "marker-en.md");
+    fs.writeFileSync(enMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${enFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${enFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty nested behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyNestedPath, "--marker", enMarkerPath,
+          "--label", "issue-only", "--approval-verified", enFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
