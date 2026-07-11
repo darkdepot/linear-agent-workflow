@@ -6,6 +6,19 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-07-11
+
+Hotfix release from the first live run of the heartbeat watcher against a real orchestrator directory (MONO-11).
+
+### Fixed
+
+- `scripts/watch-workers.mjs` no longer emits `EVENT:dead` for retired Issues: log checks are scoped to Issues present in the active `workers.json` registry; a directory's historical logs are outside the watcher's scope. Registry-side checks (entry-without-log, pid-gone) are unchanged.
+- Completed-but-unconsumed workers no longer trigger false `EVENT:stall`/`EVENT:dead`: a terminal mailbox report for the same Issue+stage suppresses events even when the Codex CLI's final shutdown writes leave the report marginally older than the log (grace window of one stall threshold), guarded by the log's birthtime so a prior-attempt report can never mask a genuine retry death.
+
+### Added
+
+- Heartbeat contract sentence in `references/orchestration.md` — the watcher observes the active registry, not the directory's history — pinned in `scripts/validate-workflow.mjs`; before/after fixture reproductions and discrimination probes recorded in `docs/spikes/mono-1-watcher-spike.md`.
+
 ## [0.18.0] - 2026-07-11
 
 Wave-2 hardening release: MONO-5 through MONO-10 close the contract, hygiene, telemetry, integrity, and ops gaps found while dogfooding orchestrated delivery, and amend the autoreview model routing.
