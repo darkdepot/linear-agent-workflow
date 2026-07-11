@@ -72,7 +72,11 @@ either is missing.
 - **Recovery:** most-recent-wins. The most recent **standalone** `linear-issue-only
   marker` line, **outside any fenced code block**, is authoritative; older marker
   comments are superseded. A prose mention or a fenced documentation example of
-  the marker format is never treated as an opt-in.
+  the marker format is never treated as an opt-in. For an inline marker (the Issue
+  body used as the marker source), **every** marker block — the authoritative
+  newest and any superseded older one — is removed before the scope is hashed, so
+  a renewal never binds stale marker metadata into the fingerprint or the
+  review-gate class.
 
 ## Marker ≠ Route-Record
 

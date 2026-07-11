@@ -927,6 +927,25 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context inline marker must be stripped before hashing so it resolves issue-only, not stale");
     }
 
+    // Guard: most-recent-wins recovery for INLINE markers — a renewed (second)
+    // inline marker is authoritative, and BOTH the superseded and the fresh blocks
+    // are stripped before hashing, so an old block (stale fingerprint, higher risk)
+    // never binds into the fingerprint or contaminates the review-gate class.
+    const renewBody = ["# Renew", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const renewPath = path.join(dir, "issue-renew.md");
+    fs.writeFileSync(renewPath, renewBody);
+    const renewFp = emitFingerprint(renewPath);
+    fs.writeFileSync(
+      renewPath,
+      `${renewBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: deadbeefdead\nAcceptance IDs: AC1, AC2\nRisk class: deep\nApproval: deadbeefdead\n\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${renewFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${renewFp}\n`
+    );
+    const renewResolved = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", renewPath, "--label", "issue-only", "--approval-verified", renewFp])
+    );
+    if (renewResolved.package_kind !== "issue-only") {
+      fail("resolve-issue-context must strip ALL inline markers (superseded + fresh) and honor the newest, so a renewed inline marker resolves issue-only");
+    }
+
     // Guard: negative headings are not miscounted as behavior — an English Issue
     // with only Non-goals (plus acceptance + verify) has no described behavior and
     // is rejected, not admitted as a self-contained package.

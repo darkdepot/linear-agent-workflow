@@ -337,40 +337,46 @@ function findMarkerBlock(markerText) {
   return fields;
 }
 
-// Remove the authoritative (last, unfenced) marker block from issue text so the
-// scope fingerprint never hashes the marker itself. An inline marker (the issue
-// body used as the marker source) would otherwise fold its own fingerprint field
-// into a section and always read stale. Mirrors findMarkerBlock's discovery.
+// Remove EVERY standalone, unfenced marker block from issue text so the scope
+// fingerprint never hashes a marker. most-recent-wins parses only the newest as
+// authoritative, but ALL blocks — including superseded ones left behind by an
+// inline renewal — must leave the hashed scope, or an old block would bind stale
+// marker metadata (its fingerprint / risk) into the fingerprint and review-gate.
 function stripMarkerBlock(text) {
   const lines = text.split(/\r?\n/);
-  let markerIdx = -1;
-  let fence = null;
-  for (let i = 0; i < lines.length; i += 1) {
-    const nextFence = fenceTransition(lines[i], fence);
-    if (nextFence !== fence) {
-      fence = nextFence;
-      continue;
+  for (;;) {
+    let markerIdx = -1;
+    let fence = null;
+    for (let i = 0; i < lines.length; i += 1) {
+      const nextFence = fenceTransition(lines[i], fence);
+      if (nextFence !== fence) {
+        fence = nextFence;
+        continue;
+      }
+      if (!fence && lines[i].trim() === MARKER_LINE) {
+        markerIdx = i;
+        break; // remove blocks one at a time, front to back
+      }
     }
-    if (!fence && lines[i].trim() === MARKER_LINE) markerIdx = i;
+    if (markerIdx < 0) break;
+    // Drop the marker line and its contiguous field block (fields until a blank
+    // line, a fence, or a non-field line).
+    let end = markerIdx + 1;
+    let started = false;
+    for (; end < lines.length; end += 1) {
+      const trimmed = lines[end].trim();
+      if (trimmed === "" || /^\s*(?:```|~~~)/.test(lines[end])) {
+        if (started) break;
+        continue;
+      }
+      if (/^[A-Za-z][A-Za-z0-9 _-]*?:\s*/.test(trimmed)) {
+        started = true;
+        continue;
+      }
+      break;
+    }
+    lines.splice(markerIdx, end - markerIdx);
   }
-  if (markerIdx < 0) return text;
-  // Drop the marker line and its contiguous field block (fields until a blank
-  // line, a fence, or a non-field line).
-  let end = markerIdx + 1;
-  let started = false;
-  for (; end < lines.length; end += 1) {
-    const trimmed = lines[end].trim();
-    if (trimmed === "" || /^\s*(?:```|~~~)/.test(lines[end])) {
-      if (started) break;
-      continue;
-    }
-    if (/^[A-Za-z][A-Za-z0-9 _-]*?:\s*/.test(trimmed)) {
-      started = true;
-      continue;
-    }
-    break;
-  }
-  lines.splice(markerIdx, end - markerIdx);
   return lines.join("\n");
 }
 
