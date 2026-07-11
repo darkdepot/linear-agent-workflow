@@ -570,6 +570,1314 @@ function validateProjectConfigBehavior() {
   }
 }
 
+function validateIssueOnlyLaneBehavior() {
+  // String pins: the doc fixes the marker line, the five marker fields, the
+  // 5-field contract, the marker ≠ route-record boundary, and the fail-closed
+  // invariant.
+  for (const pin of [
+    "linear-issue-only marker",
+    "Marker version: 1",
+    "Scope fingerprint",
+    "Acceptance IDs",
+    "Risk class",
+    "Approval",
+    "маркер ≠ route-record",
+    "route_revision",
+    "assurance_vector",
+    "required_artifacts",
+    "package_kind",
+    "lifecycle_state_entity",
+    "behavioral_oracle",
+    "issue-verification",
+    "risk_class",
+    "approval_status",
+    "no marker ⇒ `package_kind=project-first`",
+    "scripts/resolve-issue-context.mjs",
+    "Not a spine-resolver",
+  ]) {
+    assertIncludes("references/issue-only-lane.md", pin);
+  }
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-issue-only-"));
+  try {
+    const issuePath = path.join(dir, "issue.md");
+    const markerPath = path.join(dir, "marker.md");
+    fs.writeFileSync(
+      issuePath,
+      [
+        "# Fixture Issue",
+        "",
+        "## Что сделать",
+        "",
+        "- SCOPE_SENTINEL build the resolver seam",
+        "",
+        "## Acceptance",
+        "",
+        "- AC1: resolver prints five fields",
+        "- AC2: missing marker yields project-first",
+        "",
+        "## How to verify",
+        "",
+        "1. run resolver on a valid marker",
+        "2. run resolver with no marker",
+        "",
+        "## Что не входит",
+        "",
+        "- NONGOALS_SENTINEL skill wiring",
+        "",
+        "## Ревью-гейт",
+        "",
+        "- REVIEWGATE_SENTINEL standard, pre-ship review",
+        "",
+      ].join("\n")
+    );
+
+    const writeMarker = (fields) =>
+      fs.writeFileSync(markerPath, `${["linear-issue-only marker", ...fields].join("\n")}\n`);
+
+    // Fixture 1 — legacy-unchanged: a project-first issue (no marker) resolves
+    // to project-first. The lane never activates without a marker.
+    const legacy = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath]));
+    if (legacy.package_kind !== "project-first") fail("resolve-issue-context legacy issue must be project-first");
+    if (legacy.lifecycle_state_entity !== "project") fail("resolve-issue-context project-first must read the Project lifecycle entity");
+    if (legacy.behavioral_oracle !== null) fail("resolve-issue-context project-first must have no behavioral oracle");
+    if (legacy.risk_class !== null) fail("resolve-issue-context project-first must not synthesize a risk class");
+    if (legacy.approval_status !== "absent") fail("resolve-issue-context project-first approval must be absent");
+
+    // Compute the correct fingerprint via the resolver's own helper so the
+    // happy fixture never duplicates the hash.
+    const fingerprint = runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--emit-fingerprint"]).trim();
+
+    // The two trusted, caller-verified signals every issue-only resolution needs
+    // on top of a valid marker: the verified issue-only label and the owner-
+    // approval fingerprint the caller confirmed against the authenticated comment.
+    const issueOnlyArgs = ["--label", "issue-only", "--approval-verified", fingerprint];
+
+    // Fixture 2 — happy: a valid marker plus both trusted signals resolves the
+    // five fields correctly.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint} (approved by owner)`,
+    ]);
+    const happy = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
+    );
+    if (happy.package_kind !== "issue-only") fail("resolve-issue-context valid marker must be issue-only");
+    if (happy.lifecycle_state_entity !== "issue") fail("resolve-issue-context issue-only must read the Issue lifecycle entity");
+    if (!happy.behavioral_oracle || happy.behavioral_oracle.kind !== "issue-verification") {
+      fail("resolve-issue-context issue-only oracle kind must be issue-verification");
+    }
+    if (JSON.stringify(happy.behavioral_oracle?.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context issue-only oracle must carry the Issue acceptance IDs");
+    }
+    if (!Array.isArray(happy.behavioral_oracle?.verify_steps) || happy.behavioral_oracle.verify_steps.length !== 2) {
+      fail("resolve-issue-context issue-only oracle must carry the Issue verify steps");
+    }
+    if (happy.risk_class !== "standard") fail("resolve-issue-context issue-only must read the recorded risk class");
+    if (happy.approval_status !== "approved-fresh") {
+      fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
+    }
+
+    // Guard (must-fix #3): the fingerprint binds the FULL Issue contract, not
+    // just acceptance + verify. Mutating the scope or the non-goals section must
+    // change the fingerprint, so an approval can never survive a contract change.
+    const emitFingerprint = (issueFile) =>
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issueFile, "--emit-fingerprint"]).trim();
+    const fullBody = fs.readFileSync(issuePath, "utf8");
+    for (const [sentinel, label] of [
+      ["SCOPE_SENTINEL", "scope/what-to-do"],
+      ["NONGOALS_SENTINEL", "non-goals"],
+      ["REVIEWGATE_SENTINEL", "review-gate risk"],
+    ]) {
+      const mutatedPath = path.join(dir, `issue-mutated-${sentinel}.md`);
+      fs.writeFileSync(mutatedPath, fullBody.replace(sentinel, `${sentinel}_MUTATED`));
+      if (emitFingerprint(mutatedPath) === fingerprint) {
+        fail(`resolve-issue-context fingerprint must cover the ${label} section`);
+      }
+    }
+
+    // Guard: issue-only requires BOTH the verified label AND a fresh caller-
+    // verified approval. Drop either and a fully valid marker fails closed to
+    // project-first — marker text alone never activates the lane.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    const noLabel = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--approval-verified", fingerprint])
+    );
+    if (noLabel.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first without the verified issue-only label");
+    }
+    // A full label name is matched — "not issue-only" (one label with a space) is
+    // not the "issue-only" opt-in and must not activate the lane.
+    const wrongLabel = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "not issue-only", "--approval-verified", fingerprint])
+    );
+    if (wrongLabel.package_kind !== "project-first") {
+      fail("resolve-issue-context must match the full label name, not a bare word inside a longer label");
+    }
+    const noApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only"])
+    );
+    if (noApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first without a caller-verified approval");
+    }
+    const wrongApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+    );
+    if (wrongApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when the caller-verified approval does not match the scope fingerprint");
+    }
+
+    // Fixture 3 — missing-marker: a marker source without the marker line is
+    // fail-closed to project-first (never silently issue-only).
+    const emptyMarkerPath = path.join(dir, "empty.md");
+    fs.writeFileSync(emptyMarkerPath, "no marker here\n");
+    const missing = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", emptyMarkerPath])
+    );
+    if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
+
+    // Guard: a prose MENTION of the marker line (not standalone) is not a marker —
+    // an Issue documenting the convention still resolves to project-first, never a
+    // spurious broken-marker hard failure (this repo's own Issues do this).
+    const proseIssuePath = path.join(dir, "issue-prose-mention.md");
+    fs.writeFileSync(
+      proseIssuePath,
+      [
+        "# Prose mention",
+        "",
+        "## Что сделать",
+        "",
+        "Document the `linear-issue-only marker` convention; Marker version: 1 is inline prose.",
+        "",
+        "## Критерии приёмки",
+        "",
+        "- AC1: x",
+        "",
+        "## Как проверить",
+        "",
+        "1. step",
+        "",
+        "## Ревью-гейт",
+        "",
+        "- standard",
+        "",
+      ].join("\n")
+    );
+    const prose = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", proseIssuePath]));
+    if (prose.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a prose mention of the marker line as project-first, not a marker");
+    }
+
+    // Guard: a fenced code block inside a section does not truncate it — a
+    // `# comment` inside a ``` fence must not drop the rest of the scope out of
+    // the fingerprint, or scope drift after the fence would go undetected.
+    const fencedBase = [
+      "# Fenced",
+      "",
+      "## Что сделать",
+      "",
+      "```sh",
+      "# setup step (a comment, not a heading)",
+      "run build",
+      "```",
+      "",
+      "FENCED_TAIL after the fence is still scope.",
+      "",
+      "## Критерии приёмки",
+      "",
+      "- AC1: x",
+      "",
+      "## Как проверить",
+      "",
+      "1. step",
+      "",
+      "## Ревью-гейт",
+      "",
+      "- standard",
+      "",
+    ].join("\n");
+    const fencedPath = path.join(dir, "issue-fenced.md");
+    fs.writeFileSync(fencedPath, fencedBase);
+    const fencedFp = emitFingerprint(fencedPath);
+    const fencedMutPath = path.join(dir, "issue-fenced-mut.md");
+    fs.writeFileSync(fencedMutPath, fencedBase.replace("FENCED_TAIL", "FENCED_TAIL_MUTATED"));
+    if (emitFingerprint(fencedMutPath) === fencedFp) {
+      fail("resolve-issue-context fingerprint must include scope after a fenced code block (a fence must not truncate the section)");
+    }
+
+    // Guard: semantic indentation is part of the fingerprint — re-indenting a
+    // fenced code block in the scope changes the hash, so no meaning-changing
+    // whitespace edit can slip past an existing approval.
+    const indentA = ["# Ind", "", "## Что сделать", "", "```python", "def f():", "    return 1", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const indentAPath = path.join(dir, "issue-indent-a.md");
+    const indentBPath = path.join(dir, "issue-indent-b.md");
+    fs.writeFileSync(indentAPath, indentA);
+    fs.writeFileSync(indentBPath, indentA.replace("    return 1", "        return 1"));
+    if (emitFingerprint(indentAPath) === emitFingerprint(indentBPath)) {
+      fail("resolve-issue-context fingerprint must be sensitive to semantic indentation in the scope");
+    }
+
+    // Guard: the full 64-hex sha256 is emitted, never a truncated hash (a short
+    // hash is a collision target for the approval binding).
+    if (!/^[0-9a-f]{64}$/.test(emitFingerprint(indentAPath))) {
+      fail("resolve-issue-context must emit the full 64-hex sha256 fingerprint");
+    }
+
+    // Guard: a nested subsection under a normative heading still participates in
+    // the fingerprint — content under `### Edge cases` inside `## Что сделать` is
+    // hashed, so edits there invalidate an approval.
+    const nestedBase = (tail) =>
+      ["# N", "", "## Что сделать", "", "intro line", "", "### Edge cases", "", tail, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedAPath = path.join(dir, "issue-nested-a.md");
+    const nestedBPath = path.join(dir, "issue-nested-b.md");
+    fs.writeFileSync(nestedAPath, nestedBase("handle empty input"));
+    fs.writeFileSync(nestedBPath, nestedBase("handle HUGE input differently"));
+    if (emitFingerprint(nestedAPath) === emitFingerprint(nestedBPath)) {
+      fail("resolve-issue-context fingerprint must include content under nested subsections");
+    }
+
+    // Guard: section boundaries are canonically encoded — moving a "---"-delimited
+    // fragment from one section into an adjacent one changes the fingerprint (a
+    // raw delimiter join would let it collide).
+    const boundary = (scope, desired) =>
+      ["# B", "", "## Что сделать", "", scope, "", "## Желаемое поведение", "", desired, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const boundaryAPath = path.join(dir, "issue-boundary-a.md");
+    const boundaryBPath = path.join(dir, "issue-boundary-b.md");
+    fs.writeFileSync(boundaryAPath, boundary("keep", "moved"));
+    fs.writeFileSync(boundaryBPath, boundary("keep\n\n---\n\nmoved", ""));
+    if (emitFingerprint(boundaryAPath) === emitFingerprint(boundaryBPath)) {
+      fail("resolve-issue-context fingerprint must unambiguously encode section boundaries");
+    }
+
+    // Guard: a fenced EXAMPLE of the marker format is not an opt-in — an Issue
+    // documenting the format in a code fence still resolves to project-first.
+    const fencedMarkerPath = path.join(dir, "issue-fenced-marker.md");
+    fs.writeFileSync(
+      fencedMarkerPath,
+      ["# Doc", "", "## Что сделать", "", "Example marker format:", "", "```text", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: abc", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const fencedMarker = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", fencedMarkerPath]));
+    if (fencedMarker.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a fenced marker example as project-first, not an opt-in");
+    }
+
+    // Guard: fence type/length is tracked — a ~~~ line inside a ```text block does
+    // not close it, so a `# heading` inside the block cannot truncate the section.
+    const fenceTypeBase = (tail) =>
+      ["# FT", "", "## Что сделать", "", "```text", "~~~", "# not a real heading", tail, "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const fenceTypeAPath = path.join(dir, "issue-fencetype-a.md");
+    const fenceTypeBPath = path.join(dir, "issue-fencetype-b.md");
+    fs.writeFileSync(fenceTypeAPath, fenceTypeBase("payload one"));
+    fs.writeFileSync(fenceTypeBPath, fenceTypeBase("payload two"));
+    if (emitFingerprint(fenceTypeAPath) === emitFingerprint(fenceTypeBPath)) {
+      fail("resolve-issue-context fence tracking must honor fence type so nested content stays in the section");
+    }
+
+    // Guard: a duplicate normative section is not ignored — content in a SECOND
+    // `## Что сделать` is hashed too, so it cannot change post-approval unnoticed.
+    const dupBase = (second) =>
+      ["# Dup", "", "## Что сделать", "", "first scope", "", "## Что сделать", "", second, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const dupAPath = path.join(dir, "issue-dup-a.md");
+    const dupBPath = path.join(dir, "issue-dup-b.md");
+    fs.writeFileSync(dupAPath, dupBase("second scope A"));
+    fs.writeFileSync(dupBPath, dupBase("second scope B"));
+    if (emitFingerprint(dupAPath) === emitFingerprint(dupBPath)) {
+      fail("resolve-issue-context fingerprint must include duplicate normative sections");
+    }
+
+    // Guard: an issue-only package must be a self-contained Issue — missing
+    // scope/behavior or non-goals is rejected even with valid acceptance + verify.
+    const incompletePath = path.join(dir, "issue-incomplete.md");
+    fs.writeFileSync(
+      incompletePath,
+      ["# Incomplete", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const incompleteFp = emitFingerprint(incompletePath);
+    const incompleteMarkerPath = path.join(dir, "marker-incomplete.md");
+    fs.writeFileSync(
+      incompleteMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${incompleteFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${incompleteFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context incomplete contract fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", incompletePath, "--marker", incompleteMarkerPath,
+          "--label", "issue-only", "--approval-verified", incompleteFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: an INLINE marker (marker source defaults to the issue body) is
+    // stripped before hashing, so its own fingerprint field does not change the
+    // hash — the package resolves issue-only, never self-referentially stale.
+    const inlineBody = ["# Inline", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const inlinePath = path.join(dir, "issue-inline.md");
+    fs.writeFileSync(inlinePath, inlineBody);
+    const inlineFp = emitFingerprint(inlinePath);
+    fs.writeFileSync(
+      inlinePath,
+      `${inlineBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${inlineFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${inlineFp}\n`
+    );
+    const inlineResolved = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", inlinePath, "--label", "issue-only", "--approval-verified", inlineFp])
+    );
+    if (inlineResolved.package_kind !== "issue-only") {
+      fail("resolve-issue-context inline marker must be stripped before hashing so it resolves issue-only, not stale");
+    }
+
+    // Guard: most-recent-wins recovery for INLINE markers — a renewed (second)
+    // inline marker is authoritative, and BOTH the superseded and the fresh blocks
+    // are stripped before hashing, so an old block (stale fingerprint, higher risk)
+    // never binds into the fingerprint or contaminates the review-gate class.
+    const renewBody = ["# Renew", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const renewPath = path.join(dir, "issue-renew.md");
+    fs.writeFileSync(renewPath, renewBody);
+    const renewFp = emitFingerprint(renewPath);
+    fs.writeFileSync(
+      renewPath,
+      `${renewBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: deadbeefdead\nAcceptance IDs: AC1, AC2\nRisk class: deep\nApproval: deadbeefdead\n\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${renewFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${renewFp}\n`
+    );
+    const renewResolved = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", renewPath, "--label", "issue-only", "--approval-verified", renewFp])
+    );
+    if (renewResolved.package_kind !== "issue-only") {
+      fail("resolve-issue-context must strip ALL inline markers (superseded + fresh) and honor the newest, so a renewed inline marker resolves issue-only");
+    }
+
+    // Guard: negative headings are not miscounted as behavior — an English Issue
+    // with only Non-goals (plus acceptance + verify) has no described behavior and
+    // is rejected, not admitted as a self-contained package.
+    const negHeadingPath = path.join(dir, "issue-neg-heading.md");
+    fs.writeFileSync(
+      negHeadingPath,
+      ["# Neg", "", "## Acceptance", "", "- AC1: x", "", "## How to verify", "", "1. s", "", "## Non-goals", "", "- out of scope thing", "", "## Review gate", "", "- standard", ""].join("\n")
+    );
+    const negFp = emitFingerprint(negHeadingPath);
+    const negMarkerPath = path.join(dir, "marker-neg.md");
+    fs.writeFileSync(
+      negMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${negFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${negFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context negative-heading behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", negHeadingPath, "--marker", negMarkerPath,
+          "--label", "issue-only", "--approval-verified", negFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a verification given as a bare command block (no list) is a valid
+    // step, not "no steps" — the package resolves issue-only and the command is
+    // preserved in the oracle's verify_steps.
+    const cmdVerifyBody = ["# Cmd", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "```sh", "npm test", "```", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cmdVerifyPath = path.join(dir, "issue-cmd-verify.md");
+    fs.writeFileSync(cmdVerifyPath, cmdVerifyBody);
+    const cmdVerifyFp = emitFingerprint(cmdVerifyPath);
+    const cmdVerifyMarkerPath = path.join(dir, "marker-cmd-verify.md");
+    fs.writeFileSync(
+      cmdVerifyMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cmdVerifyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cmdVerifyFp}`].join("\n")}\n`
+    );
+    const cmdVerify = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cmdVerifyPath, "--marker", cmdVerifyMarkerPath, "--label", "issue-only", "--approval-verified", cmdVerifyFp])
+    );
+    if (cmdVerify.package_kind !== "issue-only") {
+      fail("resolve-issue-context must accept a bare command-block verification as a valid step");
+    }
+    if (!cmdVerify.behavioral_oracle.verify_steps.some((step) => step.includes("npm test"))) {
+      fail("resolve-issue-context must preserve command-block content in verify_steps");
+    }
+
+    // Guard: an over-broad positive-scope heading is not counted as behavior — an
+    // Issue whose only scope-ish heading is "Scope exclusions" (a negative) has no
+    // described behavior and is rejected as not self-contained.
+    const scopeExclPath = path.join(dir, "issue-scope-excl.md");
+    fs.writeFileSync(
+      scopeExclPath,
+      ["# SE", "", "## Scope exclusions", "", "- not this", "", "## Acceptance", "", "- AC1: x", "", "## How to verify", "", "1. s", "", "## Out of scope", "", "- nor that", "", "## Review gate", "", "- standard", ""].join("\n")
+    );
+    const scopeExclFp = emitFingerprint(scopeExclPath);
+    const scopeExclMarkerPath = path.join(dir, "marker-scope-excl.md");
+    fs.writeFileSync(
+      scopeExclMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${scopeExclFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${scopeExclFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context scope-exclusions heading fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", scopeExclPath, "--marker", scopeExclMarkerPath,
+          "--label", "issue-only", "--approval-verified", scopeExclFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: verify_steps splits only on TOP-LEVEL items — a nested item and a
+    // fenced "2." line stay in their parent step, matching the section structure.
+    const nestedVerifyBody = ["# NV", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. Run the check:", "   - confirm the result", "   ```sh", "   2. not a step", "   ```", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedVerifyPath = path.join(dir, "issue-nested-verify.md");
+    fs.writeFileSync(nestedVerifyPath, nestedVerifyBody);
+    const nvFp = emitFingerprint(nestedVerifyPath);
+    const nvMarkerPath = path.join(dir, "marker-nv.md");
+    fs.writeFileSync(nvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nvFp}`].join("\n")}\n`);
+    const nv = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedVerifyPath, "--marker", nvMarkerPath, "--label", "issue-only", "--approval-verified", nvFp])
+    );
+    if (nv.package_kind !== "issue-only") fail("resolve-issue-context nested-verify fixture must resolve issue-only");
+    if (nv.behavioral_oracle.verify_steps.length !== 1) {
+      fail("resolve-issue-context must split verify_steps only on top-level items (nested item + fenced line are not separate steps)");
+    }
+
+    // Guard: a behavior section whose content starts with a nested subheading is
+    // still described behavior (extractSection keeps nested subsections).
+    const nestedBehaviorBody = ["# NB", "", "## Что сделать", "", "### Details", "", "- the actual scope", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedBehaviorPath = path.join(dir, "issue-nested-behavior.md");
+    fs.writeFileSync(nestedBehaviorPath, nestedBehaviorBody);
+    const nbFp = emitFingerprint(nestedBehaviorPath);
+    const nbMarkerPath = path.join(dir, "marker-nb.md");
+    fs.writeFileSync(nbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nbFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nbFp}`].join("\n")}\n`);
+    const nb = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedBehaviorPath, "--marker", nbMarkerPath, "--label", "issue-only", "--approval-verified", nbFp])
+    );
+    if (nb.package_kind !== "issue-only") {
+      fail("resolve-issue-context must count a behavior section starting with a nested subheading as described behavior");
+    }
+
+    // Guard: a behavior heading whose only content is an EMPTY fenced block has no
+    // substantive content and is rejected — a fence marker is not behavior.
+    const emptyFenceBody = ["# EF", "", "## Что сделать", "", "```", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const emptyFencePath = path.join(dir, "issue-empty-fence.md");
+    fs.writeFileSync(emptyFencePath, emptyFenceBody);
+    const efFp = emitFingerprint(emptyFencePath);
+    const efMarkerPath = path.join(dir, "marker-ef.md");
+    fs.writeFileSync(efMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${efFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${efFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty-fence behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyFencePath, "--marker", efMarkerPath,
+          "--label", "issue-only", "--approval-verified", efFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: stripMarkerBlock removes ONLY recognized marker fields — normative
+    // text like "Endpoint: /admin/delete" after a (superseded) marker line stays
+    // in the fingerprint, so changing it stales the approval.
+    const afterMarker = (endpoint) =>
+      ["# AM", "", "## Что сделать", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeefdead", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `Endpoint: ${endpoint}`, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const amAPath = path.join(dir, "issue-am-a.md");
+    const amBPath = path.join(dir, "issue-am-b.md");
+    fs.writeFileSync(amAPath, afterMarker("/admin/read"));
+    fs.writeFileSync(amBPath, afterMarker("/admin/delete"));
+    if (emitFingerprint(amAPath) === emitFingerprint(amBPath)) {
+      fail("resolve-issue-context must keep non-marker content after a marker line in the fingerprint");
+    }
+
+    // Guard: a meaning-changing heading rename changes the fingerprint — the
+    // matched heading text is bound into the hash, so "Scope" vs "Scope exclusions"
+    // (mapping the same body) are distinct.
+    const renameBody = (scopeHeading) =>
+      ["# RN", "", `## ${scopeHeading}`, "", "- the body", "", "## Objective", "", "the objective", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const rnAPath = path.join(dir, "issue-rn-a.md");
+    const rnBPath = path.join(dir, "issue-rn-b.md");
+    fs.writeFileSync(rnAPath, renameBody("Scope"));
+    fs.writeFileSync(rnBPath, renameBody("Scope exclusions"));
+    if (emitFingerprint(rnAPath) === emitFingerprint(rnBPath)) {
+      fail("resolve-issue-context must bind the matched heading text into the fingerprint (a rename changes the hash)");
+    }
+
+    // Guard: a bare nested subheading with no body under it is not substantive
+    // behavior — the completeness gate rejects it.
+    const emptyNestedPath = path.join(dir, "issue-empty-nested.md");
+    fs.writeFileSync(
+      emptyNestedPath,
+      ["# EN", "", "## Что сделать", "", "### Details", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const enFp = emitFingerprint(emptyNestedPath);
+    const enMarkerPath = path.join(dir, "marker-en.md");
+    fs.writeFileSync(enMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${enFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${enFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty nested behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyNestedPath, "--marker", enMarkerPath,
+          "--label", "issue-only", "--approval-verified", enFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a marker with duplicate Acceptance IDs (padding the count to mask a
+    // missing required id) is rejected — IDs are compared as deduped sets.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC1",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context duplicate acceptance id fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs]),
+      "issue-only-lane: broken marker: duplicate Acceptance IDs"
+    );
+
+    // Guard: a marker line OUTSIDE a fence whose fields are all INSIDE a fenced
+    // code block collects no real fields (fenced = documentation example) and
+    // fails closed, never a silent issue-only even with valid label/approval args.
+    const fencedFieldsMarkerPath = path.join(dir, "marker-fenced-fields.md");
+    fs.writeFileSync(
+      fencedFieldsMarkerPath,
+      `${["linear-issue-only marker", "```text", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`, "```"].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context fenced marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", fencedFieldsMarkerPath,
+          ...issueOnlyArgs,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a heading with valid Markdown indentation (1-3 spaces) is recognized,
+    // so content under an indented " ## Scope" section binds the fingerprint.
+    const indentHeadingBase = (tail) =>
+      ["# IH", "", " ## Что сделать", "", tail, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const ihAPath = path.join(dir, "issue-ih-a.md");
+    const ihBPath = path.join(dir, "issue-ih-b.md");
+    fs.writeFileSync(ihAPath, indentHeadingBase("- scope A"));
+    fs.writeFileSync(ihBPath, indentHeadingBase("- scope B"));
+    if (emitFingerprint(ihAPath) === emitFingerprint(ihBPath)) {
+      fail("resolve-issue-context must recognize indented Markdown headings so their content binds the fingerprint");
+    }
+
+    // Guard: a behavior section whose only content is an HTML comment is not
+    // substantive and is rejected — an invisible comment is not described behavior.
+    const htmlCommentPath = path.join(dir, "issue-html-comment.md");
+    fs.writeFileSync(
+      htmlCommentPath,
+      ["# HC", "", "## Что сделать", "", "<!-- TODO: fill this in -->", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const hcFp = emitFingerprint(htmlCommentPath);
+    const hcMarkerPath = path.join(dir, "marker-hc.md");
+    fs.writeFileSync(hcMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hcFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hcFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context html-comment behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", htmlCommentPath, "--marker", hcMarkerPath,
+          "--label", "issue-only", "--approval-verified", hcFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: stripMarkerBlock skips the same leading blank lines findMarkerBlock
+    // allows — an inline marker with a blank line before its fields still resolves.
+    const blankInlineBody = ["# BI", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const blankInlinePath = path.join(dir, "issue-blank-inline.md");
+    fs.writeFileSync(blankInlinePath, blankInlineBody);
+    const biFp = emitFingerprint(blankInlinePath);
+    fs.writeFileSync(
+      blankInlinePath,
+      `${blankInlineBody}\nlinear-issue-only marker\n\nMarker version: 1\nScope fingerprint: ${biFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${biFp}\n`
+    );
+    const blankInline = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", blankInlinePath, "--label", "issue-only", "--approval-verified", biFp])
+    );
+    if (blankInline.package_kind !== "issue-only") {
+      fail("resolve-issue-context must strip an inline marker with a leading blank line before its fields so it resolves issue-only");
+    }
+
+    // Guard: only DECLARED acceptance IDs are collected — a cross-reference in a
+    // criterion's prose ("described by AC99") and an id in a fenced example are not
+    // declarations, so the oracle reports exactly the declared ids.
+    const crossRefBody = ["# CR", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: preserve behavior described by AC99", "- AC2: also see AC1", "", "```", "AC77: fenced example", "```", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const crossRefPath = path.join(dir, "issue-crossref.md");
+    fs.writeFileSync(crossRefPath, crossRefBody);
+    const crFp = emitFingerprint(crossRefPath);
+    const crMarkerPath = path.join(dir, "marker-cr.md");
+    fs.writeFileSync(crMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${crFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${crFp}`].join("\n")}\n`);
+    const cr = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", crossRefPath, "--marker", crMarkerPath, "--label", "issue-only", "--approval-verified", crFp])
+    );
+    if (cr.package_kind !== "issue-only") fail("resolve-issue-context cross-reference fixture must resolve issue-only with declared ids only");
+    if (JSON.stringify(cr.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context must collect only declared acceptance IDs (not cross-references or fenced examples)");
+    }
+
+    // Guard: a clean "standard" review-gate resolves issue-only. (This base issue
+    // is reused below by replacing the review-gate line to test re-tier / history
+    // / chain forms.)
+    const reGateA = ["# RG", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "standard", ""].join("\n");
+    const reGateAPath = path.join(dir, "issue-regate-a.md");
+    fs.writeFileSync(reGateAPath, reGateA);
+    const rgaFp = emitFingerprint(reGateAPath);
+    const rgaMarkerPath = path.join(dir, "marker-rga.md");
+    fs.writeFileSync(rgaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rgaFp}`].join("\n")}\n`);
+    const rga = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateAPath, "--marker", rgaMarkerPath, "--label", "issue-only", "--approval-verified", rgaFp])
+    );
+    if (rga.package_kind !== "issue-only" || rga.risk_class !== "standard") {
+      fail("resolve-issue-context must read the recorded review-gate class (standard), not a later 'deep' mention");
+    }
+
+    // And an explicit re-tier "standard→deep" records the target deep (out of the
+    // Phase-1 envelope → project-first).
+    const reGateB = reGateA.replace("standard", "standard→deep (new abstraction)");
+    const reGateBPath = path.join(dir, "issue-regate-b.md");
+    fs.writeFileSync(reGateBPath, reGateB);
+    const rgbFp = emitFingerprint(reGateBPath);
+    const rgbMarkerPath = path.join(dir, "marker-rgb.md");
+    fs.writeFileSync(rgbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgbFp}`, "Acceptance IDs: AC1", "Risk class: deep", `Approval: ${rgbFp}`].join("\n")}\n`);
+    const rgb = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateBPath, "--marker", rgbMarkerPath, "--label", "issue-only", "--approval-verified", rgbFp])
+    );
+    if (rgb.package_kind !== "project-first") {
+      fail("resolve-issue-context must read a 'standard→deep' re-tier as deep (out of Phase-1 envelope → project-first)");
+    }
+
+    // Guard: a DOWNWARD re-tier "deep→standard" still records the higher class
+    // (deep), so a standard marker cannot downgrade it into the lane.
+    const downRetier = reGateA.replace("standard", "deep→standard (scope shrank)");
+    const drPath = path.join(dir, "issue-down-retier.md");
+    fs.writeFileSync(drPath, downRetier);
+    const drFp = emitFingerprint(drPath);
+    const drMarkerPath = path.join(dir, "marker-dr.md");
+    fs.writeFileSync(drMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${drFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${drFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context downward re-tier fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", drPath, "--marker", drMarkerPath,
+          "--label", "issue-only", "--approval-verified", drFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: an empty acceptance declaration ("- AC1:" with no criterion text) is
+    // not a usable criterion — the Issue has no acceptance and is rejected.
+    const emptyAcPath = path.join(dir, "issue-empty-ac.md");
+    fs.writeFileSync(
+      emptyAcPath,
+      ["# EA", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1:", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const eaFp = emitFingerprint(emptyAcPath);
+    const eaMarkerPath = path.join(dir, "marker-ea.md");
+    fs.writeFileSync(eaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${eaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${eaFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context empty acceptance criterion fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyAcPath, "--marker", eaMarkerPath,
+          "--label", "issue-only", "--approval-verified", eaFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a verification placeholder ("1. <!-- TODO -->") is not a real step —
+    // the Issue has no verification and is rejected.
+    const placeholderVerifyPath = path.join(dir, "issue-placeholder-verify.md");
+    fs.writeFileSync(
+      placeholderVerifyPath,
+      ["# PV", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real criterion", "", "## Как проверить", "", "1. <!-- TODO -->", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const pvFp = emitFingerprint(placeholderVerifyPath);
+    const pvMarkerPath = path.join(dir, "marker-pv.md");
+    fs.writeFileSync(pvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${pvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${pvFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context placeholder verify fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", placeholderVerifyPath, "--marker", pvMarkerPath,
+          "--label", "issue-only", "--approval-verified", pvFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a "## Что сделать" whose body is ONLY nested OTHER normative sections
+    // has no scope description of its own and is rejected.
+    const nestedForeignPath = path.join(dir, "issue-nested-foreign.md");
+    fs.writeFileSync(
+      nestedForeignPath,
+      ["# NF", "", "## Что сделать", "", "### Критерии приёмки", "", "- AC1: real criterion", "", "### Как проверить", "", "1. run it", "", "### Что не входит", "", "- ng", "", "### Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const nfFp = emitFingerprint(nestedForeignPath);
+    const nfMarkerPath = path.join(dir, "marker-nf.md");
+    fs.writeFileSync(nfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nfFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context nested-foreign-sections fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", nestedForeignPath, "--marker", nfMarkerPath,
+          "--label", "issue-only", "--approval-verified", nfFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: verify steps with valid 0-3 space indentation are separate steps.
+    const indentStepsBody = ["# IS", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "  1. first check", "  2. second check", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const indentStepsPath = path.join(dir, "issue-indent-steps.md");
+    fs.writeFileSync(indentStepsPath, indentStepsBody);
+    const isFp = emitFingerprint(indentStepsPath);
+    const isMarkerPath = path.join(dir, "marker-is.md");
+    fs.writeFileSync(isMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${isFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${isFp}`].join("\n")}\n`);
+    const is = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentStepsPath, "--marker", isMarkerPath, "--label", "issue-only", "--approval-verified", isFp])
+    );
+    if (is.package_kind !== "issue-only" || is.behavioral_oracle.verify_steps.length !== 2) {
+      fail("resolve-issue-context must treat 0-3 space indented list items as separate verify steps");
+    }
+
+    // Guard: only the EXACT authoritative "Review gate" heading sets the class — an
+    // earlier "Review gate considerations" section cannot mask the deep class and
+    // downgrade the package into the lane.
+    const gateDupPath = path.join(dir, "issue-gate-dup.md");
+    fs.writeFileSync(
+      gateDupPath,
+      ["# GD", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Review gate considerations", "", "- standard was rejected", "", "## Review gate", "", "- deep", ""].join("\n")
+    );
+    const gdFp = emitFingerprint(gateDupPath);
+    const gdMarkerPath = path.join(dir, "marker-gd.md");
+    fs.writeFileSync(gdMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${gdFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${gdFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context review-gate considerations fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", gateDupPath, "--marker", gdMarkerPath,
+          "--label", "issue-only", "--approval-verified", gdFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a duplicate Acceptance ID declared in the issue body is ambiguous and
+    // rejected, like a duplicate id in the marker.
+    const dupAcPath = path.join(dir, "issue-dup-ac.md");
+    fs.writeFileSync(
+      dupAcPath,
+      ["# DA", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: first criterion", "- AC1: second criterion, same id", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const daFp = emitFingerprint(dupAcPath);
+    const daMarkerPath = path.join(dir, "marker-da.md");
+    fs.writeFileSync(daMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${daFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${daFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context duplicate body acceptance id fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", dupAcPath, "--marker", daMarkerPath,
+          "--label", "issue-only", "--approval-verified", daFp,
+        ]),
+      "issue-only-lane: broken marker: duplicate Acceptance ID declared in issue body"
+    );
+
+    // Guard: a re-classification CHAIN records the highest class — "tiny→standard→
+    // deep" is deep, so a standard marker cannot downgrade it into the lane.
+    const chainGate = reGateA.replace("standard", "tiny→standard→deep (grew twice)");
+    const chainPath = path.join(dir, "issue-chain.md");
+    fs.writeFileSync(chainPath, chainGate);
+    const chFp = emitFingerprint(chainPath);
+    const chMarkerPath = path.join(dir, "marker-ch.md");
+    fs.writeFileSync(chMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context re-tier chain fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", chainPath, "--marker", chMarkerPath,
+          "--label", "issue-only", "--approval-verified", chFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: Linear task-list acceptance criteria ("- [ ] AC1: ...") are recognized.
+    const checklistBody = ["# CL", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- [ ] AC1: resolver works", "- [x] AC2: marker parses", "", "## Как проверить", "", "1. run it", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const checklistPath = path.join(dir, "issue-checklist.md");
+    fs.writeFileSync(checklistPath, checklistBody);
+    const clFp = emitFingerprint(checklistPath);
+    const clMarkerPath = path.join(dir, "marker-cl.md");
+    fs.writeFileSync(clMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${clFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${clFp}`].join("\n")}\n`);
+    const cl = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", checklistPath, "--marker", clMarkerPath, "--label", "issue-only", "--approval-verified", clFp])
+    );
+    if (cl.package_kind !== "issue-only" || JSON.stringify(cl.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("resolve-issue-context must recognize Markdown task-list acceptance criteria");
+    }
+
+    // Guard: a re-tier chain in "risk history" cannot LOWER the authoritative class
+    // — "risky; previous history: tiny→standard" stays risky.
+    const historyGate = reGateA.replace("standard", "risky; previous history: tiny→standard");
+    const historyPath = path.join(dir, "issue-history.md");
+    fs.writeFileSync(historyPath, historyGate);
+    const hyFp = emitFingerprint(historyPath);
+    const hyMarkerPath = path.join(dir, "marker-hy.md");
+    fs.writeFileSync(hyMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hyFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context risk-history fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", historyPath, "--marker", hyMarkerPath,
+          "--label", "issue-only", "--approval-verified", hyFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: sections hidden inside an HTML comment are invisible — an Issue whose
+    // Acceptance and How-to-verify are commented out has no oracle and is rejected.
+    const commentedOraclePath = path.join(dir, "issue-commented-oracle.md");
+    fs.writeFileSync(
+      commentedOraclePath,
+      ["# CO", "", "## Что сделать", "", "- do it", "", "<!--", "## Критерии приёмки", "", "- AC1: hidden criterion", "", "## Как проверить", "", "1. hidden step", "-->", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const coFp = emitFingerprint(commentedOraclePath);
+    const coMarkerPath = path.join(dir, "marker-co.md");
+    fs.writeFileSync(coMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${coFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${coFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context commented-oracle fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", commentedOraclePath, "--marker", coMarkerPath,
+          "--label", "issue-only", "--approval-verified", coFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: the review-gate class is the MAX of all mentioned classes — a
+    // "standard was proposed; Risk class: risky" section reads risky, so a
+    // standard marker cannot enter the lane.
+    const maxGate = reGateA.replace("standard", "standard was proposed; Risk class: risky");
+    const maxPath = path.join(dir, "issue-max-gate.md");
+    fs.writeFileSync(maxPath, maxGate);
+    const mgFp = emitFingerprint(maxPath);
+    const mgMarkerPath = path.join(dir, "marker-mg.md");
+    fs.writeFileSync(mgMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${mgFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${mgFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context max-class review-gate fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", maxPath, "--marker", mgMarkerPath,
+          "--label", "issue-only", "--approval-verified", mgFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: an ATX heading with a closing "#" sequence ("## Ревью-гейт ##") is
+    // still recognized.
+    const closingHashBody = ["# CH", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт ##", "", "- standard", ""].join("\n");
+    const closingHashPath = path.join(dir, "issue-closing-hash.md");
+    fs.writeFileSync(closingHashPath, closingHashBody);
+    const chhFp = emitFingerprint(closingHashPath);
+    const chhMarkerPath = path.join(dir, "marker-chh.md");
+    fs.writeFileSync(chhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chhFp}`].join("\n")}\n`);
+    const chh = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", closingHashPath, "--marker", chhMarkerPath, "--label", "issue-only", "--approval-verified", chhFp])
+    );
+    if (chh.package_kind !== "issue-only") {
+      fail("resolve-issue-context must recognize ATX headings with a closing hash sequence");
+    }
+
+    // Guard: a 4-space-indented ``` is indented code, NOT a fence, so it does not
+    // hide the following normative headings.
+    const fourSpaceFenceBody = ["# FS", "", "## Что сделать", "", "    ```", "    code indented", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const fourSpacePath = path.join(dir, "issue-four-space.md");
+    fs.writeFileSync(fourSpacePath, fourSpaceFenceBody);
+    const fsFp = emitFingerprint(fourSpacePath);
+    const fsMarkerPath = path.join(dir, "marker-fs.md");
+    fs.writeFileSync(fsMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fsFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${fsFp}`].join("\n")}\n`);
+    const fs4 = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", fourSpacePath, "--marker", fsMarkerPath, "--label", "issue-only", "--approval-verified", fsFp])
+    );
+    if (fs4.package_kind !== "issue-only") {
+      fail("resolve-issue-context must not treat a 4-space-indented ``` as a fence that hides later headings");
+    }
+
+    // Guard: a marker line indented 4+ spaces is a Markdown indented code block (a
+    // documentation example), not an opt-in — even with an otherwise-valid inline
+    // marker and matching label/approval, the Issue resolves project-first.
+    const cleanImBody = ["# IM", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cleanImPath = path.join(dir, "issue-im-clean.md");
+    fs.writeFileSync(cleanImPath, cleanImBody);
+    const imFp = emitFingerprint(cleanImPath);
+    const indentedMarkerPath = path.join(dir, "issue-indented-marker.md");
+    fs.writeFileSync(
+      indentedMarkerPath,
+      `${cleanImBody}\n    linear-issue-only marker\n    Marker version: 1\n    Scope fingerprint: ${imFp}\n    Acceptance IDs: AC1\n    Risk class: standard\n    Approval: ${imFp}\n`
+    );
+    const im = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentedMarkerPath, "--label", "issue-only", "--approval-verified", imFp])
+    );
+    if (im.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a 4-space-indented marker line as project-first, not an opt-in");
+    }
+
+    // Guard: a marker line inside an HTML comment (a commented-out example, e.g. an
+    // Issue documenting the format) is not a marker — it resolves project-first,
+    // never a spurious broken-marker error from parsing the commented fields.
+    const commentedMarkerPath = path.join(dir, "issue-commented-marker.md");
+    fs.writeFileSync(
+      commentedMarkerPath,
+      ["# CM", "", "## Что сделать", "", "Documents the marker format:", "", "<!--", "linear-issue-only marker", "Marker version: 1", "(fields omitted in this example)", "-->", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const cmm = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", commentedMarkerPath]));
+    if (cmm.package_kind !== "project-first") {
+      fail("resolve-issue-context must ignore a marker line inside an HTML comment (project-first, not a broken-marker error)");
+    }
+
+    // Guard: content after an HTML comment closes mid-line ("--> real scope") is
+    // visible and counts — the tail after "-->" is not skipped.
+    const remainderBody = ["# RM", "", "## Что сделать", "", "<!-- placeholder note", "--> the real scope is here", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const remainderPath = path.join(dir, "issue-remainder.md");
+    fs.writeFileSync(remainderPath, remainderBody);
+    const rmFp = emitFingerprint(remainderPath);
+    const rmMarkerPath = path.join(dir, "marker-rm.md");
+    fs.writeFileSync(rmMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rmFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rmFp}`].join("\n")}\n`);
+    const rm = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", remainderPath, "--marker", rmMarkerPath, "--label", "issue-only", "--approval-verified", rmFp])
+    );
+    if (rm.package_kind !== "issue-only") {
+      fail("resolve-issue-context must see content after an HTML comment closes mid-line");
+    }
+
+    // Guard: the oracle sections use EXACT headings — "## Acceptance history" and
+    // "## Verify exclusions" are not the canonical acceptance/verify sections, so an
+    // Issue lacking the real ones has no oracle and is rejected.
+    const looseHeadingPath = path.join(dir, "issue-loose-heading.md");
+    fs.writeFileSync(
+      looseHeadingPath,
+      ["# LH", "", "## Что сделать", "", "- do it", "", "## Acceptance history", "", "- AC1: old criterion", "", "## Verify exclusions", "", "1. not a real step", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const lhFp = emitFingerprint(looseHeadingPath);
+    const lhMarkerPath = path.join(dir, "marker-lh.md");
+    fs.writeFileSync(lhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${lhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${lhFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context loose-oracle-heading fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", looseHeadingPath, "--marker", lhMarkerPath,
+          "--label", "issue-only", "--approval-verified", lhFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: marker fields indented 4+ spaces are a Markdown indented code block —
+    // an example with an unindented marker line and indented fields collects no
+    // fields and fails closed, never a silent issue-only.
+    const aFp = "a".repeat(64);
+    const indentedFieldsPath = path.join(dir, "issue-indented-fields.md");
+    fs.writeFileSync(
+      indentedFieldsPath,
+      ["# IF", "", "## Что сделать", "", "Example:", "", "linear-issue-only marker", "", `    Marker version: 1`, `    Scope fingerprint: ${aFp}`, "    Acceptance IDs: AC1", "    Risk class: standard", `    Approval: ${aFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    expectCommandFailure(
+      "resolve-issue-context indented marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", indentedFieldsPath,
+          "--label", "issue-only", "--approval-verified", aFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a "<!--" inside a fenced code block is literal, not a comment — it must
+    // NOT swallow the real sections after the fence.
+    const commentInFenceBody = ["# CF", "", "## Что сделать", "", "```", "<!-- this is code, not a comment", "```", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const cfPath = path.join(dir, "issue-comment-in-fence.md");
+    fs.writeFileSync(cfPath, commentInFenceBody);
+    const cfFp = emitFingerprint(cfPath);
+    const cfMarkerPath = path.join(dir, "marker-cf.md");
+    fs.writeFileSync(cfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cfFp}`].join("\n")}\n`);
+    const cf = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cfPath, "--marker", cfMarkerPath, "--label", "issue-only", "--approval-verified", cfFp])
+    );
+    if (cf.package_kind !== "issue-only") {
+      fail("resolve-issue-context must treat <!-- inside a fence as literal, not swallow the following sections");
+    }
+
+    // Guard: marker fields with a mixed space+tab indent reaching 4 columns are
+    // indented code, not fields — fail closed (the old space-only check missed this).
+    const tabFp = "b".repeat(64);
+    const tabFieldsPath = path.join(dir, "issue-tab-fields.md");
+    fs.writeFileSync(
+      tabFieldsPath,
+      ["# TF", "", "## Что сделать", "", "linear-issue-only marker", "", "  \tMarker version: 1", `  \tScope fingerprint: ${tabFp}`, "  \tAcceptance IDs: AC1", "  \tRisk class: standard", `  \tApproval: ${tabFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    expectCommandFailure(
+      "resolve-issue-context tab-indented marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", tabFieldsPath,
+          "--label", "issue-only", "--approval-verified", tabFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a 4+-column-indented recognized-key line after an inline marker is
+    // Markdown code, not a field — stripMarkerBlock leaves it in the whole-body
+    // fingerprint, so changing it invalidates the approval.
+    const indentedAfterMarker = (val) =>
+      ["# IAM", "", "## Что сделать", "", "- do it", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: x", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `    Risk class: ${val}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const iamAPath = path.join(dir, "issue-iam-a.md");
+    const iamBPath = path.join(dir, "issue-iam-b.md");
+    fs.writeFileSync(iamAPath, indentedAfterMarker("keep"));
+    fs.writeFileSync(iamBPath, indentedAfterMarker("changed"));
+    if (emitFingerprint(iamAPath) === emitFingerprint(iamBPath)) {
+      fail("resolve-issue-context must keep a 4+-indent recognized-key line in the fingerprint (not strip it as a marker field)");
+    }
+
+    // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
+    writeMarker([
+      "Marker version: 1",
+      "Scope fingerprint: deadbeef12ab",
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context stale fingerprint fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: stale marker"
+    );
+
+    // Guard: a structurally broken marker (unknown version) is a hard violation.
+    writeMarker([
+      "Marker version: 2",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context broken marker version fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: the marker ≠ route-record boundary is executable — a route-record
+    // field is rejected.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "route_revision: 7",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context forbidden route-record field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: the "exactly five fields, no more" contract is executable — an extra
+    // sixth field (even a benign one) is rejected, so the marker can't quietly grow.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Notes: sneaky sixth field",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context unknown extra field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: unknown field"
+    );
+
+    // Guard: the Phase-1 eligibility envelope is executable — a marker that
+    // MATCHES an Issue genuinely classified deep/risky (its review-gate carries
+    // that class) falls back to project-first, never silently issue-only
+    // (deep/risky keeps full ceremony until Phase 3).
+    for (const ineligible of ["deep", "risky"]) {
+      const ineligibleIssuePath = path.join(dir, `issue-${ineligible}.md`);
+      fs.writeFileSync(ineligibleIssuePath, fullBody.replace("REVIEWGATE_SENTINEL standard", `REVIEWGATE_SENTINEL ${ineligible}`));
+      const ineligibleFp = emitFingerprint(ineligibleIssuePath);
+      const ineligibleMarkerPath = path.join(dir, `marker-${ineligible}.md`);
+      fs.writeFileSync(
+        ineligibleMarkerPath,
+        `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${ineligibleFp}`, "Acceptance IDs: AC1, AC2", `Risk class: ${ineligible}`, `Approval: ${ineligibleFp}`].join("\n")}\n`
+      );
+      const outOfEnvelope = JSON.parse(
+        runNode(["scripts/resolve-issue-context.mjs", "--issue", ineligibleIssuePath, "--marker", ineligibleMarkerPath, "--label", "issue-only", "--approval-verified", ineligibleFp])
+      );
+      if (outOfEnvelope.package_kind !== "project-first") {
+        fail(`resolve-issue-context must fall back to project-first for an out-of-envelope ${ineligible} marker`);
+      }
+    }
+
+    // Guard: the marker's Risk class cannot DOWNGRADE the Issue's authoritative
+    // review-gate class — a "standard" marker on a deep Issue is rejected, not
+    // silently admitted to the lane.
+    const deepIssuePath = path.join(dir, "issue-deep.md");
+    fs.writeFileSync(deepIssuePath, fullBody.replace("REVIEWGATE_SENTINEL standard", "REVIEWGATE_SENTINEL deep"));
+    const deepFp = emitFingerprint(deepIssuePath);
+    const downgradeMarkerPath = path.join(dir, "marker-downgrade.md");
+    fs.writeFileSync(
+      downgradeMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${deepFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${deepFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context risk downgrade fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", deepIssuePath, "--marker", downgradeMarkerPath, "--label", "issue-only", "--approval-verified", deepFp]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: integrity is checked BEFORE the eligibility fallback — a deep marker
+    // (matching a deep Issue) with a stale fingerprint still hard-fails via the
+    // fingerprint check, it does not slip into a silent project-first.
+    const deepStaleMarkerPath = path.join(dir, "marker-deep-stale.md");
+    fs.writeFileSync(
+      deepStaleMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeef12ab", "Acceptance IDs: AC1, AC2", "Risk class: deep", "Approval: none"].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context corrupt deep marker fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", deepIssuePath, "--marker", deepStaleMarkerPath]),
+      "issue-only-lane: stale marker"
+    );
+
+    // Guard: a sixth field whose key uses a hyphen or digit is still parsed and
+    // rejected, never skipped as end-of-block.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Owner-ID: sneaky",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context hyphenated extra field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a duplicate field is ambiguous and rejected — a second value can
+    // never silently mask the first (here a second Risk class hiding a first).
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: deep",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context duplicate field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: duplicate field"
+    );
+
+    // Guard: a field-shaped line whose key holds punctuation the charset cannot
+    // represent is a violation, not a silent block terminator that hides a field.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Notes.v2: sneaky",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context unparseable line fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: unparseable line"
+    );
+
+    // Guard: an unparseable line BEFORE the first field is rejected too — a
+    // punctuation-keyed line cannot hide ahead of Marker version.
+    fs.writeFileSync(
+      markerPath,
+      `${["linear-issue-only marker", "Notes.v2: hidden", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context pre-field unparseable line fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs]),
+      "issue-only-lane: broken marker: unparseable line"
+    );
+
+    // Guard: an empty behavioral oracle is rejected — issue-only needs at least
+    // one acceptance ID and one verify step, so an Issue with no acceptance IDs
+    // (and a marker whose "Acceptance IDs: ," parses empty) hard-fails.
+    const emptyOraclePath = path.join(dir, "issue-empty-oracle.md");
+    fs.writeFileSync(
+      emptyOraclePath,
+      ["# Empty oracle", "", "## Acceptance", "", "- no stable ids here", "", "## How to verify", "", "1. a step", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const emptyFp = runNode(["scripts/resolve-issue-context.mjs", "--issue", emptyOraclePath, "--emit-fingerprint"]).trim();
+    const emptyOracleMarkerPath = path.join(dir, "marker-empty-oracle.md");
+    fs.writeFileSync(
+      emptyOracleMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${emptyFp}`, "Acceptance IDs: ,", "Risk class: standard", `Approval: ${emptyFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context empty oracle fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", emptyOraclePath, "--marker", emptyOracleMarkerPath,
+          "--label", "issue-only", "--approval-verified", emptyFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a stale (superseded) owner approval fails closed to project-first —
+    // the lane never activates on an approval that does not match current scope.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: 0000deadbeef (approved by owner for an older scope)",
+    ]);
+    const staleApproval = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+    );
+    if (staleApproval.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first on a stale (superseded) owner approval");
+    }
+
+    // Guard: config opt-out forces project-first even with a valid marker.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      `Approval: ${fingerprint}`,
+    ]);
+    const configPath = path.join(dir, "config.json");
+    fs.writeFileSync(configPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: false } }, null, 2)}\n`);
+    const disabled = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", configPath, ...issueOnlyArgs])
+    );
+    if (disabled.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when the lane is disabled by config");
+    }
+
+    // Guard: a malformed opt-out fails closed — issueOnlyLane.enabled must be a
+    // real boolean, so a stringly-typed "false" is a hard violation, never a
+    // silently-enabled lane.
+    const badConfigPath = path.join(dir, "config-bad.json");
+    fs.writeFileSync(badConfigPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: "false" } }, null, 2)}\n`);
+    expectCommandFailure(
+      "resolve-issue-context malformed config enabled fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", badConfigPath, ...issueOnlyArgs]),
+      "issue-only-lane: invalid config"
+    );
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 function validateDocsAndExamples() {
   for (const [relativePath, texts] of Object.entries({
     "README.md": [
@@ -1352,6 +2660,7 @@ validateReviewCheckBoundary();
 validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
+validateIssueOnlyLaneBehavior();
 validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
