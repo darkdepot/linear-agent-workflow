@@ -22,6 +22,9 @@ import process from "node:process";
 const MARKER_LINE = "linear-issue-only marker";
 const MARKER_VERSION = 1;
 const RISK_CLASSES = ["tiny", "standard", "deep", "risky"];
+// Phase-1 eligibility envelope for the issue-only lane. deep/risky stays
+// project-first until the Phase-3 safety modules land (see plan 015 README).
+const LANE_ELIGIBLE_RISK = ["tiny", "standard"];
 const REQUIRED_MARKER_FIELDS = [
   "Marker version",
   "Scope fingerprint",
@@ -134,21 +137,32 @@ function parseVerifySteps(lines) {
   return steps;
 }
 
-// Deterministic scope fingerprint = sha256 over the normalized acceptance and
-// verify sections, aligned with the design's oracle_revision definition
-// (hash of normalized "Критерии приемки" + "Как проверить"). Truncated for
-// human-readable markers; determinism is preserved.
+// Deterministic scope fingerprint = sha256 over the FULL normalized Issue
+// contract, not just acceptance + verify: objective, scope/what-to-do, desired
+// behavior, acceptance criteria, verification instructions, and non-goals. This
+// is must-fix #3 — an approval must never survive a change to the objective,
+// scope, or non-goals, only to the acceptance/verify text. Missing sections
+// contribute a stable empty part, so the hash stays deterministic. Truncated for
+// a human-readable marker; determinism is preserved.
+const CONTRACT_SECTION_RES = [
+  /(?:цель pr|objective|goal)/i,
+  /(?:что сделать|scope|what to do)/i,
+  /(?:желаемое поведение|desired behaviou?r)/i,
+  /(?:критерии приёмки|критерии приемки|acceptance)/i,
+  /(?:как проверить|how to verify|verify)/i,
+  /(?:что не входит|non-goals|out of scope)/i,
+];
+
 function computeScope(issueText) {
-  const acceptanceLines = extractSection(issueText, /(?:критерии приемки|acceptance)/i);
+  const acceptanceLines = extractSection(issueText, /(?:критерии приёмки|критерии приемки|acceptance)/i);
   const verifyLines = extractSection(issueText, /(?:как проверить|how to verify|verify)/i);
-  const acceptanceNorm = normalizeLines(acceptanceLines);
-  const verifyNorm = normalizeLines(verifyLines);
   const acceptanceIds = parseAcceptanceIds(acceptanceLines);
   const verifySteps = parseVerifySteps(verifyLines);
-  const hasScope = acceptanceNorm.length > 0 || verifyNorm.length > 0;
+  const parts = CONTRACT_SECTION_RES.map((re) => normalizeLines(extractSection(issueText, re)));
+  const hasScope = parts.some((part) => part.length > 0);
   const fingerprint = crypto
     .createHash("sha256")
-    .update(`${acceptanceNorm}\n---\n${verifyNorm}`)
+    .update(parts.join("\n---\n"))
     .digest("hex")
     .slice(0, 12);
   return { acceptanceIds, verifySteps, fingerprint, hasScope };
@@ -276,6 +290,14 @@ function resolve(args) {
   const riskClass = normalizedKeys.get("risk class");
   if (!RISK_CLASSES.includes(riskClass)) {
     violation(`broken marker: invalid risk class "${riskClass}" (expected one of ${RISK_CLASSES.join(", ")})`);
+  }
+
+  // Phase-1 eligibility envelope: only tiny/standard travel the issue-only lane.
+  // A structurally valid marker recording deep/risky is not corrupt — it is out
+  // of the envelope, so it falls back to the safe project-first lane instead of
+  // silently activating issue-only for work that must keep full ceremony.
+  if (!LANE_ELIGIBLE_RISK.includes(riskClass)) {
+    return projectFirstResult();
   }
 
   const scope = computeScope(issueText);

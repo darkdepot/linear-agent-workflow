@@ -607,6 +607,10 @@ function validateIssueOnlyLaneBehavior() {
       [
         "# Fixture Issue",
         "",
+        "## Что сделать",
+        "",
+        "- SCOPE_SENTINEL build the resolver seam",
+        "",
         "## Acceptance",
         "",
         "- AC1: resolver prints five fields",
@@ -616,6 +620,10 @@ function validateIssueOnlyLaneBehavior() {
         "",
         "1. run resolver on a valid marker",
         "2. run resolver with no marker",
+        "",
+        "## Что не входит",
+        "",
+        "- NONGOALS_SENTINEL skill wiring",
         "",
       ].join("\n")
     );
@@ -659,6 +667,23 @@ function validateIssueOnlyLaneBehavior() {
     if (happy.risk_class !== "standard") fail("resolve-issue-context issue-only must read the recorded risk class");
     if (happy.approval_status !== "approved-fresh") {
       fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
+    }
+
+    // Guard (must-fix #3): the fingerprint binds the FULL Issue contract, not
+    // just acceptance + verify. Mutating the scope or the non-goals section must
+    // change the fingerprint, so an approval can never survive a contract change.
+    const emitFingerprint = (issueFile) =>
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issueFile, "--emit-fingerprint"]).trim();
+    const fullBody = fs.readFileSync(issuePath, "utf8");
+    for (const [sentinel, label] of [
+      ["SCOPE_SENTINEL", "scope/what-to-do"],
+      ["NONGOALS_SENTINEL", "non-goals"],
+    ]) {
+      const mutatedPath = path.join(dir, `issue-mutated-${sentinel}.md`);
+      fs.writeFileSync(mutatedPath, fullBody.replace(sentinel, `${sentinel}_MUTATED`));
+      if (emitFingerprint(mutatedPath) === fingerprint) {
+        fail(`resolve-issue-context fingerprint must cover the ${label} section`);
+      }
     }
 
     // Fixture 3 — missing-marker: a marker source without the marker line is
@@ -730,19 +755,40 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker: unknown field"
     );
 
-    // Guard: stale approval is reachable and does not block resolution.
+    // Guard: the Phase-1 eligibility envelope is executable — a structurally
+    // valid marker recording deep or risky falls back to project-first, never
+    // silently issue-only (deep/risky keeps full ceremony until Phase 3).
+    for (const ineligible of ["deep", "risky"]) {
+      writeMarker([
+        "Marker version: 1",
+        `Scope fingerprint: ${fingerprint}`,
+        "Acceptance IDs: AC1, AC2",
+        `Risk class: ${ineligible}`,
+        `Approval: ${fingerprint}`,
+      ]);
+      const outOfEnvelope = JSON.parse(
+        runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath])
+      );
+      if (outOfEnvelope.package_kind !== "project-first") {
+        fail(`resolve-issue-context must fall back to project-first for an out-of-envelope ${ineligible} marker`);
+      }
+    }
+
+    // Guard: stale approval is reachable and does not block resolution. Uses an
+    // in-envelope class (standard) so the case exercises stale approval, not the
+    // deep/risky project-first fallback.
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
       "Acceptance IDs: AC1, AC2",
-      "Risk class: risky",
+      "Risk class: standard",
       "Approval: 0000deadbeef (approved by owner for an older scope)",
     ]);
     const staleApproval = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]));
     if (staleApproval.approval_status !== "stale") {
       fail("resolve-issue-context must report stale approval when the approved fingerprint is superseded");
     }
-    if (staleApproval.risk_class !== "risky") fail("resolve-issue-context must read the recorded risk class verbatim");
+    if (staleApproval.risk_class !== "standard") fail("resolve-issue-context must read the recorded risk class verbatim");
 
     // Guard: config opt-out forces project-first even with a valid marker.
     writeMarker([

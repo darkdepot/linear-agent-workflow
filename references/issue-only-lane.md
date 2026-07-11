@@ -35,16 +35,20 @@ An issue-only package is opted in by a **marker** plus a Linear label.
 - **Fields — EXACTLY these five, no more:**
   - `Marker version: 1` — the versioned schema of the marker itself. An unknown
     version is a hard violation, never a silent downgrade.
-  - `Scope fingerprint` — a deterministic fingerprint of the Issue's normative
-    scope (its acceptance criteria and verify steps). It is how drift is caught:
-    when the Issue body changes, the fingerprint changes and the marker goes
-    stale.
+  - `Scope fingerprint` — a deterministic fingerprint of the Issue's **full
+    normative contract**: objective, scope, desired behavior, acceptance
+    criteria, verification instructions, and non-goals. It is how drift is
+    caught: when any of those change, the fingerprint changes and the marker goes
+    stale — an approval never survives a change to the objective, scope, or
+    non-goals, not only to the acceptance text.
   - `Acceptance IDs` — the stable acceptance-criterion IDs (`AC1`, `AC2`, ...)
     this package commits to. They must match the IDs in the Issue body.
   - `Risk class` — one of the EXISTING classes `tiny`, `standard`, `deep`,
     `risky` from `references/readiness-gates.md`, read from the Issue's
     review-gate. The marker records the existing class; it never runs a fresh
-    classifier.
+    classifier. In Phase 1 only `tiny` and `standard` are eligible for the lane;
+    a marker recording `deep` or `risky` resolves to project-first (see the
+    fail-closed invariant below).
   - `Approval` — the owner start-approval receipt. It carries the fingerprint the
     owner approved (or `none`), so freshness can be checked against current
     scope.
@@ -79,13 +83,16 @@ Every issue-only-lane consumer resolves context through one seam: a fixed
 | `package_kind` | `issue-only` \| `project-first` | Which lane this package is in. |
 | `lifecycle_state_entity` | `issue` \| `project` | Which Linear entity holds the authoritative lifecycle state. Issue-only reads the Issue; project-first reads the Project. This is the seam that decouples the lifecycle-state source. |
 | `behavioral_oracle` | `{kind: issue-verification, acceptance_ids, verify_steps}` for issue-only; `null` for project-first | How the package is proven. For issue-only the oracle is the Issue's own acceptance criteria and verify steps. |
-| `risk_class` | `tiny` \| `standard` \| `deep` \| `risky` for issue-only; `null` for project-first | The EXISTING review-gate risk class, read — never re-derived. |
+| `risk_class` | `tiny` \| `standard` for issue-only (deep/risky fall back to project-first in Phase 1); `null` for project-first | The EXISTING review-gate risk class, read — never re-derived. |
 | `approval_status` | `approved-fresh` \| `stale` \| `absent` | `approved-fresh`: owner approved the current scope fingerprint. `stale`: an approval exists but for a superseded fingerprint. `absent`: no approval recorded. |
 
 **Fail-closed invariant:** **no marker ⇒ `package_kind=project-first`.** A missing
 or unrecognizable marker always resolves to the safe, full-ceremony lane. A
 package is never silently treated as issue-only. Project-first is also the result
-when the lane is explicitly disabled by config (`issueOnlyLane.enabled: false`).
+when the lane is explicitly disabled by config (`issueOnlyLane.enabled: false`),
+and when a structurally valid marker records a `deep` or `risky` risk class — in
+Phase 1 only `tiny`/`standard` are eligible, and deep/risky keeps full ceremony
+until the Phase-3 safety modules land.
 
 ## The Resolver
 
@@ -103,18 +110,22 @@ seam. It mirrors the deterministic-config-script structure of
     and exits; used to author markers and to build fixtures without duplicating
     the hash.
 - **Output:** the 5-field contract as pretty JSON on stdout, exit `0`.
-- **Fingerprint:** `sha256` over the normalized acceptance and verify sections of
-  the Issue body (aligned with the design's oracle definition — a hash of the
-  normalized `Критерии приемки` and `Как проверить` sections), truncated for a
-  human-readable marker while staying deterministic.
+- **Fingerprint:** `sha256` over the **full normalized Issue contract** —
+  objective (`Цель PR`), scope (`Что сделать`), desired behavior, acceptance
+  criteria (`Критерии приёмки`), verification instructions (`Как проверить`),
+  and non-goals (`Что не входит`) — truncated for a human-readable marker while
+  staying deterministic. Binding the full contract, not just acceptance + verify,
+  is what makes an approval fail when the objective, scope, or non-goals change.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
+  - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒
+    `project-first`, exit `0` — out of the Phase-1 envelope, not corrupt.
   - A marker that is present but integrity-invalid ⇒ `process.exit(1)` with a
     single stable line to stderr. Violations: `issue-only-lane: broken marker: …`
-    (unknown `Marker version`, a missing field, an invalid `Risk class`,
-    mismatched `Acceptance IDs`, or a forbidden route-record field) and
-    `issue-only-lane: stale marker: scope fingerprint mismatch …`. It is never
-    silently resolved as issue-only.
+    (unknown `Marker version`, a missing field, an unknown extra field beyond the
+    five, an invalid `Risk class`, mismatched `Acceptance IDs`, or a forbidden
+    route-record field) and `issue-only-lane: stale marker: scope fingerprint
+    mismatch …`. It is never silently resolved as issue-only.
 - **Not a spine-resolver:** it emits no assurance vector, no route-record, and no
   `required_artifacts`. It reads recorded state (risk class, approval) and checks
   scope integrity; it does not classify risk, reduce an assurance vector, or
