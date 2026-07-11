@@ -36,6 +36,21 @@ const REQUIRED_MARKER_FIELDS = [
 // The marker is not a route-record. These fields belong to the spine, not here.
 const FORBIDDEN_MARKER_KEYS = ["route revision", "assurance vector", "required artifacts"];
 
+// Normative-section heading matchers, ANCHORED at the start of the heading text
+// so the English alternatives cannot overlap: unanchored `goal`/`scope` would
+// match "Non-goals"/"Out of scope" and miscount them as behavior. Anchoring alone
+// (no `\b`, which mishandles Cyrillic) excludes the negative headings. One source
+// of truth, reused by the fingerprint, the oracle, completeness, and risk read.
+const SECTION_RE = {
+  objective: /^(?:цель pr|objective|goals?)/i,
+  scope: /^(?:что сделать|scope|what to do)/i,
+  desired: /^(?:желаемое поведение|desired behaviou?r)/i,
+  acceptance: /^(?:критерии приёмки|критерии приемки|acceptance)/i,
+  verify: /^(?:как проверить|how to verify|verify)/i,
+  nonGoals: /^(?:что не входит|non-goals|out of scope)/i,
+  reviewGate: /^(?:ревью-гейт|ревью гейт|review gate)/i,
+};
+
 function usage(exitCode = 2) {
   console.error(
     "Usage: node scripts/resolve-issue-context.mjs --issue <path> [--marker <path>] [--config <path>] [--label <names>] [--approval-verified <fp>] [--emit-fingerprint]"
@@ -204,48 +219,47 @@ function parseVerifySteps(lines) {
   return steps;
 }
 
-// Deterministic scope fingerprint = sha256 over the FULL normalized Issue
-// contract, not just acceptance + verify: objective, scope/what-to-do, desired
-// behavior, acceptance criteria, verification instructions, non-goals, and the
-// review-gate risk classification. This is must-fix #3 — an approval must never
-// survive a change to the objective, scope, non-goals, or the recorded risk,
-// only to the acceptance/verify text. Including the review-gate means an Issue
-// reclassified standard→deep/risky invalidates its old marker. Missing sections
-// contribute a stable empty part, so the hash stays deterministic. Truncated for
-// a human-readable marker; determinism is preserved.
+// Deterministic scope fingerprint = full sha256 over the normalized Issue
+// contract: objective, scope/what-to-do, desired behavior, acceptance criteria,
+// verification instructions, non-goals, and the review-gate risk classification.
+// This is must-fix #3 — an approval must never survive a change to the objective,
+// scope, non-goals, or recorded risk, only to the acceptance/verify text.
+// Including the review-gate means an Issue reclassified standard→deep/risky
+// invalidates its old marker. Missing sections contribute a stable empty part.
 const CONTRACT_SECTION_RES = [
-  /(?:цель pr|objective|goal)/i,
-  /(?:что сделать|scope|what to do)/i,
-  /(?:желаемое поведение|desired behaviou?r)/i,
-  /(?:критерии приёмки|критерии приемки|acceptance)/i,
-  /(?:как проверить|how to verify|verify)/i,
-  /(?:что не входит|non-goals|out of scope)/i,
-  /(?:ревью-гейт|ревью гейт|review gate)/i,
+  SECTION_RE.objective,
+  SECTION_RE.scope,
+  SECTION_RE.desired,
+  SECTION_RE.acceptance,
+  SECTION_RE.verify,
+  SECTION_RE.nonGoals,
+  SECTION_RE.reviewGate,
 ];
 
 function computeScope(issueText) {
-  const acceptanceLines = extractSection(issueText, /(?:критерии приёмки|критерии приемки|acceptance)/i);
-  const verifyLines = extractSection(issueText, /(?:как проверить|how to verify|verify)/i);
+  // Strip the marker block first: when the marker is inline (--marker defaults to
+  // the issue body), hashing the body verbatim would fold the marker's own
+  // fingerprint field into a section, so the fingerprint emitted before the marker
+  // is written would never match afterwards. A separate-comment marker leaves the
+  // body unchanged.
+  const body = stripMarkerBlock(issueText);
+  const acceptanceLines = extractSection(body, SECTION_RE.acceptance);
+  const verifyLines = extractSection(body, SECTION_RE.verify);
   const acceptanceIds = parseAcceptanceIds(acceptanceLines);
   const verifySteps = parseVerifySteps(verifyLines);
   // Indentation-preserving normalization so semantic whitespace changes the hash,
   // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
   // collision target for the approval trust boundary.
-  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(issueText, re)));
+  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(body, re)));
   // Canonical, unambiguous section encoding — a literal "---" inside a section
-  // cannot shuffle text across normative fields while preserving the hash, the
-  // way a raw "\n---\n" delimiter would allow.
+  // cannot shuffle text across normative fields while preserving the hash.
   const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
   // A self-contained issue-only package must describe its behavior (objective /
   // scope / desired behavior) and its non-goals — not just acceptance + verify.
-  const behaviorText = [
-    /(?:цель pr|objective|goal)/i,
-    /(?:что сделать|scope|what to do)/i,
-    /(?:желаемое поведение|desired behaviou?r)/i,
-  ]
-    .map((re) => normalizeLines(extractSection(issueText, re)))
+  const behaviorText = [SECTION_RE.objective, SECTION_RE.scope, SECTION_RE.desired]
+    .map((re) => normalizeLines(extractSection(body, re)))
     .join("");
-  const nonGoalsText = normalizeLines(extractSection(issueText, /(?:что не входит|non-goals|out of scope)/i));
+  const nonGoalsText = normalizeLines(extractSection(body, SECTION_RE.nonGoals));
   return {
     acceptanceIds,
     verifySteps,
@@ -262,7 +276,7 @@ function computeScope(issueText) {
 // then required to match this, so the marker cannot silently downgrade the Issue.
 function extractReviewGateClass(issueText) {
   const text = normalizeLines(
-    extractSection(issueText, /(?:ревью-гейт|ревью гейт|review gate)/i)
+    extractSection(stripMarkerBlock(issueText), SECTION_RE.reviewGate)
   ).toLowerCase();
   let found = null;
   for (const cls of RISK_CLASSES) {
@@ -321,6 +335,43 @@ function findMarkerBlock(markerText) {
     fields[key] = kv[2].trim();
   }
   return fields;
+}
+
+// Remove the authoritative (last, unfenced) marker block from issue text so the
+// scope fingerprint never hashes the marker itself. An inline marker (the issue
+// body used as the marker source) would otherwise fold its own fingerprint field
+// into a section and always read stale. Mirrors findMarkerBlock's discovery.
+function stripMarkerBlock(text) {
+  const lines = text.split(/\r?\n/);
+  let markerIdx = -1;
+  let fence = null;
+  for (let i = 0; i < lines.length; i += 1) {
+    const nextFence = fenceTransition(lines[i], fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      continue;
+    }
+    if (!fence && lines[i].trim() === MARKER_LINE) markerIdx = i;
+  }
+  if (markerIdx < 0) return text;
+  // Drop the marker line and its contiguous field block (fields until a blank
+  // line, a fence, or a non-field line).
+  let end = markerIdx + 1;
+  let started = false;
+  for (; end < lines.length; end += 1) {
+    const trimmed = lines[end].trim();
+    if (trimmed === "" || /^\s*(?:```|~~~)/.test(lines[end])) {
+      if (started) break;
+      continue;
+    }
+    if (/^[A-Za-z][A-Za-z0-9 _-]*?:\s*/.test(trimmed)) {
+      started = true;
+      continue;
+    }
+    break;
+  }
+  lines.splice(markerIdx, end - markerIdx);
+  return lines.join("\n");
 }
 
 function normalizeKey(key) {

@@ -909,6 +909,48 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: an INLINE marker (marker source defaults to the issue body) is
+    // stripped before hashing, so its own fingerprint field does not change the
+    // hash — the package resolves issue-only, never self-referentially stale.
+    const inlineBody = ["# Inline", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "- AC2: y", "", "## Как проверить", "", "1. s", "2. t", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const inlinePath = path.join(dir, "issue-inline.md");
+    fs.writeFileSync(inlinePath, inlineBody);
+    const inlineFp = emitFingerprint(inlinePath);
+    fs.writeFileSync(
+      inlinePath,
+      `${inlineBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${inlineFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${inlineFp}\n`
+    );
+    const inlineResolved = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", inlinePath, "--label", "issue-only", "--approval-verified", inlineFp])
+    );
+    if (inlineResolved.package_kind !== "issue-only") {
+      fail("resolve-issue-context inline marker must be stripped before hashing so it resolves issue-only, not stale");
+    }
+
+    // Guard: negative headings are not miscounted as behavior — an English Issue
+    // with only Non-goals (plus acceptance + verify) has no described behavior and
+    // is rejected, not admitted as a self-contained package.
+    const negHeadingPath = path.join(dir, "issue-neg-heading.md");
+    fs.writeFileSync(
+      negHeadingPath,
+      ["# Neg", "", "## Acceptance", "", "- AC1: x", "", "## How to verify", "", "1. s", "", "## Non-goals", "", "- out of scope thing", "", "## Review gate", "", "- standard", ""].join("\n")
+    );
+    const negFp = emitFingerprint(negHeadingPath);
+    const negMarkerPath = path.join(dir, "marker-neg.md");
+    fs.writeFileSync(
+      negMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${negFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${negFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context negative-heading behavior fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", negHeadingPath, "--marker", negMarkerPath,
+          "--label", "issue-only", "--approval-verified", negFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
