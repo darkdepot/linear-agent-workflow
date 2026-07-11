@@ -130,22 +130,32 @@ orchestrator's reasoning. It plays interviewer for idea shaping
 (`/plan-eng-review`, `/plan-design-review`); the orchestrator answers as
 product director.
 
-Bindings — pick the strongest available; never block discovery on a
-missing one:
+Model selection is mandatory and cross-vendor: the Second Voice runs on
+a different model family from the orchestrator. A fresh context on the
+*same* model is not a second voice — it inherits the same training,
+biases, and blind spots and collapses into self-review (an Opus
+orchestrator interrogating an Opus reviewer learns nothing new). Pick the
+strongest available cross-vendor model, both sides at high reasoning;
+never block discovery on a missing one.
 
-- Claude Code: spawn a subagent on the strongest reviewer model distinct
-  from the orchestrator's own session (Opus-class; the Agent tool's
-  `opus` model) and continue the dialogue via session messages to the
-  same agent.
-- Codex CLI runtimes: a fresh `codex exec` thread with
-  `model_reasoning_effort="high"`, continued with `codex exec resume`.
-  The thread is a reviewer, not a worker: no worktree, no Issue, no
-  registry entry. Note the live thread id and round count in the
-  discovery notes so a resumed orchestrator rebinds or deliberately
-  restarts the dialogue — and ends orphaned reviewer processes — instead
-  of silently losing it.
-- Fallback: run the lens review in-session (product, engineering, and
-  design lenses) and record the substitution in the discovery notes.
+- Orchestrator on a Claude model (Fable, Opus, Sonnet, …) → Second Voice
+  = `gpt-5.6-sol` at `model_reasoning_effort="high"`, a fresh `codex
+  exec` thread continued with `codex exec resume`. The thread is a
+  reviewer, not a worker: no worktree, no Issue, no registry entry. Note
+  the live thread id and round count in the discovery notes so a resumed
+  orchestrator rebinds or deliberately restarts the dialogue — and ends
+  orphaned reviewer processes — instead of silently losing it.
+- Orchestrator on GPT-5.6 (`sol`, `terra`, `luna`) → Second Voice =
+  Claude Opus (latest) at high reasoning, spawned via the Claude
+  transport — the Agent tool's `opus` model in Claude Code, or `claude -p
+  --model opus` from a Codex runtime — and continued via session messages
+  to the same agent.
+- Fallback, only when the cross-vendor model is unreachable (no Codex
+  auth, or no Claude access): run the lens review in-session (product,
+  engineering, and design lenses) and record the substitution and its
+  reason in the discovery notes.
+  A same-model Second Voice is not an acceptable fallback; an in-session
+  lens pass is.
 
 Dispatch shape per skill run: the reviewer role and the named skill; the
 product brief and Linear links; repo read access; the instruction to

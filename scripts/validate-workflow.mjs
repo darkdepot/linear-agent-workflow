@@ -966,6 +966,8 @@ function validateAntiPatterns() {
   assertIncludes("references/orchestration.md", "near-production");
   assertIncludes("references/orchestration.md", "never a first draft");
   assertIncludes("references/orchestration.md", "### Second Voice");
+  assertIncludes("references/orchestration.md", "a different model family from the orchestrator");
+  assertIncludes("references/orchestration.md", "A same-model Second Voice is not an acceptable fallback");
   assertIncludes("references/orchestration.md", "never talks to the user, never writes");
   assertIncludes("references/questioning.md", "Director Discovery");
   assertIncludes("references/questioning.md", "Second Voice");
