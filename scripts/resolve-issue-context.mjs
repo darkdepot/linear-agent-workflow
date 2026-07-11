@@ -99,14 +99,19 @@ function readFileOrFail(filePath, label) {
   }
 }
 
-// Extract the content lines of the first flat section whose heading matches.
-// Fenced code blocks are honored: a `# comment` line inside a ``` / ~~~ fence is
-// NOT a heading, so a shell snippet in a section never truncates it and drops the
-// rest of the scope out of the fingerprint.
+// Extract the content lines of the section whose heading matches, INCLUDING its
+// nested subsections. Two structures are honored so nothing normative silently
+// escapes the fingerprint:
+//   - Fenced code blocks: a `# comment` inside a ``` / ~~~ fence is NOT a heading,
+//     so a shell snippet never truncates the section.
+//   - Heading depth: a sibling or shallower heading ends the section, but a
+//     DEEPER (nested) heading and its content stay in — so a `## Edge cases`
+//     under `# Что сделать` still participates in the hash and in AC/verify parse.
 function extractSection(text, headingRe) {
   const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
+  let capturedDepth = 0;
   let inFence = false;
   for (const line of lines) {
     if (/^\s*(?:```|~~~)/.test(line)) {
@@ -116,8 +121,16 @@ function extractSection(text, headingRe) {
     }
     const heading = !inFence && /^(#{1,6})\s+(.*)$/.exec(line);
     if (heading) {
-      if (capturing) break; // any subsequent heading ends the flat section
-      if (headingRe.test(heading[2])) capturing = true;
+      const depth = heading[1].length;
+      if (capturing) {
+        if (depth <= capturedDepth) break; // sibling/shallower heading ends it
+        out.push(line); // deeper (nested) heading stays in the section
+        continue;
+      }
+      if (headingRe.test(heading[2])) {
+        capturing = true;
+        capturedDepth = depth;
+      }
       continue;
     }
     if (capturing) out.push(line);
@@ -197,7 +210,10 @@ function computeScope(issueText) {
   // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
   // collision target for the approval trust boundary.
   const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(issueText, re)));
-  const fingerprint = crypto.createHash("sha256").update(parts.join("\n---\n")).digest("hex");
+  // Canonical, unambiguous section encoding — a literal "---" inside a section
+  // cannot shuffle text across normative fields while preserving the hash, the
+  // way a raw "\n---\n" delimiter would allow.
+  const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
   return { acceptanceIds, verifySteps, fingerprint };
 }
 
@@ -225,8 +241,15 @@ function extractReviewGateClass(issueText) {
 function findMarkerBlock(markerText) {
   const lines = markerText.split(/\r?\n/);
   let markerIdx = -1;
+  let inFence = false;
   for (let i = 0; i < lines.length; i += 1) {
-    if (lines[i].trim() === MARKER_LINE) markerIdx = i;
+    if (/^\s*(?:```|~~~)/.test(lines[i])) {
+      inFence = !inFence;
+      continue;
+    }
+    // A marker line inside a fenced code block is a documentation EXAMPLE, not an
+    // opt-in — only a standalone line outside any fence is a real marker.
+    if (!inFence && lines[i].trim() === MARKER_LINE) markerIdx = i;
   }
   if (markerIdx < 0) return null;
   const fields = {};

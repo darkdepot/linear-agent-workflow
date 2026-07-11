@@ -69,9 +69,10 @@ either is missing.
     intake transaction that writes it as a verified owner comment, and the
     resolver only trusts it when the caller passes the matching
     `--approval-verified` fingerprint (see Trust boundary).
-- **Recovery:** most-recent-wins. The most recent Linear comment containing
-  `linear-issue-only marker` is authoritative; older marker comments are
-  superseded. Never quote the marker line inside other comments.
+- **Recovery:** most-recent-wins. The most recent **standalone** `linear-issue-only
+  marker` line, **outside any fenced code block**, is authoritative; older marker
+  comments are superseded. A prose mention or a fenced documentation example of
+  the marker format is never treated as an opt-in.
 
 ## Marker ≠ Route-Record
 
@@ -165,8 +166,12 @@ seam. It mirrors the deterministic-config-script structure of
   (`Как проверить`), non-goals (`Что не входит`), and the review-gate risk
   (`Ревью-гейт`). Normalization preserves semantic indentation (nested lists,
   fenced code), so a meaning-changing re-indentation also invalidates an approval.
-  Binding the full contract, not just acceptance + verify, is what makes an
-  approval fail when the objective, scope, non-goals, or recorded risk change.
+  Each section captures its nested subsections, and the sections are hashed with a
+  canonical, unambiguous encoding — so neither a `##` subsection nor a literal
+  `---` line can move content out of a normative field while keeping the
+  fingerprint. Binding the full contract, not just acceptance + verify, is what
+  makes an approval fail when the objective, scope, non-goals, or recorded risk
+  change.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
   - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒

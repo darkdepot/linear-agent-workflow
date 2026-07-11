@@ -824,6 +824,44 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must emit the full 64-hex sha256 fingerprint");
     }
 
+    // Guard: a nested subsection under a normative heading still participates in
+    // the fingerprint — content under `### Edge cases` inside `## Что сделать` is
+    // hashed, so edits there invalidate an approval.
+    const nestedBase = (tail) =>
+      ["# N", "", "## Что сделать", "", "intro line", "", "### Edge cases", "", tail, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const nestedAPath = path.join(dir, "issue-nested-a.md");
+    const nestedBPath = path.join(dir, "issue-nested-b.md");
+    fs.writeFileSync(nestedAPath, nestedBase("handle empty input"));
+    fs.writeFileSync(nestedBPath, nestedBase("handle HUGE input differently"));
+    if (emitFingerprint(nestedAPath) === emitFingerprint(nestedBPath)) {
+      fail("resolve-issue-context fingerprint must include content under nested subsections");
+    }
+
+    // Guard: section boundaries are canonically encoded — moving a "---"-delimited
+    // fragment from one section into an adjacent one changes the fingerprint (a
+    // raw delimiter join would let it collide).
+    const boundary = (scope, desired) =>
+      ["# B", "", "## Что сделать", "", scope, "", "## Желаемое поведение", "", desired, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const boundaryAPath = path.join(dir, "issue-boundary-a.md");
+    const boundaryBPath = path.join(dir, "issue-boundary-b.md");
+    fs.writeFileSync(boundaryAPath, boundary("keep", "moved"));
+    fs.writeFileSync(boundaryBPath, boundary("keep\n\n---\n\nmoved", ""));
+    if (emitFingerprint(boundaryAPath) === emitFingerprint(boundaryBPath)) {
+      fail("resolve-issue-context fingerprint must unambiguously encode section boundaries");
+    }
+
+    // Guard: a fenced EXAMPLE of the marker format is not an opt-in — an Issue
+    // documenting the format in a code fence still resolves to project-first.
+    const fencedMarkerPath = path.join(dir, "issue-fenced-marker.md");
+    fs.writeFileSync(
+      fencedMarkerPath,
+      ["# Doc", "", "## Что сделать", "", "Example marker format:", "", "```text", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: abc", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const fencedMarker = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", fencedMarkerPath]));
+    if (fencedMarker.package_kind !== "project-first") {
+      fail("resolve-issue-context must treat a fenced marker example as project-first, not an opt-in");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
