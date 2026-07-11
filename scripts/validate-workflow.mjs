@@ -774,6 +774,54 @@ function validateIssueOnlyLaneBehavior() {
       }
     }
 
+    // Guard: integrity is checked BEFORE the eligibility fallback — a deep/risky
+    // marker with a stale fingerprint still hard-fails, it does not slip into a
+    // silent project-first.
+    writeMarker([
+      "Marker version: 1",
+      "Scope fingerprint: deadbeef12ab",
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: deep",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context corrupt deep marker fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: stale marker"
+    );
+
+    // Guard: a sixth field whose key uses a hyphen or digit is still parsed and
+    // rejected, never skipped as end-of-block.
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: standard",
+      "Approval: none",
+      "Owner-ID: sneaky",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context hyphenated extra field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: a duplicate field is ambiguous and rejected — a second value can
+    // never silently mask the first (here a second Risk class hiding a first).
+    writeMarker([
+      "Marker version: 1",
+      `Scope fingerprint: ${fingerprint}`,
+      "Acceptance IDs: AC1, AC2",
+      "Risk class: deep",
+      "Risk class: standard",
+      "Approval: none",
+    ]);
+    expectCommandFailure(
+      "resolve-issue-context duplicate field fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      "issue-only-lane: broken marker: duplicate field"
+    );
+
     // Guard: stale approval is reachable and does not block resolution. Uses an
     // in-envelope class (standard) so the case exercises stale approval, not the
     // deep/risky project-first fallback.

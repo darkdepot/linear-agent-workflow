@@ -175,6 +175,7 @@ function findMarkerBlock(markerText) {
   if (idx < 0) return null;
   const rest = markerText.slice(idx + MARKER_LINE.length).split(/\r?\n/);
   const fields = {};
+  const seen = new Set();
   let started = false;
   for (const rawLine of rest) {
     const line = rawLine.trim();
@@ -182,19 +183,28 @@ function findMarkerBlock(markerText) {
       if (started) break;
       continue;
     }
-    const kv = /^([A-Za-z][A-Za-z _]*?):\s*(.*)$/.exec(line);
+    // Parse ANY field-shaped line — the key may hold letters, digits, spaces,
+    // underscores, or hyphens — so a sixth field can never hide by using a
+    // character the parser would otherwise skip past as end-of-block.
+    const kv = /^([A-Za-z][A-Za-z0-9 _-]*?):\s*(.*)$/.exec(line);
     if (!kv) {
       if (started) break;
       continue;
     }
     started = true;
-    fields[kv[1].trim()] = kv[2].trim();
+    const key = kv[1].trim();
+    const norm = normalizeKey(key);
+    // A repeated field is ambiguous — a second value can mask the first (a
+    // second "Risk class: standard" hiding a first "Risk class: deep"); reject.
+    if (seen.has(norm)) violation(`broken marker: duplicate field "${key}"`);
+    seen.add(norm);
+    fields[key] = kv[2].trim();
   }
   return fields;
 }
 
 function normalizeKey(key) {
-  return key.toLowerCase().replace(/[_\s]+/g, " ").trim();
+  return key.toLowerCase().replace(/[-_\s]+/g, " ").trim();
 }
 
 function parseIdList(value) {
@@ -292,14 +302,6 @@ function resolve(args) {
     violation(`broken marker: invalid risk class "${riskClass}" (expected one of ${RISK_CLASSES.join(", ")})`);
   }
 
-  // Phase-1 eligibility envelope: only tiny/standard travel the issue-only lane.
-  // A structurally valid marker recording deep/risky is not corrupt — it is out
-  // of the envelope, so it falls back to the safe project-first lane instead of
-  // silently activating issue-only for work that must keep full ceremony.
-  if (!LANE_ELIGIBLE_RISK.includes(riskClass)) {
-    return projectFirstResult();
-  }
-
   const scope = computeScope(issueText);
   if (!scope.hasScope) {
     violation("broken marker: issue body has no acceptance or verify scope to fingerprint");
@@ -313,6 +315,16 @@ function resolve(args) {
   const markerFingerprint = normalizedKeys.get("scope fingerprint");
   if (markerFingerprint !== scope.fingerprint) {
     violation(`stale marker: scope fingerprint mismatch (marker ${markerFingerprint} vs body ${scope.fingerprint})`);
+  }
+
+  // Phase-1 eligibility envelope — checked only AFTER every integrity gate above,
+  // so a corrupt deep/risky marker (stale fingerprint, mismatched acceptance IDs)
+  // still hard-fails rather than silently falling back. A structurally valid
+  // marker recording deep/risky is not corrupt — it is out of the envelope, so it
+  // resolves to the safe project-first lane. deep/risky keeps full ceremony until
+  // the Phase-3 safety modules land.
+  if (!LANE_ELIGIBLE_RISK.includes(riskClass)) {
+    return projectFirstResult();
   }
 
   return {
