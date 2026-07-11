@@ -483,26 +483,47 @@ function extractReviewGateClass(issueText) {
   return classes.reduce((hi, cls) => (classAt(cls) > classAt(hi) ? cls : hi));
 }
 
-// Locate the most-recent marker block (most-recent-wins) and parse its contiguous
-// "Key: value" fields. The marker line must stand ALONE on its own line — a mere
-// prose mention of "linear-issue-only marker" (e.g. an Issue documenting the
-// convention) is not a marker, so such an Issue still resolves to project-first.
-// Returns null when no standalone marker line is present.
-function findMarkerBlock(markerText) {
-  const lines = markerText.split(/\r?\n/);
-  let markerIdx = -1;
+// Indices of every REAL standalone marker line: 0-3 space indent, and outside any
+// fenced code block AND any HTML comment. A prose mention, a fenced example, an
+// indented-code example, or a commented-out example is never a marker — one
+// discovery rule shared by findMarkerBlock and stripMarkerBlock so they can't drift.
+function markerLineIndices(lines) {
+  const indices = [];
   let fence = null;
+  let inComment = false;
   for (let i = 0; i < lines.length; i += 1) {
-    const nextFence = fenceTransition(lines[i], fence);
+    let line = lines[i];
+    if (inComment) {
+      const close = line.indexOf("-->");
+      if (close < 0) continue;
+      line = line.slice(close + 3);
+      inComment = false;
+    }
+    line = line.replace(/<!--[^]*?-->/g, "");
+    const openIdx = line.indexOf("<!--");
+    if (openIdx >= 0) {
+      line = line.slice(0, openIdx);
+      inComment = true;
+    }
+    const nextFence = fenceTransition(line, fence);
     if (nextFence !== fence) {
       fence = nextFence;
       continue;
     }
-    // A marker line inside a fenced code block is a documentation EXAMPLE, not an
-    // opt-in — only a standalone line outside any fence is a real marker.
-    if (!fence && MARKER_LINE_RE.test(lines[i])) markerIdx = i;
+    if (!fence && MARKER_LINE_RE.test(line)) indices.push(i);
   }
-  if (markerIdx < 0) return null;
+  return indices;
+}
+
+// Locate the most-recent marker block (most-recent-wins) and parse its contiguous
+// "Key: value" fields. Returns null when no real standalone marker line is present
+// (a prose mention or a fenced/indented/commented example still resolves to
+// project-first).
+function findMarkerBlock(markerText) {
+  const lines = markerText.split(/\r?\n/);
+  const indices = markerLineIndices(lines);
+  if (indices.length === 0) return null;
+  const markerIdx = indices[indices.length - 1]; // most-recent-wins
   const fields = {};
   const seen = new Set();
   let started = false;
@@ -550,20 +571,9 @@ function stripMarkerBlock(text) {
   const recognized = new Set(REQUIRED_MARKER_FIELDS.map(normalizeKey));
   const lines = text.split(/\r?\n/);
   for (;;) {
-    let markerIdx = -1;
-    let fence = null;
-    for (let i = 0; i < lines.length; i += 1) {
-      const nextFence = fenceTransition(lines[i], fence);
-      if (nextFence !== fence) {
-        fence = nextFence;
-        continue;
-      }
-      if (!fence && MARKER_LINE_RE.test(lines[i])) {
-        markerIdx = i;
-        break; // remove blocks one at a time, front to back
-      }
-    }
-    if (markerIdx < 0) break;
+    const indices = markerLineIndices(lines);
+    if (indices.length === 0) break;
+    const markerIdx = indices[0]; // remove blocks one at a time, front to back
     // Drop the marker line and ONLY its contiguous recognized marker fields. A
     // non-marker line (blank, fence, or arbitrary Issue text like
     // "Endpoint: /admin/delete") ends the block and is never stripped, so

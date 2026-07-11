@@ -1512,6 +1512,19 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must treat a 4-space-indented marker line as project-first, not an opt-in");
     }
 
+    // Guard: a marker line inside an HTML comment (a commented-out example, e.g. an
+    // Issue documenting the format) is not a marker — it resolves project-first,
+    // never a spurious broken-marker error from parsing the commented fields.
+    const commentedMarkerPath = path.join(dir, "issue-commented-marker.md");
+    fs.writeFileSync(
+      commentedMarkerPath,
+      ["# CM", "", "## Что сделать", "", "Documents the marker format:", "", "<!--", "linear-issue-only marker", "Marker version: 1", "(fields omitted in this example)", "-->", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const cmm = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", commentedMarkerPath]));
+    if (cmm.package_kind !== "project-first") {
+      fail("resolve-issue-context must ignore a marker line inside an HTML comment (project-first, not a broken-marker error)");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
