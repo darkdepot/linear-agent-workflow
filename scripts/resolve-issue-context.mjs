@@ -253,6 +253,7 @@ function parseAcceptanceIds(lines) {
 function parseVerifySteps(lines) {
   const steps = [];
   let current = null;
+  let baseIndent = 0; // indentation of the current step's list marker
   let fence = null;
   const flush = () => {
     if (current !== null) {
@@ -275,10 +276,19 @@ function parseVerifySteps(lines) {
       continue;
     }
     if (/^ {0,3}#{1,6}\s/.test(raw)) continue; // a subsection heading is not a step
-    const topItem = /^(?:[-*]|\d+[.)])\s+(.*)$/.exec(raw);
-    if (topItem) {
-      flush();
-      current = topItem[1];
+    const item = /^(\s*)(?:[-*]|\d+[.)])\s+(.*)$/.exec(raw);
+    if (item) {
+      const indent = item[1].length;
+      // A new step starts only at the top level — an item indented DEEPER than the
+      // current step's marker is a nested sub-item (a continuation). Indentation is
+      // relative, so "  1. a" / "  2. b" are siblings while "1. a" / "   - b" nests.
+      if (current === null || indent <= baseIndent) {
+        flush();
+        current = item[2];
+        baseIndent = indent;
+      } else {
+        current = `${current} ${item[2]}`;
+      }
       continue;
     }
     const rest = raw.trim();
@@ -289,41 +299,69 @@ function parseVerifySteps(lines) {
   return steps;
 }
 
-// Substantive = a line with visible content that is not merely a fence marker, a
-// heading, or an HTML comment — so an empty fenced block, a bare nested
-// subheading, or an invisible `<!-- ... -->` never counts as described content.
-function hasSubstantiveContent(lines) {
-  let inComment = false;
-  for (const rawLine of lines) {
-    let text = rawLine;
+// True when a section matched by `targetRes` has substantive content of ITS OWN.
+// Content nested under a subheading that belongs to ANOTHER normative section does
+// NOT count — so a section that only nests other normative sections (e.g. a
+// "## Что сделать" whose body is just "### Критерии приёмки", "### Как проверить",
+// ...) is treated as empty. A nested subsection that is arbitrary (### Details) or
+// a duplicate of the target still counts. Fence/indent/depth handled inline so it
+// stays consistent with extractSection.
+function hasOwnSectionContent(text, targetRes) {
+  const allSectionRes = [
+    SECTION_RE.objective,
+    SECTION_RE.scope,
+    SECTION_RE.desired,
+    SECTION_RE.acceptance,
+    SECTION_RE.verify,
+    SECTION_RE.nonGoals,
+    SECTION_RE.reviewGate,
+  ];
+  const lines = text.split(/\r?\n/);
+  let fence = null;
+  let depth = -1; // depth of the current target heading, or -1 when outside one
+  let foreignDepth = 0; // >0 while inside a nested foreign-normative subsection
+  let inComment = false; // inside a multi-line HTML comment
+  for (const raw of lines) {
     if (inComment) {
-      const close = text.indexOf("-->");
-      if (close < 0) continue; // the whole line is still inside a comment
-      text = text.slice(close + 3);
-      inComment = false;
+      if (raw.includes("-->")) inComment = false;
+      continue; // a line inside a multi-line comment is invisible, not content
     }
-    text = text.replace(/<!--[^]*?-->/g, ""); // complete comments on this line
-    const open = text.indexOf("<!--");
-    if (open >= 0) {
-      text = text.slice(0, open);
+    if (raw.includes("<!--") && !raw.includes("-->")) {
+      const before = raw.slice(0, raw.indexOf("<!--"));
+      if (depth >= 0 && !foreignDepth && isSubstantiveText(before)) return true;
       inComment = true;
+      continue;
     }
-    const trimmed = text.trim();
-    if (trimmed === "") continue;
-    if (/^(?:```|~~~)/.test(trimmed)) continue; // fence marker
-    if (/^#{1,6}\s/.test(trimmed)) continue; // heading (indent already trimmed away)
-    if (/[\p{L}\p{N}]/u.test(trimmed)) return true; // a bare "-" bullet is not content
+    const nextFence = fenceTransition(raw, fence);
+    if (nextFence !== fence) {
+      fence = nextFence;
+      continue;
+    }
+    if (fence) {
+      if (depth >= 0 && !foreignDepth && isSubstantiveText(raw)) return true;
+      continue;
+    }
+    const heading = /^ {0,3}(#{1,6})\s+(.*)$/.exec(raw);
+    if (heading) {
+      const hd = heading[1].length;
+      if (depth >= 0 && hd > depth) {
+        if (foreignDepth && hd > foreignDepth) continue; // still inside a foreign block
+        const isForeign =
+          allSectionRes.some((re) => re.test(heading[2])) && !targetRes.some((re) => re.test(heading[2]));
+        foreignDepth = isForeign ? hd : 0;
+        continue;
+      }
+      foreignDepth = 0;
+      depth = targetRes.some((re) => re.test(heading[2])) ? hd : -1;
+      continue;
+    }
+    if (depth >= 0 && !foreignDepth && isSubstantiveText(raw)) return true;
   }
   return false;
 }
 
-// True when the Issue has a positive-behavior section (EXACT heading) with
-// substantive content. Reuses extractSection so it inherits the same fenced-block,
-// heading-depth, and nested-subsection handling — no bespoke re-scan to drift out
-// of sync (a negative heading like "Scope exclusions" cannot satisfy it, a nested
-// subsection under the heading still counts, and an empty fence does not).
 function hasDescribedBehavior(text) {
-  return BEHAVIOR_HEADING_RES.some((re) => hasSubstantiveContent(extractSection(text, re)));
+  return hasOwnSectionContent(text, BEHAVIOR_HEADING_RES);
 }
 
 // Deterministic scope fingerprint = full sha256 over the normalized Issue
@@ -369,7 +407,7 @@ function computeScope(issueText) {
     verifySteps,
     fingerprint,
     hasBehavior: hasDescribedBehavior(body),
-    hasNonGoals: hasSubstantiveContent(extractSection(body, SECTION_RE.nonGoals)),
+    hasNonGoals: hasOwnSectionContent(body, [SECTION_RE.nonGoals]),
   };
 }
 

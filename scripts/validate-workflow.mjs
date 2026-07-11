@@ -1298,6 +1298,40 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker"
     );
 
+    // Guard: a "## Что сделать" whose body is ONLY nested OTHER normative sections
+    // has no scope description of its own and is rejected.
+    const nestedForeignPath = path.join(dir, "issue-nested-foreign.md");
+    fs.writeFileSync(
+      nestedForeignPath,
+      ["# NF", "", "## Что сделать", "", "### Критерии приёмки", "", "- AC1: real criterion", "", "### Как проверить", "", "1. run it", "", "### Что не входит", "", "- ng", "", "### Ревью-гейт", "", "- standard", ""].join("\n")
+    );
+    const nfFp = emitFingerprint(nestedForeignPath);
+    const nfMarkerPath = path.join(dir, "marker-nf.md");
+    fs.writeFileSync(nfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nfFp}`].join("\n")}\n`);
+    expectCommandFailure(
+      "resolve-issue-context nested-foreign-sections fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", nestedForeignPath, "--marker", nfMarkerPath,
+          "--label", "issue-only", "--approval-verified", nfFp,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: verify steps with valid 0-3 space indentation are separate steps.
+    const indentStepsBody = ["# IS", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "  1. first check", "  2. second check", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+    const indentStepsPath = path.join(dir, "issue-indent-steps.md");
+    fs.writeFileSync(indentStepsPath, indentStepsBody);
+    const isFp = emitFingerprint(indentStepsPath);
+    const isMarkerPath = path.join(dir, "marker-is.md");
+    fs.writeFileSync(isMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${isFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${isFp}`].join("\n")}\n`);
+    const is = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentStepsPath, "--marker", isMarkerPath, "--label", "issue-only", "--approval-verified", isFp])
+    );
+    if (is.package_kind !== "issue-only" || is.behavioral_oracle.verify_steps.length !== 2) {
+      fail("resolve-issue-context must treat 0-3 space indented list items as separate verify steps");
+    }
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
