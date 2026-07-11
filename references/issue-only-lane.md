@@ -44,13 +44,14 @@ either is missing.
 - **Fields — EXACTLY these five, no more:**
   - `Marker version: 1` — the versioned schema of the marker itself. An unknown
     version is a hard violation, never a silent downgrade.
-  - `Scope fingerprint` — a deterministic fingerprint of the Issue's **full
-    normative contract**: objective, scope, desired behavior, acceptance
-    criteria, verification instructions, non-goals, and the review-gate risk
-    classification. It is how drift is caught: when any of those change, the
-    fingerprint changes and the marker goes stale — an approval never survives a
-    change to the objective, scope, non-goals, or recorded risk, not only to the
-    acceptance text.
+  - `Scope fingerprint` — a deterministic fingerprint of the **entire Issue body**
+    (marker block removed), minimally normalized. It is how drift is caught: **any**
+    change anywhere in the body — objective, scope, acceptance, verification,
+    non-goals, review-gate, a heading rename, or a re-indentation — changes the
+    fingerprint and the marker goes stale. Hashing the whole body (rather than
+    parsing individual sections) is deliberate: it leaves no free-text-Markdown
+    parsing surface for drift to slip past, at the cost that an approval must be
+    renewed after **any** edit to the Issue body.
   - `Acceptance IDs` — the stable acceptance-criterion IDs (`AC1`, `AC2`, ...)
     this package commits to. They must match the IDs in the Issue body.
   - `Risk class` — one of the EXISTING classes `tiny`, `standard`, `deep`,
@@ -164,19 +165,18 @@ seam. It mirrors the deterministic-config-script structure of
     the hash.
 - **Output:** the 5-field contract as pretty JSON on stdout, exit `0`.
 - **Fingerprint:** the full `sha256` (64 hex, never truncated — a short hash is a
-  collision target for the approval binding) over the **full normalized Issue
-  contract** — objective (`Цель PR`), scope (`Что сделать`), desired behavior,
-  acceptance criteria (`Критерии приёмки`), verification instructions
-  (`Как проверить`), non-goals (`Что не входит`), and the review-gate risk
-  (`Ревью-гейт`). Normalization preserves semantic indentation (nested lists,
-  fenced code), so a meaning-changing re-indentation also invalidates an approval.
-  Each section captures its nested subsections and any duplicate of the same
-  heading, fenced blocks are tracked by fence type and length, and the sections
-  are hashed with a canonical, unambiguous encoding — so no `##` subsection,
-  duplicate section, mismatched fence, or literal `---` line can move content out
-  of a normative field while keeping the fingerprint. Binding the full contract,
-  not just acceptance + verify, is what makes an approval fail when the objective,
-  scope, non-goals, or recorded risk change.
+  collision target for the approval binding) over the **entire Issue body** with
+  the marker block removed, minimally normalized (trailing whitespace stripped,
+  blank-line runs collapsed, leading indentation preserved). It is NOT parsed into
+  sections. Consequently **any** change to the body — to any normative section, a
+  heading rename, a re-indentation, or even surrounding prose — changes the hash
+  and invalidates the approval. This whole-body hash is deliberately chosen over
+  section-parsing so there is no free-text-Markdown surface (fences, nested
+  headings, duplicate sections, delimiters) for drift to slip past; the trade-off
+  is that an approval must be renewed after any Issue-body edit. The section
+  parsing the resolver still does — for the acceptance/verify oracle, the risk
+  cross-check, and the completeness gate — cannot bypass this hash, because those
+  outputs never widen what the fingerprint covers.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
   - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒

@@ -153,7 +153,7 @@ function fenceTransition(line, open) {
 //     a DEEPER (nested) heading and its content stay in.
 //   - Duplicates: a second matching heading re-opens capture, so both sections'
 //     content is included — a duplicate normative section is never dropped.
-function extractSection(text, headingRe, includeHeadings = false) {
+function extractSection(text, headingRe) {
   const lines = text.split(/\r?\n/);
   const out = [];
   let capturing = false;
@@ -184,10 +184,6 @@ function extractSection(text, headingRe, includeHeadings = false) {
       if (headingRe.test(heading[2])) {
         capturing = true; // (re-)open on any matching heading, so duplicates count
         capturedDepth = depth;
-        // Bind the matched heading text into the output for the fingerprint, so a
-        // meaning-changing rename (e.g. "Scope" → "Scope exclusions") changes the
-        // hash even though it maps the same content into the same slot.
-        if (includeHeadings) out.push(line);
       }
       continue;
     }
@@ -376,23 +372,6 @@ function hasDescribedBehavior(text) {
   return hasOwnSectionContent(text, BEHAVIOR_HEADING_RES);
 }
 
-// Deterministic scope fingerprint = full sha256 over the normalized Issue
-// contract: objective, scope/what-to-do, desired behavior, acceptance criteria,
-// verification instructions, non-goals, and the review-gate risk classification.
-// This is must-fix #3 — an approval must never survive a change to the objective,
-// scope, non-goals, or recorded risk, only to the acceptance/verify text.
-// Including the review-gate means an Issue reclassified standard→deep/risky
-// invalidates its old marker. Missing sections contribute a stable empty part.
-const CONTRACT_SECTION_RES = [
-  SECTION_RE.objective,
-  SECTION_RE.scope,
-  SECTION_RE.desired,
-  SECTION_RE.acceptance,
-  SECTION_RE.verify,
-  SECTION_RE.nonGoals,
-  SECTION_RE.reviewGate,
-];
-
 function computeScope(issueText) {
   // Strip the marker block first: when the marker is inline (--marker defaults to
   // the issue body), hashing the body verbatim would fold the marker's own
@@ -404,13 +383,19 @@ function computeScope(issueText) {
   const verifyLines = extractSection(body, SECTION_RE.verify);
   const { ids: acceptanceIds, duplicate: acceptanceDuplicate } = parseAcceptanceIds(acceptanceLines);
   const verifySteps = parseVerifySteps(verifyLines);
-  // Indentation-preserving normalization so semantic whitespace changes the hash,
-  // and the FULL sha256 (no truncation) — a 48-bit truncation is a practical
-  // collision target for the approval trust boundary.
-  const parts = CONTRACT_SECTION_RES.map((re) => normalizeForFingerprint(extractSection(body, re, true)));
-  // Canonical, unambiguous section encoding — a literal "---" inside a section
-  // cannot shuffle text across normative fields while preserving the hash.
-  const fingerprint = crypto.createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+  // Fingerprint = the FULL sha256 over the WHOLE marker-stripped Issue body,
+  // minimally normalized (trailing whitespace + blank-line runs collapsed, leading
+  // indentation preserved), NOT section-parsed. Any change anywhere in the body —
+  // objective, scope, acceptance, verify, non-goals, review-gate, a heading rename,
+  // or a re-indentation — changes the hash and invalidates the approval. This is
+  // the maximally fail-closed drift boundary: it has no free-text-Markdown
+  // section-parsing surface for drift to slip past (the section parsing below is
+  // only for the oracle output, the risk cross-check, and completeness, where an
+  // imperfect parse can never bypass the whole-body drift hash).
+  const fingerprint = crypto
+    .createHash("sha256")
+    .update(normalizeForFingerprint(body.split(/\r?\n/)))
+    .digest("hex");
   // A self-contained issue-only package must describe its behavior (objective /
   // scope / desired behavior) and its non-goals — not just acceptance + verify,
   // and a bare heading with no body under it does not satisfy either.
