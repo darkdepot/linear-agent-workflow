@@ -374,7 +374,13 @@ function findMarkerBlock(markerText) {
   let started = false;
   for (let i = markerIdx + 1; i < lines.length; i += 1) {
     const line = lines[i].trim();
-    if (line === "" || /^(?:```|~~~)/.test(line)) {
+    // A fence ALWAYS ends the block: a real marker's fields are plain text right
+    // after the marker line, so a fence means the field-shaped lines inside it are
+    // a documentation example, never authoritative fields. (A marker line whose
+    // fields are all fenced then collects no fields and fails the required-field
+    // check — fail-closed, never a silent issue-only.)
+    if (/^(?:```|~~~)/.test(line)) break;
+    if (line === "") {
       if (started) break;
       continue;
     }

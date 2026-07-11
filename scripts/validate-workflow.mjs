@@ -1126,6 +1126,24 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker: duplicate Acceptance IDs"
     );
 
+    // Guard: a marker line OUTSIDE a fence whose fields are all INSIDE a fenced
+    // code block collects no real fields (fenced = documentation example) and
+    // fails closed, never a silent issue-only even with valid label/approval args.
+    const fencedFieldsMarkerPath = path.join(dir, "marker-fenced-fields.md");
+    fs.writeFileSync(
+      fencedFieldsMarkerPath,
+      `${["linear-issue-only marker", "```text", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`, "```"].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context fenced marker fields fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", fencedFieldsMarkerPath,
+          ...issueOnlyArgs,
+        ]),
+      "issue-only-lane: broken marker"
+    );
+
     // Guard: a stale scope fingerprint is a hard violation, not a silent lane.
     writeMarker([
       "Marker version: 1",
