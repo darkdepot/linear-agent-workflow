@@ -797,38 +797,55 @@ function validateIssueOnlyLaneBehavior() {
       "issue-only-lane: broken marker: unknown field"
     );
 
-    // Guard: the Phase-1 eligibility envelope is executable — a structurally
-    // valid marker recording deep or risky falls back to project-first, never
-    // silently issue-only (deep/risky keeps full ceremony until Phase 3).
+    // Guard: the Phase-1 eligibility envelope is executable — a marker that
+    // MATCHES an Issue genuinely classified deep/risky (its review-gate carries
+    // that class) falls back to project-first, never silently issue-only
+    // (deep/risky keeps full ceremony until Phase 3).
     for (const ineligible of ["deep", "risky"]) {
-      writeMarker([
-        "Marker version: 1",
-        `Scope fingerprint: ${fingerprint}`,
-        "Acceptance IDs: AC1, AC2",
-        `Risk class: ${ineligible}`,
-        `Approval: ${fingerprint}`,
-      ]);
+      const ineligibleIssuePath = path.join(dir, `issue-${ineligible}.md`);
+      fs.writeFileSync(ineligibleIssuePath, fullBody.replace("REVIEWGATE_SENTINEL standard", `REVIEWGATE_SENTINEL ${ineligible}`));
+      const ineligibleFp = emitFingerprint(ineligibleIssuePath);
+      const ineligibleMarkerPath = path.join(dir, `marker-${ineligible}.md`);
+      fs.writeFileSync(
+        ineligibleMarkerPath,
+        `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${ineligibleFp}`, "Acceptance IDs: AC1, AC2", `Risk class: ${ineligible}`, `Approval: ${ineligibleFp}`].join("\n")}\n`
+      );
       const outOfEnvelope = JSON.parse(
-        runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
+        runNode(["scripts/resolve-issue-context.mjs", "--issue", ineligibleIssuePath, "--marker", ineligibleMarkerPath, "--label", "issue-only", "--approval-verified", ineligibleFp])
       );
       if (outOfEnvelope.package_kind !== "project-first") {
         fail(`resolve-issue-context must fall back to project-first for an out-of-envelope ${ineligible} marker`);
       }
     }
 
-    // Guard: integrity is checked BEFORE the eligibility fallback — a deep/risky
-    // marker with a stale fingerprint still hard-fails, it does not slip into a
-    // silent project-first.
-    writeMarker([
-      "Marker version: 1",
-      "Scope fingerprint: deadbeef12ab",
-      "Acceptance IDs: AC1, AC2",
-      "Risk class: deep",
-      "Approval: none",
-    ]);
+    // Guard: the marker's Risk class cannot DOWNGRADE the Issue's authoritative
+    // review-gate class — a "standard" marker on a deep Issue is rejected, not
+    // silently admitted to the lane.
+    const deepIssuePath = path.join(dir, "issue-deep.md");
+    fs.writeFileSync(deepIssuePath, fullBody.replace("REVIEWGATE_SENTINEL standard", "REVIEWGATE_SENTINEL deep"));
+    const deepFp = emitFingerprint(deepIssuePath);
+    const downgradeMarkerPath = path.join(dir, "marker-downgrade.md");
+    fs.writeFileSync(
+      downgradeMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${deepFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${deepFp}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context risk downgrade fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", deepIssuePath, "--marker", downgradeMarkerPath, "--label", "issue-only", "--approval-verified", deepFp]),
+      "issue-only-lane: broken marker"
+    );
+
+    // Guard: integrity is checked BEFORE the eligibility fallback — a deep marker
+    // (matching a deep Issue) with a stale fingerprint still hard-fails via the
+    // fingerprint check, it does not slip into a silent project-first.
+    const deepStaleMarkerPath = path.join(dir, "marker-deep-stale.md");
+    fs.writeFileSync(
+      deepStaleMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeef12ab", "Acceptance IDs: AC1, AC2", "Risk class: deep", "Approval: none"].join("\n")}\n`
+    );
     expectCommandFailure(
       "resolve-issue-context corrupt deep marker fixture",
-      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath]),
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", deepIssuePath, "--marker", deepStaleMarkerPath]),
       "issue-only-lane: stale marker"
     );
 
@@ -886,7 +903,7 @@ function validateIssueOnlyLaneBehavior() {
     const emptyOraclePath = path.join(dir, "issue-empty-oracle.md");
     fs.writeFileSync(
       emptyOraclePath,
-      ["# Empty oracle", "", "## Acceptance", "", "- no stable ids here", "", "## How to verify", "", "1. a step", ""].join("\n")
+      ["# Empty oracle", "", "## Acceptance", "", "- no stable ids here", "", "## How to verify", "", "1. a step", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
     );
     const emptyFp = runNode(["scripts/resolve-issue-context.mjs", "--issue", emptyOraclePath, "--emit-fingerprint"]).trim();
     const emptyOracleMarkerPath = path.join(dir, "marker-empty-oracle.md");
@@ -936,6 +953,17 @@ function validateIssueOnlyLaneBehavior() {
     if (disabled.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first when the lane is disabled by config");
     }
+
+    // Guard: a malformed opt-out fails closed — issueOnlyLane.enabled must be a
+    // real boolean, so a stringly-typed "false" is a hard violation, never a
+    // silently-enabled lane.
+    const badConfigPath = path.join(dir, "config-bad.json");
+    fs.writeFileSync(badConfigPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: "false" } }, null, 2)}\n`);
+    expectCommandFailure(
+      "resolve-issue-context malformed config enabled fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", badConfigPath, ...issueOnlyArgs]),
+      "issue-only-lane: invalid config"
+    );
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
   }

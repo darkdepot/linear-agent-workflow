@@ -52,9 +52,12 @@ either is missing.
   - `Risk class` — one of the EXISTING classes `tiny`, `standard`, `deep`,
     `risky` from `references/readiness-gates.md`, read from the Issue's
     review-gate. The marker records the existing class; it never runs a fresh
-    classifier. In Phase 1 only `tiny` and `standard` are eligible for the lane;
-    a marker recording `deep` or `risky` resolves to project-first (see the
-    fail-closed invariant below).
+    classifier. The resolver cross-checks this field against the class named in
+    the Issue's `Ревью-гейт` section and rejects a marker that downgrades it (a
+    re-tier like `standard→deep` counts as the higher class), so the field cannot
+    be forged to slip a higher-risk change into the lane. In Phase 1 only `tiny`
+    and `standard` are eligible for the lane; a marker recording `deep` or `risky`
+    resolves to project-first (see the fail-closed invariant below).
   - `Approval` — the owner start-approval receipt. It carries the fingerprint the
     owner approved (or `none`), so freshness can be checked against current scope.
     The token alone is self-attested text; its **authenticity** (that the owner
@@ -169,9 +172,12 @@ seam. It mirrors the deterministic-config-script structure of
     single stable line to stderr. Violations: `issue-only-lane: broken marker: …`
     (unknown `Marker version`, a missing field, an unknown extra field beyond the
     five, an unparseable line inside the machine block, a duplicate field, an
-    invalid `Risk class`, an empty behavioral oracle, mismatched `Acceptance IDs`,
-    or a forbidden route-record field) and `issue-only-lane: stale marker: scope
-    fingerprint mismatch …`. It is never silently resolved as issue-only.
+    invalid `Risk class`, a `Risk class` that does not match the Issue
+    review-gate, an empty behavioral oracle, mismatched `Acceptance IDs`, or a
+    forbidden route-record field), `issue-only-lane: stale marker: scope
+    fingerprint mismatch …`, and `issue-only-lane: invalid config: …` for a
+    malformed `issueOnlyLane.enabled`. It is never silently resolved as
+    issue-only.
 - **Not a spine-resolver:** it emits no assurance vector, no route-record, and no
   `required_artifacts`. It reads recorded state (risk class, approval) and checks
   scope integrity; it does not classify risk, reduce an assurance vector, or

@@ -177,6 +177,22 @@ function computeScope(issueText) {
   return { acceptanceIds, verifySteps, fingerprint };
 }
 
+// Read (never re-derive) the authoritative risk class recorded in the Issue's
+// review-gate section. When the gate names more than one class (a "standard→deep"
+// re-tier), the HIGHEST wins — ambiguity moves upward, never downward. Returns
+// null when the section names no known class. The marker's Risk class field is
+// then required to match this, so the marker cannot silently downgrade the Issue.
+function extractReviewGateClass(issueText) {
+  const text = normalizeLines(
+    extractSection(issueText, /(?:ревью-гейт|ревью гейт|review gate)/i)
+  ).toLowerCase();
+  let found = null;
+  for (const cls of RISK_CLASSES) {
+    if (new RegExp(`\\b${cls}\\b`).test(text)) found = cls;
+  }
+  return found;
+}
+
 // Locate the most-recent marker block (most-recent-wins) and parse its
 // contiguous "Key: value" fields. Returns null when no marker line is present.
 function findMarkerBlock(markerText) {
@@ -261,8 +277,16 @@ function resolve(args) {
   let config = null;
   if (args.config) {
     config = readConfig(args.config);
-    if (config && config.issueOnlyLane && config.issueOnlyLane.enabled === false) {
-      return projectFirstResult();
+    if (config && Object.prototype.hasOwnProperty.call(config, "issueOnlyLane")) {
+      const lane = config.issueOnlyLane;
+      // Fail closed on a malformed opt-out: a stringly-typed `"false"` must never
+      // be mistaken for "not disabled" and quietly enable the lane.
+      if (typeof lane !== "object" || lane === null || typeof lane.enabled !== "boolean") {
+        violation("invalid config: issueOnlyLane must be an object with a boolean `enabled`");
+      }
+      if (lane.enabled === false) {
+        return projectFirstResult();
+      }
     }
   }
 
@@ -306,6 +330,19 @@ function resolve(args) {
   const riskClass = normalizedKeys.get("risk class");
   if (!RISK_CLASSES.includes(riskClass)) {
     violation(`broken marker: invalid risk class "${riskClass}" (expected one of ${RISK_CLASSES.join(", ")})`);
+  }
+
+  // The marker's Risk class must MATCH the Issue's authoritative review-gate
+  // class — the marker records the existing class, it never re-derives or
+  // downgrades it. A marker claiming a lower class than the Issue's review-gate
+  // (e.g. "standard" on a deep Issue) is rejected, closing the risk-downgrade
+  // bypass of the Phase-1 envelope.
+  const reviewGateClass = extractReviewGateClass(issueText);
+  if (reviewGateClass === null) {
+    violation("broken marker: issue body has no review-gate risk class to verify the marker against");
+  }
+  if (riskClass !== reviewGateClass) {
+    violation(`broken marker: marker Risk class "${riskClass}" does not match the Issue review-gate class "${reviewGateClass}"`);
   }
 
   const scope = computeScope(issueText);
