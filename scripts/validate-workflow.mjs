@@ -378,6 +378,53 @@ function validateLocalInstallBehavior() {
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
       "stale or edited"
     );
+
+    // The "missing installed runtime script" branch: a deleted resolver is
+    // flagged (mirrors the copied-asset missing-file test).
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    fs.rmSync(installedResolver, { force: true });
+    expectCommandFailure(
+      "install-local --check missing runtime script fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "Missing installed runtime script"
+    );
+
+    // The "unexpected" branch: an extra file under the canonical scripts dir is
+    // flagged (mirrors the copied-asset unexpected-file test).
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    fs.writeFileSync(path.join(skillsRoot, ".linear-agent-workflow", "scripts", "stray.mjs"), "// stray\n");
+    expectCommandFailure(
+      "install-local --check unexpected runtime script fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "Unexpected installed runtime script"
+    );
+
+    // The tamper scan walks the whole .linear-agent-workflow/ root: a file planted
+    // one level up (not under scripts/) is flagged too.
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    fs.writeFileSync(path.join(skillsRoot, ".linear-agent-workflow", "evil.mjs"), "// evil\n");
+    expectCommandFailure(
+      "install-local --check pack-root stray file fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "Unexpected installed runtime script"
+    );
+
+    // schemaVersion 2 -> 3 migration: a pre-MONO-19 lockfile (v2 shape, no
+    // runtimeScripts) fails --check loudly, and a re-sync upgrades it to a clean
+    // v3 install that passes.
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    const lockPath = path.join(skillsRoot, ".linear-agent-workflow.lock.json");
+    const v2Lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    v2Lock.schemaVersion = 2;
+    delete v2Lock.runtimeScripts;
+    fs.writeFileSync(lockPath, `${JSON.stringify(v2Lock, null, 2)}\n`);
+    expectCommandFailure(
+      "install-local --check schemaVersion 2 lockfile fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "Lockfile schemaVersion must be 3"
+    );
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
   } finally {
     fs.rmSync(skillsRoot, { recursive: true, force: true });
   }

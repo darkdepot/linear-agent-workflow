@@ -388,11 +388,14 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
 
   // Publish the pack-private runtime scripts (the issue-only resolver + any
   // sibling it imports) into <skills-root>/.linear-agent-workflow/scripts/, the
-  // canonical location the installed skills invoke at delivery time. The subdir
-  // is fully rewritten each sync so a removed upstream script leaves no stale
-  // copy behind.
-  const runtimeDir = path.join(skillsRoot, RUNTIME_DIR, RUNTIME_SCRIPTS_SUBDIR);
-  fs.rmSync(runtimeDir, { recursive: true, force: true });
+  // canonical location the installed skills invoke at delivery time. The whole
+  // .linear-agent-workflow/ directory is installer-owned and fully rewritten each
+  // sync, so a removed upstream script — or any file planted anywhere under it —
+  // leaves no copy behind. (The lockfile sits beside this directory, not inside
+  // it, so it is untouched.)
+  const packDir = path.join(skillsRoot, RUNTIME_DIR);
+  const runtimeDir = path.join(packDir, RUNTIME_SCRIPTS_SUBDIR);
+  fs.rmSync(packDir, { recursive: true, force: true });
   fs.mkdirSync(runtimeDir, { recursive: true });
   for (const script of plan.runtimeScripts) {
     fs.copyFileSync(script.sourcePath, script.destPath);
@@ -441,8 +444,12 @@ function check(root, skillsRoot, commit, dirty, version) {
 
   // The pack-private runtime scripts must be installed, current, and free of
   // extras, so the create-then-approve intake finds the resolver at the
-  // canonical path in every synced root.
-  const runtimeDir = path.join(skillsRoot, RUNTIME_DIR, RUNTIME_SCRIPTS_SUBDIR);
+  // canonical path in every synced root. The extra-file scan walks the WHOLE
+  // .linear-agent-workflow/ root (not just scripts/), so a file planted one level
+  // up — e.g. .linear-agent-workflow/evil.mjs — is flagged too. The lockfile
+  // lives beside this root, not inside it, so nothing here should exist outside
+  // the expected runtime-script set.
+  const packDir = path.join(skillsRoot, RUNTIME_DIR);
   const expectedRuntime = new Set(plan.runtimeScripts.map((script) => script.relativePath));
   for (const script of plan.runtimeScripts) {
     if (!fs.existsSync(script.destPath)) {
@@ -453,8 +460,8 @@ function check(root, skillsRoot, commit, dirty, version) {
       failures.push(`Installed runtime script is stale or edited: ${script.relativePath}`);
     }
   }
-  for (const relativePath of listFilesRecursive(runtimeDir)) {
-    const rooted = path.join(RUNTIME_DIR, RUNTIME_SCRIPTS_SUBDIR, relativePath);
+  for (const relativePath of listFilesRecursive(packDir)) {
+    const rooted = path.join(RUNTIME_DIR, relativePath);
     if (!expectedRuntime.has(rooted)) {
       failures.push(`Unexpected installed runtime script: ${rooted}`);
     }
