@@ -39,7 +39,28 @@ For each installed skills root the command writes:
 - `<skills-root>/linear-*/AGENTS.md`
 - `<skills-root>/linear-*/references/*`
 - `<skills-root>/linear-*/templates/*`
+- `<skills-root>/.linear-agent-workflow/scripts/*` (pack-private workflow runtime scripts)
 - `<skills-root>/.linear-agent-workflow.lock.json`
+
+### Workflow Runtime Scripts
+
+Some skills invoke a workflow script at delivery time rather than only reading
+Markdown. The installer owns their copy so product repos never hand-vendor
+workflow scripts. They are published, per installed root, into a pack-private
+directory beside the lockfile:
+
+- **Canonical path:** `<skills-root>/.linear-agent-workflow/scripts/<script>.mjs`
+- **Discovery from an installed skill:** the pack-private directory is one level
+  up from any installed `linear-*` skill directory, so a skill at
+  `<skills-root>/linear-<name>/` reaches it at
+  `../.linear-agent-workflow/scripts/<script>.mjs`.
+
+The only runtime script today is the issue-only lane resolver,
+`.linear-agent-workflow/scripts/resolve-issue-context.mjs` (see
+`references/issue-only-lane.md`). The create-then-approve intake transaction runs
+it from this canonical path. Each script's hash is recorded in the lockfile
+(`runtimeScripts`), so `--check` fails when an installed runtime script is
+missing, edited, or stale.
 
 Use an explicit single skills root only for tests or runtimes outside the
 known roots:
@@ -168,6 +189,7 @@ The JSON config should record:
 - `deployApproval` (optional): deploy approval policy — `"always"` (default), `"risky-only"` (approval required for `standard`, `deep`, and `risky` risk classes; only `tiny` proceeds without asking), or `"never"`.
 - `qaAuth` (optional): how the Live QA sweep authenticates — `"cookie-import"`, `"test-account"`, or `"owner-session"`. `"owner-session"` is explicitly marked as involving the owner: the sweep drives the owner's real authenticated session and must never be assumed without asking. `null` or absent means no authenticated sweep is configured; the sweep covers unauthenticated surfaces only.
 - `orchestration` (optional): `linear-orchestrate` policy. `transport` — worker transport (`"codex-cli"`, `"claude-code-desktop"`, or `"fallback"`); when absent the orchestrator detects the runtime per `references/orchestration.md`. `maxParallelWorkers` — concurrent worker cap (default 3).
+- `issueOnlyLane` (optional): the direct Issue-only lane. `enabled` — boolean opt-in (`false` or absent leaves the lane off). `ownerPrincipal` — the stable Linear user ID authorized to approve issue-only intake; required (non-empty) when `enabled` is `true`. The create-then-approve intake transaction verifies each approval comment's author against this canonical field, and the lane fails closed to Project-first when it is absent.
 
 ## Checks
 

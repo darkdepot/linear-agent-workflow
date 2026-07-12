@@ -220,6 +220,19 @@ function validateConfig(config, failures) {
       failures.push(`Project config deployApproval must be one of: ${allowed.join(", ")}`);
     }
   }
+  if ("issueOnlyLane" in config) {
+    const lane = config.issueOnlyLane;
+    if (typeof lane !== "object" || lane === null || typeof lane.enabled !== "boolean") {
+      failures.push("Project config issueOnlyLane must be an object with a boolean `enabled`");
+    } else if (
+      lane.enabled === true &&
+      (typeof lane.ownerPrincipal !== "string" || lane.ownerPrincipal.trim().length === 0)
+    ) {
+      failures.push(
+        "Project config issueOnlyLane.ownerPrincipal must be a non-empty stable Linear user ID when the lane is enabled"
+      );
+    }
+  }
   if ("qaAuth" in config) {
     const allowed = ["cookie-import", "test-account", "owner-session"];
     if (config.qaAuth !== null && !allowed.includes(config.qaAuth)) {

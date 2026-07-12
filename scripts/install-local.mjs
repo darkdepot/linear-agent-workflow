@@ -12,6 +12,19 @@ const UPSTREAM_REPO = "darkdepot/linear-agent-workflow";
 const LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
 const GENERATED_MARKER = `Installed from ${UPSTREAM_REPO}`;
 
+// Pack-private shared directory at the skills root (a sibling of LOCKFILE_NAME).
+// It holds workflow runtime scripts the installed skills invoke at delivery time
+// — today the issue-only lane resolver the create-then-approve intake runs. It is
+// hidden (leading dot) so it is never mistaken for an installed `linear-*` skill
+// directory by discovery or stale-cleanup, which scan for `linear-` prefixes.
+const RUNTIME_DIR = ".linear-agent-workflow";
+const RUNTIME_SCRIPTS_SUBDIR = "scripts";
+// Upstream scripts/ files published into
+// <skills-root>/.linear-agent-workflow/scripts/. The resolver imports only Node
+// built-ins, so it has no sibling-script dependencies; add any future sibling it
+// imports here so the whole runtime dependency set is installed together.
+const RUNTIME_SCRIPTS = ["resolve-issue-context.mjs"];
+
 function usage() {
   console.error(
     "Usage: node scripts/install-local.mjs [--all-roots | --skills-root /path/to/skills] [--check] [--remove-stale]"
@@ -228,6 +241,30 @@ function installedSkillBody(sourceText, commit, dirty) {
   return `${metadata}\n${trimmedBody}\n`;
 }
 
+// The pack-private runtime scripts to publish into
+// <skills-root>/.linear-agent-workflow/scripts/. `relativePath` is skills-root
+// relative (the lockfile and --check key); `destPath` is the absolute install
+// target; `sourcePath` is the upstream file copied verbatim.
+function plannedRuntimeScripts(root, skillsRoot) {
+  return RUNTIME_SCRIPTS.map((name) => {
+    const sourcePath = path.join(root, "scripts", name);
+    const relativePath = path.join(RUNTIME_DIR, RUNTIME_SCRIPTS_SUBDIR, name);
+    return {
+      name,
+      sourcePath,
+      destPath: path.join(skillsRoot, relativePath),
+      relativePath,
+      sha256: sha256(fs.readFileSync(sourcePath)),
+    };
+  });
+}
+
+// The lockfile shape for the runtime scripts: skills-root-relative path + hash,
+// so sync() records and check() compares the same canonical structure.
+function runtimeScriptsManifest(plan) {
+  return plan.runtimeScripts.map((script) => ({ path: script.relativePath, sha256: script.sha256 }));
+}
+
 function plannedInstall(root, skillsRoot, commit, dirty) {
   const skills = listSourceSkills(root);
   const files = [];
@@ -253,6 +290,7 @@ function plannedInstall(root, skillsRoot, commit, dirty) {
       references: directoryManifest(path.join(root, "references")),
       templates: directoryManifest(path.join(root, "templates")),
     },
+    runtimeScripts: plannedRuntimeScripts(root, skillsRoot),
     lockPath: path.join(skillsRoot, LOCKFILE_NAME),
   };
 }
@@ -348,8 +386,23 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
     });
   }
 
+  // Publish the pack-private runtime scripts (the issue-only resolver + any
+  // sibling it imports) into <skills-root>/.linear-agent-workflow/scripts/, the
+  // canonical location the installed skills invoke at delivery time. The whole
+  // .linear-agent-workflow/ directory is installer-owned and fully rewritten each
+  // sync, so a removed upstream script — or any file planted anywhere under it —
+  // leaves no copy behind. (The lockfile sits beside this directory, not inside
+  // it, so it is untouched.)
+  const packDir = path.join(skillsRoot, RUNTIME_DIR);
+  const runtimeDir = path.join(packDir, RUNTIME_SCRIPTS_SUBDIR);
+  fs.rmSync(packDir, { recursive: true, force: true });
+  fs.mkdirSync(runtimeDir, { recursive: true });
+  for (const script of plan.runtimeScripts) {
+    fs.copyFileSync(script.sourcePath, script.destPath);
+  }
+
   const manifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     upstreamRepo: UPSTREAM_REPO,
     upstreamVersion: version,
     upstreamCommit: commit,
@@ -357,6 +410,7 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
     installedAt: new Date().toISOString(),
     skillsRoot,
     assets: plan.assets,
+    runtimeScripts: runtimeScriptsManifest(plan),
     installedSkills: manifestSkills,
   };
   fs.writeFileSync(plan.lockPath, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -388,10 +442,35 @@ function check(root, skillsRoot, commit, dirty, version) {
     compareCopiedAssets(path.join(file.dir, "templates"), `templates for ${file.name}`, plan.assets.templates, failures);
   }
 
+  // The pack-private runtime scripts must be installed, current, and free of
+  // extras, so the create-then-approve intake finds the resolver at the
+  // canonical path in every synced root. The extra-file scan walks the WHOLE
+  // .linear-agent-workflow/ root (not just scripts/), so a file planted one level
+  // up — e.g. .linear-agent-workflow/evil.mjs — is flagged too. The lockfile
+  // lives beside this root, not inside it, so nothing here should exist outside
+  // the expected runtime-script set.
+  const packDir = path.join(skillsRoot, RUNTIME_DIR);
+  const expectedRuntime = new Set(plan.runtimeScripts.map((script) => script.relativePath));
+  for (const script of plan.runtimeScripts) {
+    if (!fs.existsSync(script.destPath)) {
+      failures.push(`Missing installed runtime script: ${script.relativePath}`);
+      continue;
+    }
+    if (sha256(fs.readFileSync(script.destPath)) !== script.sha256) {
+      failures.push(`Installed runtime script is stale or edited: ${script.relativePath}`);
+    }
+  }
+  for (const relativePath of listFilesRecursive(packDir)) {
+    const rooted = path.join(RUNTIME_DIR, relativePath);
+    if (!expectedRuntime.has(rooted)) {
+      failures.push(`Unexpected installed runtime script: ${rooted}`);
+    }
+  }
+
   if (!lock) {
     failures.push(`Missing lockfile: ${path.relative(skillsRoot, plan.lockPath)}`);
   } else {
-    if (lock.schemaVersion !== 2) failures.push("Lockfile schemaVersion must be 2");
+    if (lock.schemaVersion !== 3) failures.push("Lockfile schemaVersion must be 3");
     if (lock.upstreamVersion !== version) {
       failures.push(`Lockfile upstreamVersion is ${lock.upstreamVersion || "unknown"} but upstream is ${version || "unknown"}`);
     }
@@ -400,6 +479,9 @@ function check(root, skillsRoot, commit, dirty, version) {
     if (lock.upstreamDirty !== dirty) failures.push("Lockfile upstreamDirty mismatch");
     if (JSON.stringify(lock.assets || {}) !== JSON.stringify(plan.assets)) {
       failures.push("Lockfile copied asset hashes mismatch");
+    }
+    if (JSON.stringify(lock.runtimeScripts || []) !== JSON.stringify(runtimeScriptsManifest(plan))) {
+      failures.push("Lockfile runtime script hashes mismatch");
     }
     const lockedSkills = new Map((lock.installedSkills || []).map((skill) => [skill.name, skill]));
     for (const file of plan.files) {
