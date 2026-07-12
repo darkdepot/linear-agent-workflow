@@ -9,6 +9,8 @@ Use this skill to turn a raw idea into a strengthened Linear Project in `Idea`.
 
 `linear-idea` is the intake gate. It is not a planning skill and it never starts delivery.
 
+Issue-only front door: before treating a request as a Project idea, check its shape. When it is unmistakably one-PR, projectless, issue-only work — one independently-acceptable outcome, exactly one PR, no product-surface or scope ambiguity — the correct front door is `linear-issue-intake`. But in Phase 1 the issue-only lane is staged — the downstream delivery stages cannot consume the package until Slices 3-5 (MONO-16..MONO-18) land, so intake leaves the Issue non-startable and not yet deliverable. So keep Project-first the working default for anything the owner wants to deliver now, and route to `linear-issue-intake` only when the owner explicitly consents to the staged, not-yet-deliverable path. Name the front door and the staging tradeoff; never silently divert deliverable work into a dead end. `linear-idea` itself stays at Idea and never resolves an entity or a lane; it only names the correct front door. Any ambiguity keeps the default Project-first intake below, where Project creation stays mandatory. On the issue-only route, `linear-idea` does not run the project-first `linear-check idea` gate — there is no Project to check, and `linear-check` is issue-only-aware; the intake front door owns issue-only readiness.
+
 Read first:
 
 1. `AGENTS.md`
@@ -48,6 +50,7 @@ Good first update shape:
 
 Hard terminal contract:
 
+- Scope: this terminal contract and the Project-centric final response below govern the Project-first path. When the front-door check above routes unmistakable one-PR issue-only work to `linear-issue-intake`, `linear-idea` completes by naming that front door — no Project is created, and the absence of a Project link is expected, not an incompletion. Any ambiguity stays Project-first, where the rules below are mandatory.
 - Project creation or update in Linear status `Idea` is mandatory.
 - No Linear Project link or id means `linear-idea` is not complete.
 - After the Project is created or updated, stop. Do not continue into discovery, planning, or delivery.
@@ -122,6 +125,7 @@ Forbidden during Idea:
 
 Rules:
 
+- Route unmistakably one-PR, projectless issue-only work to the `linear-issue-intake` front door only with explicit owner consent to the staged, not-yet-deliverable lane; keep Project-first intake as the working default for deliverable work, for everything else, and for any ambiguity.
 - Do not create PRD, Tech Spec, or Issue during Idea.
 - Do not start implementation.
 - Do not treat the raw idea as shaped requirements.

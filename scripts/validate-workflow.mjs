@@ -15,6 +15,7 @@ const EXPECTED_SKILLS = [
   "linear-idea",
   "linear-implement",
   "linear-issue",
+  "linear-issue-intake",
   "linear-orchestrate",
   "linear-preflight",
   "linear-prd",
@@ -2046,8 +2047,171 @@ function validateIssueOnlyLaneBehavior() {
       () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", nonObjectLaneConfigPath, ...issueOnlyArgs]),
       "issue-only-lane: invalid config"
     );
+
+    // AC2 / MONO-15 stale-approval fixture — the create-then-approve read-back
+    // guard. A marker approved against fingerprint F goes STALE the moment ANY of
+    // the four contract sections (scope, acceptance, verify, non-goals) is edited
+    // after approval: the whole-body fingerprint no longer matches F, so the
+    // resolver hard-fails with `stale marker` and never silently resolves the
+    // edited body as issue-only. This exercises the EXISTING whole-body detection
+    // (no new hashing path) and proves the intake transaction parks any package
+    // whose body drifts between approve and activate.
+    const staleBase = [
+      "# Stale After Approval",
+      "",
+      "## Что сделать",
+      "",
+      "- STALE_SCOPE build the widget",
+      "",
+      "## Критерии приёмки",
+      "",
+      "- AC1: STALE_ACCEPTANCE the widget renders",
+      "",
+      "## Как проверить",
+      "",
+      "1. STALE_VERIFY run the widget suite",
+      "",
+      "## Что не входит",
+      "",
+      "- STALE_NONGOALS theming work",
+      "",
+      "## Ревью-гейт",
+      "",
+      "- standard, pre-ship review",
+      "",
+    ].join("\n");
+    const staleBasePath = path.join(dir, "issue-stale-base.md");
+    fs.writeFileSync(staleBasePath, staleBase);
+    const staleFp = emitFingerprint(staleBasePath);
+    // The marker the owner approved against fingerprint F (the unedited body).
+    const staleMarkerPath = path.join(dir, "marker-stale-after-approval.md");
+    fs.writeFileSync(
+      staleMarkerPath,
+      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${staleFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${staleFp}`].join("\n")}\n`
+    );
+    // Sanity: the unedited body resolves issue-only under the approved marker, so
+    // the failures below are caused only by the post-approval body edit.
+    const staleBaseResolved = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", staleBasePath, "--marker", staleMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", staleFp])
+    );
+    if (staleBaseResolved.package_kind !== "issue-only") {
+      fail("resolve-issue-context stale-approval base must resolve issue-only before any post-approval edit");
+    }
+    // Editing ANY of the four sections after approval invalidates it: the marker
+    // still records F while the body now hashes to F', so the resolver hard-fails.
+    for (const [sentinel, label] of [
+      ["STALE_SCOPE", "scope"],
+      ["STALE_ACCEPTANCE", "acceptance"],
+      ["STALE_VERIFY", "verify"],
+      ["STALE_NONGOALS", "non-goals"],
+    ]) {
+      const editedPath = path.join(dir, `issue-stale-${sentinel}.md`);
+      fs.writeFileSync(editedPath, staleBase.replace(sentinel, `${sentinel}_EDITED_AFTER_APPROVAL`));
+      expectCommandFailure(
+        `resolve-issue-context stale-approval ${label}-edit fixture`,
+        () =>
+          runNode([
+            "scripts/resolve-issue-context.mjs", "--issue", editedPath, "--marker", staleMarkerPath,
+            "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", staleFp,
+          ]),
+        "issue-only-lane: stale marker"
+      );
+    }
   } finally {
     fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function validateIssueIntakeContract() {
+  // MONO-15: the linear-issue-intake front door plus the idea/issue guard edits
+  // and the issue-only fingerprint-approval contract. Pins anchor the load-bearing
+  // prose; the create-then-approve transaction itself is agent work backed by the
+  // existing resolver, exercised by validateIssueOnlyLaneBehavior's fixtures.
+  for (const required of [
+    "nine eligibility conditions",
+    "Prequalification",
+    "intake-authorized draft mode",
+    "create-then-approve",
+    "scripts/resolve-issue-context.mjs",
+    "--emit-fingerprint",
+    "--approval-verified",
+    "whole-body",
+    "non-startable Issue",
+    "Run the mandatory review gate on the drafted body",
+    "readiness check before activation",
+    "Phase-1 staging boundary",
+    "activation into a startable state is deferred",
+    ".linear-agent-workflow/scripts/resolve-issue-context.mjs",
+    "owner principal's stable Linear user ID",
+    "issueOnlyLane.ownerPrincipal",
+    "explicit owner decision",
+    "Never self-approve",
+    "маркер ≠ route-record",
+    "route_revision",
+    "`issue-only` label",
+    "fails closed to Project-first",
+    "Do not add a second hashing path",
+  ]) {
+    assertIncludes("skills/linear-issue-intake/SKILL.md", required, JSON.stringify(required));
+  }
+
+  // linear-idea guard: names the issue-only front door but keeps Project-first as
+  // the default and mandatory for the idea path (does not weaken the terminal
+  // Project-creation contract).
+  for (const required of [
+    "Issue-only front door",
+    "`linear-issue-intake`",
+    "Project creation stays mandatory",
+    "Route unmistakably one-PR, projectless issue-only work to the `linear-issue-intake` front door",
+  ]) {
+    assertIncludes("skills/linear-idea/SKILL.md", required, JSON.stringify(required));
+  }
+
+  // linear-issue guard: issue-only create mode does not redirect to handoff and
+  // emits no Project/PRD/Tech Spec chips; project-first behavior stays unchanged.
+  for (const required of [
+    "Issue-only mode",
+    "package_kind=issue-only",
+    "Intake-authorized draft",
+    "make only non-body updates",
+    "must not redirect into `linear-handoff`",
+    "must not emit or attach Project, PRD, or Tech Spec chips",
+    "the default project-first behavior and is unchanged",
+  ]) {
+    assertIncludes("skills/linear-issue/SKILL.md", required, JSON.stringify(required));
+  }
+
+  // linear-check guard: idea/issue modes are issue-only-aware so the two intake
+  // entry paths (projectless idea route, self-contained issue-only Issue) do not
+  // hit a mandatory false failure from the project-first check modes.
+  for (const required of [
+    "no Project was created by design",
+    "judge it against the issue-only contract",
+  ]) {
+    assertIncludes("skills/linear-check/SKILL.md", required, JSON.stringify(required));
+  }
+
+  // linear-review guard: an issue-only review mode judges the self-contained
+  // Issue without requiring Project/PRD/Tech Spec, so the intake review gate is
+  // satisfiable for projectless standard work.
+  for (const required of [
+    "the self-contained Issue is the sole artifact and source of truth",
+    "Intake-authorized draft",
+  ]) {
+    assertIncludes("skills/linear-review/SKILL.md", required, JSON.stringify(required));
+  }
+  // The mandatory review-output template must offer the issue-only mode so a
+  // linear-review issue-only run can state its actual mode and still conform.
+  assertIncludes("templates/review-output.md", "issue-only", '"issue-only" in review-output mode enum');
+
+  // artifact-rules: the issue-only approval contract is the whole-body scope
+  // fingerprint, produced by the create-then-approve transaction.
+  for (const required of [
+    "the issue-only lane, package approval is the scope fingerprint",
+    "whole-body SHA-256 of the Issue contract",
+    "create-then-approve intake transaction",
+  ]) {
+    assertIncludes("references/artifact-rules.md", required, JSON.stringify(required));
   }
 }
 
@@ -2834,6 +2998,7 @@ validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
 validateIssueOnlyLaneBehavior();
+validateIssueIntakeContract();
 validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();

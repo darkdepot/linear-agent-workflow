@@ -13,6 +13,7 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 ## Skills
 
 - `linear-idea`: raw idea intake, AskQuestion mini-grill, Project in Idea.
+- `linear-issue-intake`: atomic front door for genuinely one-PR, projectless issue-only work; owns the create-then-approve fingerprint transaction and fails closed to Project-first.
 - `linear-handoff`: primary post-discovery bridge into Project, PRD, Tech Spec, package approval, and Issue(s).
 - `linear-project`: concise Project product brief helper.
 - `linear-prd`: internal/advanced atomic PRD create/update helper.

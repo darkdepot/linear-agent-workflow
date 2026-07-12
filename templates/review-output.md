@@ -6,7 +6,7 @@ Use Russian for Linear-facing review comments or summaries when no project confi
 Коротко: <по-русски: смысл вердикта и безопасно ли двигаться дальше, нужны ли исправления или есть блокер>
 Ревью Linear: <ready|advisory-ready|needs-fixes|blocked>
 
-Режим: <handoff|pre-ship|artifact|issue|delivery>
+Режим: <handoff|pre-ship|artifact|issue|issue-only|delivery>
 Риск: <крошечный (tiny)|обычный (standard)|глубокий (deep)|рискованный (risky)>
 Ревью-гейт: <обязательное (required)|совещательное (advisory)>
 

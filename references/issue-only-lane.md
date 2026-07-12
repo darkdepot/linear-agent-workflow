@@ -70,9 +70,11 @@ select it.
     owner approved (or `none`), so freshness can be checked against current scope.
     The token alone is self-attested text; its **authenticity** (that the owner
     actually approved this fingerprint) is established by the create-then-approve
-    intake transaction that writes it as a verified owner comment, and the
-    resolver only trusts it when the caller passes the matching
-    `--approval-verified` fingerprint (see Trust boundary).
+    intake transaction, which verifies the approval comment's author against the
+    owner principal's stable Linear user ID — the fingerprint is publicly
+    computable, so it proves text freshness, not authorship — before writing it
+    as a verified owner comment, and the resolver only trusts it when the caller
+    passes the matching `--approval-verified` fingerprint (see Trust boundary).
 - **Recovery:** most-recent-wins. The most recent **standalone** `linear-issue-only
   marker` line, **outside any fenced code block**, is authoritative; older marker
   comments are superseded. A prose mention or a fenced documentation example of
@@ -107,8 +109,10 @@ cannot be, the point where owner identity is authenticated. That authentication
 is the job of the **create-then-approve intake transaction** (a later slice),
 which is the only sanctioned marker writer: it creates a non-startable Issue,
 records the owner's approval as a verified Linear comment against the exact
-full-contract fingerprint, reads it back, and only then activates the package and
-sets the `issue-only` label.
+full-contract fingerprint, verifies the comment author against the canonical
+owner principal, reads it back, and writes the marker and the `issue-only` label;
+activation is deferred — in Phase 1 the package stays non-startable until the
+downstream delivery slices land.
 
 Because marker and label text is otherwise self-attested, the resolver never
 grants issue-only from marker text alone. It additionally requires two trusted
