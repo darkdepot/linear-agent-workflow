@@ -53,6 +53,8 @@ final diff disagree, use the higher risk class for review routing.
 - PRD-lite is explicitly accepted;
 - no-spec exception is explicit, low-risk, and recorded.
 
+In the issue-only lane (`package_kind=issue-only`), the self-contained Issue is the sole artifact: `linear-review` and `linear-check` judge it against the issue-only contract and do not require a Project, PRD, or Tech Spec. The required-versus-advisory split is unchanged — standard issue-only still requires review to `ready`; tiny stays advisory with the reason recorded.
+
 ## Gate Outcomes
 
 - `ready`: required review ran, no blocking findings remain, or accepted fixes were applied by the owning workflow.

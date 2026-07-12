@@ -25,6 +25,7 @@ Modes:
 - `handoff`
 - `delivery`
 - `issue`
+- `issue-only`
 - `pre-ship`
 - `artifact`
 
@@ -54,6 +55,7 @@ Rules:
 - Include a compact "checked / not checked" boundary. For `pre-ship`, distinguish inspected PR/review/CI state from manual QA, browser QA, deployment verification, or production smoke that did not run.
 - For PRD review, check actor -> capability -> benefit coverage and behavior-validation intent.
 - For Issue review, check two axes: whether a zero-context agent can execute it, and whether the Issue is durable rather than procedural or stale-prone.
+- For issue-only work, the self-contained Issue is the sole artifact and source of truth: review it against the issue-only contract — objective/scope/desired behavior, acceptance criteria with stable IDs, verification, non-goals, the recorded risk class, and a non-vacuous behavioral oracle — and do not require or expect a Project, PRD, or Tech Spec. This mode is entered in two situations. (a) Intake-authorized draft: `linear-issue-intake` invokes it to run the mandatory pre-approval review on the drafted, non-startable Issue before the marker, `issue-only` label, and approval exist — the resolver still returns project-first at that point, so authorization comes from intake, not from the resolver, and the intentionally absent Project/PRD/Tech Spec is never treated as a missing artifact. (b) Resolved: the resolver already returns `package_kind=issue-only` for an activated package. In both situations, standard issue-only still needs a `ready` verdict; tiny stays advisory.
 - For bug and performance work, check that the Issue or PR carries a reproduction or feedback-loop contract and that pre-ship status reports fix proof.
 - For deep or risky work, apply the architecture lens from `references/execution-quality.md`: interface as test surface, deletion test, and no shallow pass-through modules.
 
@@ -79,7 +81,7 @@ Owner workflows:
 Hard boundaries:
 
 - If the only issue is project config or legacy vendored workflow drift, recommend `linear-check project-config`; use `node scripts/project-config.mjs --repo <project> --check` from upstream when available.
-- If the package is missing a required artifact, report `blocked` or `needs-fixes`; do not create it.
+- If the package is missing a required artifact, report `blocked` or `needs-fixes`; do not create it. In the issue-only lane the sole required artifact is the self-contained Issue — an absent Project, PRD, or Tech Spec is expected there, not a missing artifact.
 - If a review is advisory because the work is tiny, say why it is advisory and what would make it required.
 - If scope is standard, deep, or risky, missing `linear-review` should be treated by `linear-check` as a readiness problem until review runs or an explicit exception is recorded.
 
