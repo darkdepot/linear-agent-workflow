@@ -306,6 +306,7 @@ function validateReviewCheckBoundary() {
 
 function validateLocalInstallBehavior() {
   const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-skills-"));
+  const installedResolver = path.join(skillsRoot, ".linear-agent-workflow", "scripts", "resolve-issue-context.mjs");
   try {
     expectCommandFailure(
       "install-local --check --remove-stale conflict",
@@ -333,6 +334,24 @@ function validateLocalInstallBehavior() {
       }
     }
 
+    // AC3: the issue-only resolver is installed at the canonical pack-private
+    // path and is runnable in the installed layout — the create-then-approve
+    // intake (MONO-15) invokes it from here at delivery time.
+    if (!fs.existsSync(installedResolver)) {
+      fail("Local install missing the canonical issue-only resolver");
+    } else {
+      const probeIssue = path.join(skillsRoot, "probe-issue.md");
+      fs.writeFileSync(
+        probeIssue,
+        ["# Probe", "", "## Что сделать", "", "- do it", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+      );
+      const probeFp = runNode([installedResolver, "--issue", probeIssue, "--emit-fingerprint"]).trim();
+      if (!/^[0-9a-f]{64}$/.test(probeFp)) {
+        fail("Installed issue-only resolver must be runnable and emit a 64-hex fingerprint");
+      }
+      fs.rmSync(probeIssue, { force: true });
+    }
+
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
 
     fs.appendFileSync(path.join(skillsRoot, "linear-review", "SKILL.md"), "\nBROKEN\n");
@@ -346,6 +365,16 @@ function validateLocalInstallBehavior() {
     fs.appendFileSync(path.join(skillsRoot, "linear-review", "references", "review-rubric.md"), "\nBROKEN\n");
     expectCommandFailure(
       "install-local --check edited reference fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+      "stale or edited"
+    );
+
+    // A tampered installed runtime script is caught by --check, exactly like an
+    // edited skill body or reference.
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    fs.appendFileSync(installedResolver, "\n// BROKEN\n");
+    expectCommandFailure(
+      "install-local --check edited runtime script fixture",
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
       "stale or edited"
     );
@@ -391,6 +420,10 @@ function validateMultiRootInstallBehavior() {
     for (const skillsRoot of [codexRoot, claudeRoot]) {
       if (!syncOutput.includes(`Installed ${EXPECTED_SKILLS.length} Linear workflow skills into ${skillsRoot} (version ${version})`)) {
         fail(`install-local --all-roots must report a per-root install for ${skillsRoot}`);
+      }
+      // AC3: every synced root gets the pack-private resolver at the canonical path.
+      if (!fs.existsSync(path.join(skillsRoot, ".linear-agent-workflow", "scripts", "resolve-issue-context.mjs"))) {
+        fail(`install-local --all-roots must install the issue-only resolver into ${skillsRoot}`);
       }
     }
 
@@ -508,6 +541,20 @@ function validateProjectConfigBehavior() {
     config.deployApproval = "always";
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 
+    config.issueOnlyLane = { enabled: true, ownerPrincipal: "user_abc123" };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
+
+    config.issueOnlyLane = { enabled: true };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+    expectCommandFailure(
+      "project-config --check issue-only lane without ownerPrincipal fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
+      "ownerPrincipal"
+    );
+    delete config.issueOnlyLane;
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
     config.workflows.qa = "gstack qa-only";
     config.qaAuth = "cookie-import";
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -594,12 +641,30 @@ function validateIssueOnlyLaneBehavior() {
     "no marker ⇒ `package_kind=project-first`",
     "scripts/resolve-issue-context.mjs",
     "Not a spine-resolver",
+    // MONO-19: config opt-in gate + the canonical installed resolver path.
+    "opt-in gate",
+    "issueOnlyLane.enabled: true",
+    "ownerPrincipal",
+    ".linear-agent-workflow/scripts/resolve-issue-context.mjs",
   ]) {
     assertIncludes("references/issue-only-lane.md", pin);
   }
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-issue-only-"));
   try {
+    // MONO-19: the issue-only lane is a config opt-in. issue-only is granted only
+    // when --config enables the lane AND names an owner principal. Every fixture
+    // that expects issue-only — and every project-first fixture whose intent is a
+    // downstream soft gate (eligibility envelope, verified label, fresh approval)
+    // — passes this enabling config, so the ONLY reason it fails closed is the
+    // specific gate under test. The dedicated opt-in fixtures below omit or weaken
+    // it on purpose.
+    const enableConfigPath = path.join(dir, "config-enabled.json");
+    fs.writeFileSync(
+      enableConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: true, ownerPrincipal: "user_owner_1" } }, null, 2)}\n`
+    );
+
     const issuePath = path.join(dir, "issue.md");
     const markerPath = path.join(dir, "marker.md");
     fs.writeFileSync(
@@ -663,7 +728,7 @@ function validateIssueOnlyLaneBehavior() {
       `Approval: ${fingerprint} (approved by owner)`,
     ]);
     const happy = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, ...issueOnlyArgs])
     );
     if (happy.package_kind !== "issue-only") fail("resolve-issue-context valid marker must be issue-only");
     if (happy.lifecycle_state_entity !== "issue") fail("resolve-issue-context issue-only must read the Issue lifecycle entity");
@@ -710,7 +775,7 @@ function validateIssueOnlyLaneBehavior() {
       `Approval: ${fingerprint}`,
     ]);
     const noLabel = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--approval-verified", fingerprint])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, "--approval-verified", fingerprint])
     );
     if (noLabel.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first without the verified issue-only label");
@@ -718,19 +783,19 @@ function validateIssueOnlyLaneBehavior() {
     // A full label name is matched — "not issue-only" (one label with a space) is
     // not the "issue-only" opt-in and must not activate the lane.
     const wrongLabel = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "not issue-only", "--approval-verified", fingerprint])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, "--label", "not issue-only", "--approval-verified", fingerprint])
     );
     if (wrongLabel.package_kind !== "project-first") {
       fail("resolve-issue-context must match the full label name, not a bare word inside a longer label");
     }
     const noApproval = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only"])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, "--label", "issue-only"])
     );
     if (noApproval.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first without a caller-verified approval");
     }
     const wrongApproval = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
     );
     if (wrongApproval.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first when the caller-verified approval does not match the scope fingerprint");
@@ -929,7 +994,7 @@ function validateIssueOnlyLaneBehavior() {
       `${inlineBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${inlineFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${inlineFp}\n`
     );
     const inlineResolved = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", inlinePath, "--label", "issue-only", "--approval-verified", inlineFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", inlinePath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", inlineFp])
     );
     if (inlineResolved.package_kind !== "issue-only") {
       fail("resolve-issue-context inline marker must be stripped before hashing so it resolves issue-only, not stale");
@@ -948,7 +1013,7 @@ function validateIssueOnlyLaneBehavior() {
       `${renewBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: deadbeefdead\nAcceptance IDs: AC1, AC2\nRisk class: deep\nApproval: deadbeefdead\n\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${renewFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${renewFp}\n`
     );
     const renewResolved = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", renewPath, "--label", "issue-only", "--approval-verified", renewFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", renewPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", renewFp])
     );
     if (renewResolved.package_kind !== "issue-only") {
       fail("resolve-issue-context must strip ALL inline markers (superseded + fresh) and honor the newest, so a renewed inline marker resolves issue-only");
@@ -991,7 +1056,7 @@ function validateIssueOnlyLaneBehavior() {
       `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cmdVerifyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cmdVerifyFp}`].join("\n")}\n`
     );
     const cmdVerify = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", cmdVerifyPath, "--marker", cmdVerifyMarkerPath, "--label", "issue-only", "--approval-verified", cmdVerifyFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cmdVerifyPath, "--marker", cmdVerifyMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", cmdVerifyFp])
     );
     if (cmdVerify.package_kind !== "issue-only") {
       fail("resolve-issue-context must accept a bare command-block verification as a valid step");
@@ -1033,7 +1098,7 @@ function validateIssueOnlyLaneBehavior() {
     const nvMarkerPath = path.join(dir, "marker-nv.md");
     fs.writeFileSync(nvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nvFp}`].join("\n")}\n`);
     const nv = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedVerifyPath, "--marker", nvMarkerPath, "--label", "issue-only", "--approval-verified", nvFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedVerifyPath, "--marker", nvMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", nvFp])
     );
     if (nv.package_kind !== "issue-only") fail("resolve-issue-context nested-verify fixture must resolve issue-only");
     if (nv.behavioral_oracle.verify_steps.length !== 1) {
@@ -1049,7 +1114,7 @@ function validateIssueOnlyLaneBehavior() {
     const nbMarkerPath = path.join(dir, "marker-nb.md");
     fs.writeFileSync(nbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nbFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nbFp}`].join("\n")}\n`);
     const nb = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedBehaviorPath, "--marker", nbMarkerPath, "--label", "issue-only", "--approval-verified", nbFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedBehaviorPath, "--marker", nbMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", nbFp])
     );
     if (nb.package_kind !== "issue-only") {
       fail("resolve-issue-context must count a behavior section starting with a nested subheading as described behavior");
@@ -1195,7 +1260,7 @@ function validateIssueOnlyLaneBehavior() {
       `${blankInlineBody}\nlinear-issue-only marker\n\nMarker version: 1\nScope fingerprint: ${biFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${biFp}\n`
     );
     const blankInline = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", blankInlinePath, "--label", "issue-only", "--approval-verified", biFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", blankInlinePath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", biFp])
     );
     if (blankInline.package_kind !== "issue-only") {
       fail("resolve-issue-context must strip an inline marker with a leading blank line before its fields so it resolves issue-only");
@@ -1211,7 +1276,7 @@ function validateIssueOnlyLaneBehavior() {
     const crMarkerPath = path.join(dir, "marker-cr.md");
     fs.writeFileSync(crMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${crFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${crFp}`].join("\n")}\n`);
     const cr = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", crossRefPath, "--marker", crMarkerPath, "--label", "issue-only", "--approval-verified", crFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", crossRefPath, "--marker", crMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", crFp])
     );
     if (cr.package_kind !== "issue-only") fail("resolve-issue-context cross-reference fixture must resolve issue-only with declared ids only");
     if (JSON.stringify(cr.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
@@ -1228,7 +1293,7 @@ function validateIssueOnlyLaneBehavior() {
     const rgaMarkerPath = path.join(dir, "marker-rga.md");
     fs.writeFileSync(rgaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rgaFp}`].join("\n")}\n`);
     const rga = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateAPath, "--marker", rgaMarkerPath, "--label", "issue-only", "--approval-verified", rgaFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateAPath, "--marker", rgaMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rgaFp])
     );
     if (rga.package_kind !== "issue-only" || rga.risk_class !== "standard") {
       fail("resolve-issue-context must read the recorded review-gate class (standard), not a later 'deep' mention");
@@ -1243,7 +1308,7 @@ function validateIssueOnlyLaneBehavior() {
     const rgbMarkerPath = path.join(dir, "marker-rgb.md");
     fs.writeFileSync(rgbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgbFp}`, "Acceptance IDs: AC1", "Risk class: deep", `Approval: ${rgbFp}`].join("\n")}\n`);
     const rgb = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateBPath, "--marker", rgbMarkerPath, "--label", "issue-only", "--approval-verified", rgbFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateBPath, "--marker", rgbMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rgbFp])
     );
     if (rgb.package_kind !== "project-first") {
       fail("resolve-issue-context must read a 'standard→deep' re-tier as deep (out of Phase-1 envelope → project-first)");
@@ -1335,7 +1400,7 @@ function validateIssueOnlyLaneBehavior() {
     const isMarkerPath = path.join(dir, "marker-is.md");
     fs.writeFileSync(isMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${isFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${isFp}`].join("\n")}\n`);
     const is = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentStepsPath, "--marker", isMarkerPath, "--label", "issue-only", "--approval-verified", isFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", indentStepsPath, "--marker", isMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", isFp])
     );
     if (is.package_kind !== "issue-only" || is.behavioral_oracle.verify_steps.length !== 2) {
       fail("resolve-issue-context must treat 0-3 space indented list items as separate verify steps");
@@ -1408,7 +1473,7 @@ function validateIssueOnlyLaneBehavior() {
     const clMarkerPath = path.join(dir, "marker-cl.md");
     fs.writeFileSync(clMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${clFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${clFp}`].join("\n")}\n`);
     const cl = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", checklistPath, "--marker", clMarkerPath, "--label", "issue-only", "--approval-verified", clFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", checklistPath, "--marker", clMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", clFp])
     );
     if (cl.package_kind !== "issue-only" || JSON.stringify(cl.behavioral_oracle.acceptance_ids) !== JSON.stringify(["AC1", "AC2"])) {
       fail("resolve-issue-context must recognize Markdown task-list acceptance criteria");
@@ -1480,7 +1545,7 @@ function validateIssueOnlyLaneBehavior() {
     const chhMarkerPath = path.join(dir, "marker-chh.md");
     fs.writeFileSync(chhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chhFp}`].join("\n")}\n`);
     const chh = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", closingHashPath, "--marker", chhMarkerPath, "--label", "issue-only", "--approval-verified", chhFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", closingHashPath, "--marker", chhMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", chhFp])
     );
     if (chh.package_kind !== "issue-only") {
       fail("resolve-issue-context must recognize ATX headings with a closing hash sequence");
@@ -1495,7 +1560,7 @@ function validateIssueOnlyLaneBehavior() {
     const fsMarkerPath = path.join(dir, "marker-fs.md");
     fs.writeFileSync(fsMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fsFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${fsFp}`].join("\n")}\n`);
     const fs4 = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", fourSpacePath, "--marker", fsMarkerPath, "--label", "issue-only", "--approval-verified", fsFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", fourSpacePath, "--marker", fsMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", fsFp])
     );
     if (fs4.package_kind !== "issue-only") {
       fail("resolve-issue-context must not treat a 4-space-indented ``` as a fence that hides later headings");
@@ -1542,7 +1607,7 @@ function validateIssueOnlyLaneBehavior() {
     const rmMarkerPath = path.join(dir, "marker-rm.md");
     fs.writeFileSync(rmMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rmFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rmFp}`].join("\n")}\n`);
     const rm = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", remainderPath, "--marker", rmMarkerPath, "--label", "issue-only", "--approval-verified", rmFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", remainderPath, "--marker", rmMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rmFp])
     );
     if (rm.package_kind !== "issue-only") {
       fail("resolve-issue-context must see content after an HTML comment closes mid-line");
@@ -1597,7 +1662,7 @@ function validateIssueOnlyLaneBehavior() {
     const cfMarkerPath = path.join(dir, "marker-cf.md");
     fs.writeFileSync(cfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cfFp}`].join("\n")}\n`);
     const cf = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", cfPath, "--marker", cfMarkerPath, "--label", "issue-only", "--approval-verified", cfFp])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", cfPath, "--marker", cfMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", cfFp])
     );
     if (cf.package_kind !== "issue-only") {
       fail("resolve-issue-context must treat <!-- inside a fence as literal, not swallow the following sections");
@@ -1708,7 +1773,7 @@ function validateIssueOnlyLaneBehavior() {
         `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${ineligibleFp}`, "Acceptance IDs: AC1, AC2", `Risk class: ${ineligible}`, `Approval: ${ineligibleFp}`].join("\n")}\n`
       );
       const outOfEnvelope = JSON.parse(
-        runNode(["scripts/resolve-issue-context.mjs", "--issue", ineligibleIssuePath, "--marker", ineligibleMarkerPath, "--label", "issue-only", "--approval-verified", ineligibleFp])
+        runNode(["scripts/resolve-issue-context.mjs", "--issue", ineligibleIssuePath, "--marker", ineligibleMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", ineligibleFp])
       );
       if (outOfEnvelope.package_kind !== "project-first") {
         fail(`resolve-issue-context must fall back to project-first for an out-of-envelope ${ineligible} marker`);
@@ -1840,13 +1905,19 @@ function validateIssueOnlyLaneBehavior() {
       "Approval: 0000deadbeef (approved by owner for an older scope)",
     ]);
     const staleApproval = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", "0000deadbeef"])
     );
     if (staleApproval.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first on a stale (superseded) owner approval");
     }
 
-    // Guard: config opt-out forces project-first even with a valid marker.
+    // ── Config opt-in gate (MONO-19) ─────────────────────────────────────────
+    // The issue-only lane is OFF by default. A fully valid marker + verified
+    // label + fresh approval resolves issue-only ONLY when --config opts the lane
+    // in AND names an owner principal. Every other config shape fails closed to
+    // project-first; only structural corruption of issueOnlyLane is a hard
+    // violation. (The happy fixture above already proves the enabled +
+    // ownerPrincipal grant, so these cover the fail-closed cases.)
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
@@ -1854,23 +1925,78 @@ function validateIssueOnlyLaneBehavior() {
       "Risk class: standard",
       `Approval: ${fingerprint}`,
     ]);
-    const configPath = path.join(dir, "config.json");
-    fs.writeFileSync(configPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: false } }, null, 2)}\n`);
+
+    // (a) No --config at all ⇒ project-first, even with a valid marker + verified
+    // label + fresh approval. The lane never activates without the opt-in.
+    const noConfig = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, ...issueOnlyArgs])
+    );
+    if (noConfig.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first without the opt-in config");
+    }
+
+    // (b) issueOnlyLane.enabled === false ⇒ project-first even with a valid
+    // marker and a named owner.
+    const disabledConfigPath = path.join(dir, "config-disabled.json");
+    fs.writeFileSync(
+      disabledConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: false, ownerPrincipal: "user_owner_1" } }, null, 2)}\n`
+    );
     const disabled = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", configPath, ...issueOnlyArgs])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", disabledConfigPath, ...issueOnlyArgs])
     );
     if (disabled.package_kind !== "project-first") {
       fail("resolve-issue-context must fail closed to project-first when the lane is disabled by config");
     }
 
-    // Guard: a malformed opt-out fails closed — issueOnlyLane.enabled must be a
-    // real boolean, so a stringly-typed "false" is a hard violation, never a
-    // silently-enabled lane.
-    const badConfigPath = path.join(dir, "config-bad.json");
-    fs.writeFileSync(badConfigPath, `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: "false" } }, null, 2)}\n`);
+    // (c) enabled === true but no ownerPrincipal ⇒ project-first (fail-closed).
+    // The opt-in must both enable the lane AND designate the owner principal.
+    const noOwnerConfigPath = path.join(dir, "config-no-owner.json");
+    fs.writeFileSync(
+      noOwnerConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: true } }, null, 2)}\n`
+    );
+    const noOwner = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", noOwnerConfigPath, ...issueOnlyArgs])
+    );
+    if (noOwner.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when the enabled lane names no ownerPrincipal");
+    }
+
+    // (c′) enabled === true with an empty/whitespace ownerPrincipal ⇒ project-first.
+    const blankOwnerConfigPath = path.join(dir, "config-blank-owner.json");
+    fs.writeFileSync(
+      blankOwnerConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: true, ownerPrincipal: "   " } }, null, 2)}\n`
+    );
+    const blankOwner = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", blankOwnerConfigPath, ...issueOnlyArgs])
+    );
+    if (blankOwner.package_kind !== "project-first") {
+      fail("resolve-issue-context must fail closed to project-first when ownerPrincipal is empty/whitespace");
+    }
+
+    // (d) A structurally malformed issueOnlyLane is a hard violation, never a
+    // silent enable — a non-boolean `enabled` and a non-object lane both fail
+    // closed with the stable invalid-config line.
+    const badEnabledConfigPath = path.join(dir, "config-bad-enabled.json");
+    fs.writeFileSync(
+      badEnabledConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: { enabled: "false" } }, null, 2)}\n`
+    );
     expectCommandFailure(
       "resolve-issue-context malformed config enabled fixture",
-      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", badConfigPath, ...issueOnlyArgs]),
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", badEnabledConfigPath, ...issueOnlyArgs]),
+      "issue-only-lane: invalid config"
+    );
+    const nonObjectLaneConfigPath = path.join(dir, "config-nonobject-lane.json");
+    fs.writeFileSync(
+      nonObjectLaneConfigPath,
+      `${JSON.stringify({ schemaVersion: 1, issueOnlyLane: "enabled" }, null, 2)}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context non-object issueOnlyLane fixture",
+      () => runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", nonObjectLaneConfigPath, ...issueOnlyArgs]),
       "issue-only-lane: invalid config"
     );
   } finally {

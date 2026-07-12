@@ -11,8 +11,11 @@ out of scope here and land in later slices.
 ## The Marker
 
 An issue-only package is opted in by a **marker** *and* the verified `issue-only`
-Linear label — both are required, and the lane fails closed to project-first if
-either is missing.
+Linear label, and only when the project has enabled the lane in its config — all
+are required, and the lane fails closed to project-first if any is missing. The
+project-level opt-in (`issueOnlyLane.enabled: true` with a non-empty
+`ownerPrincipal`) is the coarsest gate: with the lane off, no marker or label can
+select it.
 
 - **Label:** `issue-only` on the Linear Issue. The label is the human-visible,
   filterable signal; the marker is the machine-readable receipt. Both are
@@ -136,12 +139,14 @@ Every issue-only-lane consumer resolves context through one seam: a fixed
 **Fail-closed invariant:** **no marker ⇒ `package_kind=project-first`.** A missing
 or unrecognizable marker always resolves to the safe, full-ceremony lane. A
 package is never silently treated as issue-only. Project-first is also the result
-when the lane is explicitly disabled by config (`issueOnlyLane.enabled: false`),
-and when a structurally valid marker records a `deep` or `risky` risk class — in
-Phase 1 only `tiny`/`standard` are eligible, and deep/risky keeps full ceremony
-until the Phase-3 safety modules land. Selecting issue-only additionally requires
-the verified `issue-only` label and a caller-verified, fresh owner approval;
-absent either, the resolver fails closed to project-first.
+whenever the lane is not opted in by config — the opt-in requires
+`issueOnlyLane.enabled: true` with a non-empty `ownerPrincipal`, so no `--config`,
+a disabled lane, or a missing owner all fail closed — and when a structurally
+valid marker records a `deep` or `risky` risk class, since in Phase 1 only
+`tiny`/`standard` are eligible and deep/risky keeps full ceremony until the
+Phase-3 safety modules land. Selecting issue-only additionally requires the
+verified `issue-only` label and a caller-verified, fresh owner approval; absent
+either, the resolver fails closed to project-first.
 
 ## The Resolver
 
@@ -153,8 +158,15 @@ seam. It mirrors the deterministic-config-script structure of
   - `--issue <path>` — the Issue body markdown (required).
   - `--marker <path>` — the marker source; defaults to the Issue body when
     omitted, so an inline or a separate-comment marker both work.
-  - `--config <path>` — optional project config JSON; validated for readability
-    and honored for the `issueOnlyLane.enabled` opt-out.
+  - `--config <path>` — project config JSON. It is the lane's **opt-in gate**:
+    issue-only is granted only when the config sets `issueOnlyLane.enabled: true`
+    AND names a non-empty `issueOnlyLane.ownerPrincipal` (a stable Linear user
+    ID). No `--config`, no `issueOnlyLane`, an `enabled` other than `true`, or an
+    empty `ownerPrincipal` all leave the lane un-opted-in and fail closed to
+    project-first. A structurally malformed `issueOnlyLane` (not an object, or a
+    non-boolean `enabled`) is a hard violation. The resolver only checks the
+    opt-in's presence and owner designation; it never authenticates the Linear
+    comment author (the create-then-approve intake owns that).
   - `--label <names>` — trusted, caller-verified Linear labels on the Issue
     (comma-separated; a name may contain spaces). Issue-only requires the exact
     full label `issue-only` among them — a label like `not issue-only` does not
@@ -181,6 +193,11 @@ seam. It mirrors the deterministic-config-script structure of
   outputs never widen what the fingerprint covers.
 - **Fail-closed behavior:**
   - No usable marker (marker line absent) ⇒ `project-first`, exit `0`.
+  - A valid, integrity-checked marker for a project that has not opted the lane
+    in via `--config` (`issueOnlyLane.enabled: true` with a non-empty
+    `ownerPrincipal`) ⇒ `project-first`, exit `0` — the lane is off, not corrupt.
+    The opt-in gate runs AFTER every marker-integrity check, so a corrupt marker
+    still hard-fails even when no config is supplied.
   - A structurally valid marker whose `Risk class` is `deep` or `risky` ⇒
     `project-first`, exit `0` — out of the Phase-1 envelope, not corrupt.
   - A valid, in-envelope marker without the verified `issue-only` label, or
@@ -195,9 +212,20 @@ seam. It mirrors the deterministic-config-script structure of
     (no described scope/behavior or no non-goals), mismatched `Acceptance IDs`, or
     a forbidden route-record field), `issue-only-lane: stale marker: scope
     fingerprint mismatch …`, and `issue-only-lane: invalid config: …` for a
-    malformed `issueOnlyLane.enabled`. It is never silently resolved as
-    issue-only.
+    structurally malformed `issueOnlyLane` (a non-object lane or a non-boolean
+    `enabled`). It is never silently resolved as issue-only.
 - **Not a spine-resolver:** it emits no assurance vector, no route-record, and no
   `required_artifacts`. It reads recorded state (risk class, approval) and checks
   scope integrity; it does not classify risk, reduce an assurance vector, or
   compute a route. Those are later slices.
+- **Installed location (runtime):** the intake transaction runs the resolver from
+  an installed environment, so `scripts/install-local.mjs` publishes it — per
+  skills root — at the canonical pack-private path
+  `<skills-root>/.linear-agent-workflow/scripts/resolve-issue-context.mjs`,
+  recorded in the lockfile's `runtimeScripts` (see `references/install.md`). The
+  create-then-approve intake transaction invokes it there; because the
+  pack-private directory is one level up from any installed `linear-*` skill
+  directory, a skill reaches it at
+  `../.linear-agent-workflow/scripts/resolve-issue-context.mjs`. Product repos
+  never vendor the script — the installer owns the copy. In this upstream
+  checkout the same script is `scripts/resolve-issue-context.mjs`.

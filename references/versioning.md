@@ -47,13 +47,14 @@ The local lockfile pins:
 - install timestamp;
 - skills root;
 - generated local skill paths and hashes;
-- copied `AGENTS.md`, `references/`, and `templates/` hashes.
+- copied `AGENTS.md`, `references/`, and `templates/` hashes;
+- pack-private workflow runtime script paths and hashes (`runtimeScripts`).
 
 Example shape:
 
 ```json
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "upstreamRepo": "darkdepot/linear-agent-workflow",
   "upstreamVersion": "0.11.0",
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
@@ -65,6 +66,9 @@ Example shape:
     "references": [{ "path": "artifact-quality.md", "sha256": "..." }],
     "templates": [{ "path": "prd.md", "sha256": "..." }]
   },
+  "runtimeScripts": [
+    { "path": ".linear-agent-workflow/scripts/resolve-issue-context.mjs", "sha256": "..." }
+  ],
   "installedSkills": [
     {
       "name": "linear-check",

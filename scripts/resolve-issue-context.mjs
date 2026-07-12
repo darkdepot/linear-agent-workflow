@@ -633,22 +633,37 @@ function projectFirstResult() {
 function resolve(args) {
   const issueText = readFileOrFail(args.issue, "issue body");
 
-  // Optional config. Fail-closed on unreadable/invalid config. An explicit
-  // opt-out (issueOnlyLane.enabled === false) short-circuits to project-first
-  // before any marker is trusted.
-  let config = null;
+  // Config opt-in gate. The issue-only lane is OFF by default: it activates only
+  // when --config names it enabled AND designates a stable owner principal.
+  // Structural corruption of `issueOnlyLane` (not an object, or a non-boolean
+  // `enabled`) is a hard violation; every other shape — no --config, no
+  // `issueOnlyLane`, `enabled !== true`, or a missing/empty `ownerPrincipal` —
+  // simply leaves the lane un-opted-in (`laneOptedIn = false`), which fails
+  // closed to project-first at the opt-in gate AFTER marker integrity is checked
+  // below. Deferring the fail-closed decision keeps a corrupt marker hard-failing
+  // even when no config is supplied. The resolver stays a pure structural /
+  // eligibility gate: it requires the opt-in to be present and to name an owner,
+  // but it does NOT authenticate the Linear comment author — that remains the
+  // create-then-approve intake transaction's job.
+  let laneOptedIn = false;
   if (args.config) {
-    config = readConfig(args.config);
+    const config = readConfig(args.config);
     if (config && Object.prototype.hasOwnProperty.call(config, "issueOnlyLane")) {
       const lane = config.issueOnlyLane;
-      // Fail closed on a malformed opt-out: a stringly-typed `"false"` must never
-      // be mistaken for "not disabled" and quietly enable the lane.
+      // Fail closed on a structurally malformed lane: a stringly-typed `"false"`
+      // (or a non-object lane) must never be mistaken for a valid opt-in.
       if (typeof lane !== "object" || lane === null || typeof lane.enabled !== "boolean") {
         violation("invalid config: issueOnlyLane must be an object with a boolean `enabled`");
       }
-      if (lane.enabled === false) {
-        return projectFirstResult();
-      }
+      // The opt-in must both enable the lane AND name a non-empty owner
+      // principal (a stable Linear user ID). A missing/empty `ownerPrincipal`
+      // leaves the lane un-opted-in rather than raising a violation — the
+      // resolver fails closed, the project-config check is what flags it as a
+      // misconfiguration.
+      laneOptedIn =
+        lane.enabled === true &&
+        typeof lane.ownerPrincipal === "string" &&
+        lane.ownerPrincipal.trim().length > 0;
     }
   }
 
@@ -735,6 +750,16 @@ function resolve(args) {
   const markerFingerprint = normalizedKeys.get("scope fingerprint");
   if (markerFingerprint !== scope.fingerprint) {
     violation(`stale marker: scope fingerprint mismatch (marker ${markerFingerprint} vs body ${scope.fingerprint})`);
+  }
+
+  // Config opt-in gate (fail-closed). Even a fully valid, integrity-checked
+  // marker resolves to project-first unless the project opted the lane in via
+  // --config (issueOnlyLane.enabled === true with a non-empty ownerPrincipal).
+  // This runs AFTER every marker-integrity violation above, so a corrupt marker
+  // still hard-fails regardless of whether the lane is opted in — integrity is
+  // never conditional on the opt-in.
+  if (!laneOptedIn) {
+    return projectFirstResult();
   }
 
   // Phase-1 eligibility envelope — checked only AFTER every integrity gate above,
