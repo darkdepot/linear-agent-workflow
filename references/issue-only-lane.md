@@ -107,16 +107,20 @@ reintroduce project-first ceremony.
 
 ## Trust boundary
 
+The plumbing is live, but intake remains non-activating: it leaves a prepared
+Issue in a pre-start state, and `mono-implement` owns the later delivery check
+and Issue lifecycle move. Per-repo use is still allowlisted only by explicit
+`issueOnlyLane.enabled: true` plus a non-empty `ownerPrincipal`; no workflow may
+write or infer that opt-in.
+
 The resolver is a deterministic, pure function over its inputs. It enforces
 **structure, freshness, eligibility, and provenance-agreement** — it is not, and
 cannot be, the point where owner identity is authenticated. That authentication
-is the job of the **create-then-approve intake transaction** (a later slice),
+is the job of the **create-then-approve intake transaction**,
 which is the only sanctioned marker writer: it creates a non-startable Issue,
 records the owner's approval as a verified Linear comment against the exact
 full-contract fingerprint, verifies the comment author against the canonical
-owner principal, reads it back, and writes the marker and the `issue-only` label;
-activation is deferred — in Phase 1 the package stays non-startable until the
-downstream delivery slices land.
+owner principal, reads it back, and writes the marker and the `issue-only` label.
 
 Because marker and label text is otherwise self-attested, the resolver never
 grants issue-only from marker text alone. It additionally requires two trusted

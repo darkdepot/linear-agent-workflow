@@ -830,6 +830,64 @@ function validateIssueOnlyLaneBehavior() {
     assertIncludes("skills/mono-deploy/SKILL.md", required, JSON.stringify(required));
   }
 
+  // MONO-18 / fixture 7 — check modes, dispatch snapshot, and resume-discovery.
+  // Every issue-only check mode must use the same verified seam instead of
+  // Project/PRD/Spec presence, dispatch must carry the complete worker world,
+  // and resume must discover only open, parentless, label-selected candidates
+  // that re-resolve issue-only/approved-fresh.
+  for (const required of [
+    "Before applying `issue`, `delivery`, `pre-ship`, or `post-ship` mode requirements",
+    "`package_kind=issue-only`, `lifecycle_state_entity=issue`, and `approval_status=approved-fresh`",
+    "`issue` (issue-only lane)",
+    "`delivery` (issue-only lane)",
+    "`pre-ship` (issue-only lane)",
+    "`post-ship` (issue-only lane)",
+    "Missing marker or a fail-closed `project-first` result never waives Project-first requirements",
+  ]) {
+    assertIncludes("skills/mono-check/SKILL.md", required, JSON.stringify(required));
+  }
+  assertIncludes(
+    "skills/mono-check/SKILL.md",
+    "Project moved to Delivery with PRD and Tech Spec but no approved execution Issue or no implementation-start approval.",
+    "hard-FAIL Project-in-Delivery-without-approved-Issue must remain unchanged",
+  );
+
+  for (const required of [
+    "PRD: <full text, the sections relevant to this Issue, or `n/a (issue-only)`>",
+    "Tech Spec: <full text, the contracts relevant to this Issue, or `n/a (issue-only)`>",
+    "Issue-only marker: <current marker comment verbatim, or `n/a (project-first)`>",
+    "Scope fingerprint: <fresh whole-body SHA-256, or `n/a (project-first)`>",
+    "Owner approval: <authenticated author plus approved fingerprint, or `n/a (project-first)`>",
+  ]) {
+    assertIncludes("templates/orchestrator-dispatch.md", required, JSON.stringify(required));
+  }
+
+  for (const required of [
+    "query open parentless Issues carrying the verified `issue-only` label",
+    "re-run the 5-field context seam",
+    "Only `package_kind=issue-only` plus `approval_status=approved-fresh` is resumable",
+    "Missing label or marker is not discovered as issue-only",
+    "unverified reconstruction fails closed",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+
+  // Slice 5 is the plumbing go-live, not implicit activation. Intake still
+  // leaves a package non-startable; mono-implement alone moves the Issue after
+  // the delivery check, and each consuming repo remains config-opt-in.
+  for (const [relativePath, required] of [
+    ["skills/mono-issue-intake/SKILL.md", "Intake never moves the Issue to started; `mono-implement` owns activation"],
+    ["skills/mono-idea/SKILL.md", "live only when `issueOnlyLane.enabled: true` and `ownerPrincipal` are configured"],
+    ["references/artifact-rules.md", "intake remains non-activating; `mono-implement` owns the later Issue lifecycle move"],
+    ["references/issue-only-lane.md", "The plumbing is live, but intake remains non-activating"],
+  ]) {
+    assertIncludes(relativePath, required, JSON.stringify(required));
+  }
+  const activeProjectConfig = JSON.parse(read(".agents/mono-workflow.config.json"));
+  if (Object.hasOwn(activeProjectConfig, "issueOnlyLane")) {
+    fail("Slice 5 must not enable issueOnlyLane in the upstream repo's real project config");
+  }
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
   try {
     // MONO-19: the issue-only lane is a config opt-in. issue-only is granted only
@@ -924,6 +982,49 @@ function validateIssueOnlyLaneBehavior() {
     if (happy.risk_class !== "standard") fail("resolve-issue-context issue-only must read the recorded risk class");
     if (happy.approval_status !== "approved-fresh") {
       fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
+    }
+
+    // Fixture 7 — resume-discovery. Linear narrows the scan to open,
+    // parentless Issues carrying the verified issue-only label; the resuming
+    // orchestrator then re-runs the seam and trusts only approved-fresh results.
+    const isResumeDiscoveryCandidate = ({ parentProject, statusType, labels, seam, reconstructionVerified }) =>
+      parentProject === null &&
+      !["completed", "canceled"].includes(statusType) &&
+      labels.includes("issue-only") &&
+      reconstructionVerified === true &&
+      seam.package_kind === "issue-only" &&
+      seam.lifecycle_state_entity === "issue" &&
+      seam.approval_status === "approved-fresh";
+    const resumeCandidate = {
+      parentProject: null,
+      statusType: "started",
+      labels: ["issue-only"],
+      seam: happy,
+      reconstructionVerified: true,
+    };
+    if (!isResumeDiscoveryCandidate(resumeCandidate)) {
+      fail("resume-discovery fixture must recover an open parentless issue-only Issue");
+    }
+    const resumeWithoutLabelSeam = JSON.parse(
+      runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath,
+        "--config", enableConfigPath, "--approval-verified", fingerprint,
+      ])
+    );
+    if (isResumeDiscoveryCandidate({ ...resumeCandidate, labels: [], seam: resumeWithoutLabelSeam })) {
+      fail("resume-discovery fixture must not recover a candidate without the issue-only label");
+    }
+    const resumeWithoutMarkerSeam = JSON.parse(
+      runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", issuePath,
+        "--config", enableConfigPath, ...issueOnlyArgs,
+      ])
+    );
+    if (isResumeDiscoveryCandidate({ ...resumeCandidate, seam: resumeWithoutMarkerSeam })) {
+      fail("resume-discovery fixture must not recover a candidate without the marker");
+    }
+    if (isResumeDiscoveryCandidate({ ...resumeCandidate, reconstructionVerified: false })) {
+      fail("resume-discovery fixture must fail closed when reconstruction evidence is unverified");
     }
 
     // Fixture 5 runtime proof: the `happy` assertions above prove the valid
@@ -2413,8 +2514,9 @@ function validateIssueIntakeContract() {
     "non-startable Issue",
     "Run the mandatory review gate on the drafted body",
     "readiness check before activation",
-    "Phase-1 staging boundary",
-    "activation into a startable state is deferred",
+    "Phase-1 go-live boundary",
+    "prepared, approved, non-startable package",
+    "`mono-implement` owns activation",
     ".mono-agent-workflow/scripts/resolve-issue-context.mjs",
     "owner principal's stable Linear user ID",
     "issueOnlyLane.ownerPrincipal",

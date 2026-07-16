@@ -45,10 +45,15 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 
 ## Context Snapshot
 
-- Project brief: <full text>
-- PRD: <full text, or the sections relevant to this Issue>
-- Tech Spec: <full text, or the contracts relevant to this Issue>
+- Project brief: <full text, or `n/a (issue-only)`>
+- PRD: <full text, the sections relevant to this Issue, or `n/a (issue-only)`>
+- Tech Spec: <full text, the contracts relevant to this Issue, or `n/a (issue-only)`>
 - Issue: <full Issue body, verbatim>
+- Issue-only marker: <current marker comment verbatim, or `n/a (project-first)`>
+- Verified label: <`issue-only`, or `n/a (project-first)`>
+- Scope fingerprint: <fresh whole-body SHA-256, or `n/a (project-first)`>
+- Owner approval: <authenticated author plus approved fingerprint, or `n/a (project-first)`>
+- Context seam: <resolved 5-field JSON, or `n/a` when resolution is blocked>
 - Decisions so far: <user decisions and «Решил сам:» entries relevant to this
   Issue, one line each>
 

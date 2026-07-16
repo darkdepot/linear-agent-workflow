@@ -466,7 +466,15 @@ A fresh orchestrator session rebuilds state without loss:
 
 1. Read the project config; locate the mailbox root.
 2. Scan Linear: projects in flight, Issue statuses, latest comments and
-   certificates.
+   certificates. Separately query open parentless Issues carrying the verified `issue-only` label. For every returned candidate, re-read its body, current
+   marker comment, authenticated owner-approval comment, and project config,
+   then re-run the 5-field context seam with the freshly emitted whole-body
+   fingerprint. Only `package_kind=issue-only` plus `approval_status=approved-fresh` is resumable as an issue-only package.
+   Missing label or marker is not discovered as issue-only; a broken/stale
+   marker, missing authenticated approval, or closed status is excluded. Any
+   unverified reconstruction fails closed and is excluded from the issue-only queue. This
+   scan adds parentless issue-only discovery only; it does not change dependency
+   ordering or reclassify any fail-closed result.
 3. Read `ledger.md` and all mailbox reports; apply queued Linear mutations
    that were never applied.
 4. Corroborate key ledger claims — dispatches, stage advances, deploys —
