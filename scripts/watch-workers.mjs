@@ -12,8 +12,9 @@
 //   (a) age of the last event of each logs/<ISSUE-KEY>-<stage>[-aN].jsonl
 //       (file mtime) against --stall-sec -> stall;
 //   (b) workers.json entries without a live log file -> dead;
-//   (c) a log whose first line does not start with "{" -> spawn-fail,
-//       immediately, without waiting for any age threshold;
+//   (c) a non-empty log with no valid JSON events -> spawn-fail,
+//       immediately, without waiting for any age threshold; a non-JSON
+//       first line followed by valid events is contamination and warns once;
 //   (d) a log that stopped growing with no writer process evidence
 //       (registry pid gone, or silent for 2x the stall threshold) -> dead.
 // Stall and dead (both branches) are suppressed when a mailbox report for
@@ -35,7 +36,7 @@ const DEFAULT_STALL_SEC = 120;
 const MIN_STALL_SEC = 90;
 const DEFAULT_REPEAT_SEC = 300;
 const DEFAULT_INTERVAL_SEC = 15;
-const FIRST_LINE_BYTES = 4096;
+const LOG_READ_BYTES = 4096;
 const DETAIL_SNIPPET_LENGTH = 80;
 
 // <ISSUE-KEY>-<stage>.jsonl or <ISSUE-KEY>-<stage>-a<attempt>.jsonl,
@@ -144,20 +145,46 @@ function truncateForDetail(text) {
   return flat.length > DETAIL_SNIPPET_LENGTH ? `${flat.slice(0, DETAIL_SNIPPET_LENGTH)}...` : flat;
 }
 
-function readFirstLine(filePath) {
+function isJsonEventLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("{")) return false;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return parsed !== null && typeof parsed === "object" && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}
+
+function inspectLog(filePath) {
   let descriptor;
   try {
     descriptor = fs.openSync(filePath, "r");
   } catch {
-    return null;
+    return { firstLine: null, hasJsonEvent: false };
   }
   try {
-    const buffer = Buffer.alloc(FIRST_LINE_BYTES);
-    const bytesRead = fs.readSync(descriptor, buffer, 0, FIRST_LINE_BYTES, 0);
-    if (bytesRead === 0) return null;
-    const chunk = buffer.toString("utf8", 0, bytesRead);
-    const newlineIndex = chunk.indexOf("\n");
-    return newlineIndex >= 0 ? chunk.slice(0, newlineIndex) : chunk;
+    const buffer = Buffer.alloc(LOG_READ_BYTES);
+    let pending = "";
+    let firstLine = null;
+    let bytesRead;
+    do {
+      bytesRead = fs.readSync(descriptor, buffer, 0, LOG_READ_BYTES, null);
+      pending += buffer.toString("utf8", 0, bytesRead);
+      let newlineIndex;
+      while ((newlineIndex = pending.indexOf("\n")) >= 0) {
+        const line = pending.slice(0, newlineIndex);
+        pending = pending.slice(newlineIndex + 1);
+        if (firstLine === null) firstLine = line;
+        if (isJsonEventLine(line)) return { firstLine, hasJsonEvent: true };
+      }
+    } while (bytesRead > 0);
+
+    if (pending.length > 0) {
+      if (firstLine === null) firstLine = pending;
+      if (isJsonEventLine(pending)) return { firstLine, hasJsonEvent: true };
+    }
+    return { firstLine, hasJsonEvent: false };
   } finally {
     fs.closeSync(descriptor);
   }
@@ -225,18 +252,23 @@ function reportMtimeMs(reportsDir, log) {
 }
 
 function checkLog(log, reportsDir, registry, nowMs) {
-  const firstLine = readFirstLine(log.filePath);
-  if (firstLine !== null && !firstLine.trimStart().startsWith("{")) {
-    // A non-JSON first line means the spawn command itself failed (e.g. the
-    // CLI fell into interactive stdin mode); report it immediately.
+  const { firstLine, hasJsonEvent } = inspectLog(log.filePath);
+  if (firstLine !== null && !hasJsonEvent) {
+    // A non-empty log with no JSON events means the spawn command failed
+    // before Codex started a thread; report it immediately.
     emitEvent(
       "spawn-fail",
       log.issue,
-      `first log line is not JSON: "${truncateForDetail(firstLine)}" (${log.name})`,
+      `log has no JSON events; first line: "${truncateForDetail(firstLine)}" (${log.name})`,
       `spawn-fail:${log.name}`,
       nowMs
     );
     return;
+  }
+  if (firstLine !== null && !isJsonEventLine(firstLine)) {
+    warnOnce(
+      `non-JSON contamination before valid JSON events in ${log.name}: "${truncateForDetail(firstLine)}"`
+    );
   }
 
   const ageSec = Math.round((nowMs - log.stat.mtimeMs) / 1000);
