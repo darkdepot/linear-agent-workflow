@@ -194,7 +194,8 @@ Desktop, then `fallback`. Per-runtime bindings:
     -c 'model="<pinned model>"' \
     -c 'model_reasoning_effort="high"' \
     "$(cat <dispatch-prompt-file>)" < /dev/null \
-    > ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.jsonl 2>&1 &
+    > ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.jsonl \
+    2> ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.stderr.log &
   ```
 
   Spawn verification, mandatory for every spawn attempt:
@@ -206,8 +207,10 @@ Desktop, then `fallback`. Per-runtime bindings:
     mode instead of failing.
   - `thread.started` must appear in the log within 60 seconds of spawn;
     otherwise kill the process and retry as the next attempt.
-  - A first log line that is not JSON (does not start with `{`) is an
-    immediate spawn failure — kill and retry; never wait out the timeout.
+  - A non-empty log with no valid JSON event is an immediate spawn failure —
+    kill and retry; never wait out the timeout. A non-JSON line followed by
+    valid JSON events is contamination, not spawn failure; inspect the separate
+    stderr log, while liveness monitoring continues from the JSON events.
   - Recording "ok" or a live thread in the worker registry or ledger with an
     empty `thread_id` is forbidden; write the registry entry only after
     `thread.started` is parsed.
@@ -221,10 +224,21 @@ Desktop, then `fallback`. Per-runtime bindings:
 
   Parse the `thread.started` event from the log for the thread id and record
   it in the worker registry, together with the background process pid (`$!`)
-  so the heartbeat watcher can probe writer liveness. Continue or steer the same thread with
-  `codex exec resume <thread-id> "<message>"` using the same
-  `--cd`/`--sandbox`/`--add-dir` flags; the thread keeps its context across
-  stages. Ship-stage spawns and resumes add
+  so the heartbeat watcher can probe writer liveness. Continue or steer the
+  same thread with the same attempt-numbered stdout/stderr pair (resume appends
+  because each attempt log is cumulative):
+
+  ```bash
+  codex exec --json \
+    --cd <worktree> \
+    --sandbox workspace-write \
+    --add-dir ~/.mono-agent-workflow/orchestrator/<product> \
+    resume <thread-id> "<message>" < /dev/null \
+    >> ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a<N>.jsonl \
+    2>> ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a<N>.stderr.log &
+  ```
+
+  The thread keeps its context across stages. Ship-stage spawns and resumes add
   `-c 'sandbox_workspace_write.network_access=true'` (push and PR creation
   need network). The dispatch prompt names the installed stage-skill body
   (`~/.codex/skills/<stage-skill>/SKILL.md`) because Codex workers load
@@ -341,7 +355,9 @@ directory's history; retired Issues' logs are outside its scope.
 - Watcher events are Monitoring Protocol triggers: treat `stall`, `dead`,
   and `spawn-fail` lines exactly like a worker-reported blocker — read the
   worker's latest state first, then act. `spawn-fail` feeds the spawn
-  verification kill+retry rule in Worker Transports.
+  verification kill+retry rule in Worker Transports. Non-JSON contamination
+  before later valid JSON events produces one diagnostic warning on stderr,
+  not a repeated watcher event, and does not suppress stall/dead checks.
 - The stall threshold is at least 90 seconds (default 120); lower values
   misread normal turn gaps as stalls, and the watcher refuses them.
 - Healing ladder, in order: nudge (resume the thread demanding a report) →
