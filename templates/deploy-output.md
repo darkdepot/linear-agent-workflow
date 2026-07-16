@@ -35,7 +35,7 @@ Deploy status:
 Optional internal summary for logs or Linear comments:
 
 ```text
-Linear deploy verdict: <deployed|needs-human|blocked|timed-out>
+Mono deploy verdict: <deployed|needs-human|blocked|timed-out>
 
 PR:
 Linear Issue:
@@ -63,6 +63,6 @@ Verdicts:
 Verdict-to-human translation:
 
 - Для `deployed`: напиши точно, что было смержено/задеплоено и как обновился Linear.
-- Для stale certificates: «PR изменился после ревью; прогони `linear-ship` ещё раз перед деплоем.»
+- Для stale certificates: «PR изменился после ревью; прогони `mono-ship` ещё раз перед деплоем.»
 - Для отсутствующего Deploy workflow: «Deploy workflow не настроен; укажи `Deploy workflow` или запусти deploy-путь репозитория вручную.»
 - Для `timed-out`: назови, что не устаканилось — merge, deploy, верификация или Linear closeout.

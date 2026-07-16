@@ -1,8 +1,8 @@
-# Linear Review Rubric
+# Mono Review Rubric
 
-Use this rubric from `linear-review` to inspect Linear Project, PRD, Tech Spec, and Issue packages.
+Use this rubric from `mono-review` to inspect Linear Project, PRD, Tech Spec, and Issue packages.
 
-`linear-review` is report-only. It must not create, update, delete, or silently repair Linear artifacts.
+`mono-review` is report-only. It must not create, update, delete, or silently repair Linear artifacts.
 
 ## Inputs
 
@@ -76,7 +76,7 @@ Pre-ship:
 - Material drift is synced or explicitly accepted.
 - Review feedback and unresolved decisions are represented.
 - Documentation workflow ran before the final green certificate when configured.
-- Green certificate records the reviewed head SHA and next `linear-deploy`.
+- Green certificate records the reviewed head SHA and next `mono-deploy`.
 
 ## Finding Format
 
@@ -87,13 +87,13 @@ Each finding must include:
 - Evidence: short quote or artifact section reference.
 - Impact: what goes wrong if ignored.
 - Recommendation: concrete next action.
-- Owner workflow: `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, `linear-deploy`, `linear-issue`, `linear-prd`, `linear-spec`, or human decision.
+- Owner workflow: `mono-handoff`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-deploy`, `mono-issue`, `mono-prd`, `mono-spec`, or human decision.
 
 ## Report Shape
 
 Use `templates/review-output.md`.
 
-Do not emit `PASS`, `FAIL`, or `BLOCKED` as the main review status. Those words belong to `linear-check`.
+Do not emit `PASS`, `FAIL`, or `BLOCKED` as the main review status. Those words belong to `mono-check`.
 
 Allowed review verdicts:
 

@@ -23,7 +23,7 @@ select it.
   caller has verified against Linear, and fails closed to project-first when it is
   absent.
 - **Marker:** a machine block inside a Linear comment on the Issue, opened by the
-  stable marker line `linear-issue-only marker`. Following the machine-block
+  stable marker line `mono-issue-only marker`. Following the machine-block
   convention in `references/human-friendly-output.md` and
   `references/artifact-quality.md`, the comment leads with a short Russian human
   sentence (project config language when set) stating the outcome, then the
@@ -32,7 +32,7 @@ select it.
   ```text
   Пакет переведён в issue-only: одна PR, продуктовой поверхности нет, риск обычный.
 
-  linear-issue-only marker
+  mono-issue-only marker
   Marker version: 1
   Scope fingerprint: 3f8a1c0b9d2e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c
   Acceptance IDs: AC1, AC2
@@ -43,6 +43,10 @@ select it.
   The `Scope fingerprint` and the approved fingerprint are the full 64-hex
   sha256, never truncated — a short hash would be a collision target for the
   approval binding.
+- **Previous-brand marker compatibility:** the resolver may read
+  `linear-issue-only marker` from an already-approved durable Linear comment so
+  the brand migration does not revoke a valid package. All new and renewed
+  comments must write `mono-issue-only marker`.
 
 - **Fields — EXACTLY these five, no more:**
   - `Marker version: 1` — the versioned schema of the marker itself. An unknown
@@ -75,7 +79,7 @@ select it.
     computable, so it proves text freshness, not authorship — before writing it
     as a verified owner comment, and the resolver only trusts it when the caller
     passes the matching `--approval-verified` fingerprint (see Trust boundary).
-- **Recovery:** most-recent-wins. The most recent **standalone** `linear-issue-only
+- **Recovery:** most-recent-wins. The most recent **standalone** `mono-issue-only
   marker` line, **outside any fenced code block**, is authoritative; older marker
   comments are superseded. A prose mention or a fenced documentation example of
   the marker format is never treated as an opt-in. For an inline marker (the Issue
@@ -225,11 +229,11 @@ seam. It mirrors the deterministic-config-script structure of
 - **Installed location (runtime):** the intake transaction runs the resolver from
   an installed environment, so `scripts/install-local.mjs` publishes it — per
   skills root — at the canonical pack-private path
-  `<skills-root>/.linear-agent-workflow/scripts/resolve-issue-context.mjs`,
+  `<skills-root>/.mono-agent-workflow/scripts/resolve-issue-context.mjs`,
   recorded in the lockfile's `runtimeScripts` (see `references/install.md`). The
   create-then-approve intake transaction invokes it there; because the
-  pack-private directory is one level up from any installed `linear-*` skill
+  pack-private directory is one level up from any installed `mono-*` skill
   directory, a skill reaches it at
-  `../.linear-agent-workflow/scripts/resolve-issue-context.mjs`. Product repos
+  `../.mono-agent-workflow/scripts/resolve-issue-context.mjs`. Product repos
   never vendor the script — the installer owns the copy. In this upstream
   checkout the same script is `scripts/resolve-issue-context.mjs`.

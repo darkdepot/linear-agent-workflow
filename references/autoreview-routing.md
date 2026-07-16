@@ -1,6 +1,6 @@
 # Autoreview Model Routing
 
-`linear-preflight` must select the Codex review model and reasoning effort from
+`mono-preflight` must select the Codex review model and reasoning effort from
 the workflow risk class. Never rely on the external `autoreview` helper's built-in model default:
 that helper is independently updateable and its default
 may change without this workflow changing.
@@ -16,7 +16,7 @@ may change without this workflow changing.
 | `risky` with critical escalation | `gpt-5.6-sol` | `xhigh` | Irreversible production/data risk, a complex security boundary, a near-limit dispersed scope, or a release blocker after conflicting reviews. |
 
 This policy intentionally uses only the GPT-5.6 family. GPT-5.5 is not a
-normal `linear-preflight` route. Do not silently fall back to another model or
+normal `mono-preflight` route. Do not silently fall back to another model or
 effort when a selected route is unavailable.
 
 Cross-vendor review is deliberately not a code-review requirement, and must

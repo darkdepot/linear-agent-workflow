@@ -1,4 +1,4 @@
-# Plan 012: codex-cli worker transport for linear-orchestrate
+# Plan 012: codex-cli worker transport for mono-orchestrate
 
 > **Executor instructions**: Follow this plan task by task. Each task adds
 > failing validator assertions first, then writes the artifact until
@@ -6,7 +6,7 @@
 > `node scripts/verify.mjs` and commits with the exact message given.
 > If anything in "STOP conditions" occurs, stop and report — do not improvise.
 
-**Goal:** Make `linear-orchestrate` first-class for the "Claude orchestrator +
+**Goal:** Make `mono-orchestrate` first-class for the "Claude orchestrator +
 Codex executors" operating model: the orchestrator session (any runtime with
 shell access, typically Claude Code) spawns one headless Codex CLI worker per
 Issue via `codex exec`, steers it across stages via `codex exec resume`, and
@@ -72,7 +72,7 @@ closeout and the independent review pass ran after the outage cleared.
    `codex` CLI is installed and authenticated, else `claude-code-desktop` when
    running in Claude Code Desktop, else `fallback`. The chosen binding is still
    stated in the first status update.
-3. **Worker registry**: `~/.linear-agent-workflow/orchestrator/<product>/workers.json`,
+3. **Worker registry**: `~/.mono-agent-workflow/orchestrator/<product>/workers.json`,
    orchestrator-owned (workers never touch it), one entry per Issue:
    `transport`, `thread_id`, `worktree`, `branch`, `stage`, `spawned_at`,
    `last_activity_at`, `log`. Updated on spawn/advance/respawn; read during
@@ -83,10 +83,10 @@ closeout and the independent review pass ran after the outage cleared.
    codex exec --json \
      --cd <worktree> \
      --sandbox workspace-write \
-     --add-dir ~/.linear-agent-workflow/orchestrator/<product> \
+     --add-dir ~/.mono-agent-workflow/orchestrator/<product> \
      -c 'model_reasoning_effort="high"' \
      "$(cat <dispatch-prompt-file>)" \
-     > ~/.linear-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>.jsonl 2>&1 &
+     > ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>.jsonl 2>&1 &
    ```
 
    Run in the background via the orchestrator runtime. Parse `thread.started`
@@ -164,10 +164,10 @@ closeout and the independent review pass ran after the outage cleared.
 - [ ] Validator passes; `node scripts/verify.mjs` passes.
 - [ ] Commit: `feat: extend orchestrator dispatch and report templates for codex workers`
 
-### Task 3: skills/linear-orchestrate/SKILL.md — transport selection, registry, worktrees
+### Task 3: skills/mono-orchestrate/SKILL.md — transport selection, registry, worktrees
 
 **Files:** `scripts/validate-workflow.mjs` (orchestrate contract block),
-`skills/linear-orchestrate/SKILL.md`
+`skills/mono-orchestrate/SKILL.md`
 
 - [ ] Add validator pins to the orchestrate contract list: `"codex-cli"`,
   `"workers.json"`, `"codex exec resume"`. Run validator — must FAIL.
@@ -180,20 +180,20 @@ closeout and the independent review pass ran after the outage cleared.
   Keep the control-plane rules and read-first list intact (the read-first list
   already covers the updated references/templates).
 - [ ] Validator passes; `node scripts/verify.mjs` passes.
-- [ ] Commit: `feat: wire codex-cli transport and worker registry into linear-orchestrate`
+- [ ] Commit: `feat: wire codex-cli transport and worker registry into mono-orchestrate`
 
 ### Task 4: stage-skill runtime fallbacks (implement, ship)
 
 **Files:** `scripts/validate-workflow.mjs` (anti-pattern/contract pins),
-`skills/linear-implement/SKILL.md`, `skills/linear-ship/SKILL.md`
+`skills/mono-implement/SKILL.md`, `skills/mono-ship/SKILL.md`
 
 - [ ] Add validator pins: implement — `"not available in the current runtime"`;
   ship — `"not available in the current runtime"`. Run validator — must FAIL.
-- [ ] `skills/linear-implement/SKILL.md`: after the engine selection table,
+- [ ] `skills/mono-implement/SKILL.md`: after the engine selection table,
   add the decision-10 fallback line (implement directly from the approved
   Issue under this skill + `references/execution-quality.md`; record the
   substitution in the exit report and `notes` under orchestration).
-- [ ] `skills/linear-ship/SKILL.md`: read the file first; add an analogous
+- [ ] `skills/mono-ship/SKILL.md`: read the file first; add an analogous
   fallback where ship/documentation/reviewFeedback workflows are delegated:
   when the configured workflow is not invocable in the current runtime,
   perform the equivalent steps directly (branch push, PR creation via `gh`,
@@ -230,7 +230,7 @@ closeout and the independent review pass ran after the outage cleared.
 
 - [ ] Run `node scripts/verify.mjs` — expected `Verification passed (8 checks).`
 - [ ] Add plan 012 row to `plans/README.md` status table:
-  `| 012 | codex-cli worker transport for linear-orchestrate | P1 | M | 011 | DONE (<commit>) |`
+  `| 012 | codex-cli worker transport for mono-orchestrate | P1 | M | 011 | DONE (<commit>) |`
 - [ ] Commit: `docs: mark plan 012 done in plans index`
 
 ## Out of scope (do not do)
@@ -238,7 +238,7 @@ closeout and the independent review pass ran after the outage cleared.
 - VERSION bump and CHANGELOG entry (ship workflow owns them).
 - New scripts, wrappers, or vendored helpers for spawning codex (the policy
   reference documents command shapes; the orchestrator runtime executes them).
-- Any change to `linear-preflight`'s autoreview gate, `linear-review`,
-  `linear-check`, or gate ordering.
+- Any change to `mono-preflight`'s autoreview gate, `mono-review`,
+  `mono-check`, or gate ordering.
 - Automating runtime-imposed confirmation clicks in Claude Code Desktop.
 - Project repo changes (e.g. adding the orchestration block to Zeni's config).

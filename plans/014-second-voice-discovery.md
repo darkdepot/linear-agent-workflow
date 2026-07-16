@@ -88,7 +88,7 @@ Excerpts verified at commit `e5ec260` (anchor by content).
   The section ends with the Multi-idea intake paragraph, followed by
   `## Worker Transports`. The Prototype bar paragraph contains
   `an internal design-review pass already applied`.
-- `skills/linear-orchestrate/SKILL.md` state 2 contains the bullet
+- `skills/mono-orchestrate/SKILL.md` state 2 contains the bullet
   `- Run the recommended discovery route and review skills in this session`
   `  with the orchestrator as respondent: answer their questions yourself`
   and the UX-checkpoint bullet with
@@ -116,14 +116,14 @@ Excerpts verified at commit `e5ec260` (anchor by content).
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Full validation | `node scripts/validate-workflow.mjs` | exit 0, `…(13 skills checked).` |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 | One-command verify | `node scripts/verify.mjs` | exit 0, `8 checks` |
 
 ## Scope
 
 **In scope**:
 - `references/orchestration.md`
-- `skills/linear-orchestrate/SKILL.md`
+- `skills/mono-orchestrate/SKILL.md`
 - `references/questioning.md`
 - `references/lifecycle.md`
 - `README.md`
@@ -134,7 +134,7 @@ Excerpts verified at commit `e5ec260` (anchor by content).
 - Templates (`orchestrator-brief.md`, `orchestrator-dispatch.md`,
   `orchestrator-report.md`) — no user-facing or worker-facing shape changes.
 - Worker transports, registry, monitoring protocol — untouched.
-- `linear-idea`, `linear-handoff`, worker-side skills.
+- `mono-idea`, `mono-handoff`, worker-side skills.
 - Vendoring any gstack skill. VERSION / CHANGELOG.
 
 ## Git workflow
@@ -220,7 +220,7 @@ d. At the end of `## Director Discovery` (after the Multi-idea intake
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 **Verify**: `grep -c "generates their questions and answers them in-session" references/orchestration.md` → 0.
 
-### Step 2: `skills/linear-orchestrate/SKILL.md` — stage 2 and rules
+### Step 2: `skills/mono-orchestrate/SKILL.md` — stage 2 and rules
 
 a. Replace the state-2 bullet
    `- Run the recommended discovery route and review skills in this session
@@ -247,7 +247,7 @@ c. In `Rules:`, add directly after the «Touch the user only at checkpoints»
    workers.`
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
-**Verify**: `grep -c "Second Voice" skills/linear-orchestrate/SKILL.md` ≥ 3.
+**Verify**: `grep -c "Second Voice" skills/mono-orchestrate/SKILL.md` ≥ 3.
 
 ### Step 3: `references/questioning.md` — Orchestrated Mode bullet
 
@@ -339,10 +339,10 @@ green.
       in-session fallback), the dispatch shape, the 3-round protocol with
       disagreement routing, and the boundaries line
 - [ ] `grep -c "generates their questions and answers them in-session" references/orchestration.md` → 0
-- [ ] `grep -c "Second Voice" skills/linear-orchestrate/SKILL.md` ≥ 3
+- [ ] `grep -c "Second Voice" skills/mono-orchestrate/SKILL.md` ≥ 3
 - [ ] questioning.md Orchestrated Mode bullet names the Second Voice and the
       round-cap routing; pinned strings `Director Discovery` and
-      `` `linear-orchestrate`: ask only for Always-ask escalations `` intact
+      `` `mono-orchestrate`: ask only for Always-ask escalations `` intact
 - [ ] lifecycle.md Required line names the Second Voice; `Director
       Discovery` pin intact
 - [ ] README bullet and diagram updated; `director mode` pin intact

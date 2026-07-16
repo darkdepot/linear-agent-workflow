@@ -25,7 +25,7 @@ Translate workflow statuses before showing them to the user:
 - `advisory-ready`: "This was low-risk/advisory and nothing blocks moving forward."
 - `needs-fixes`: "Review found changes or decisions that should be handled before the next stage."
 - `blocked`: "Review cannot complete because required artifacts, permissions, tools, or context are missing."
-- `green`: "The PR is stable after docs/review/checks and ready for `linear-deploy`, but it has not been merged or deployed by `linear-ship`."
+- `green`: "The PR is stable after docs/review/checks and ready for `mono-deploy`, but it has not been merged or deployed by `mono-ship`."
 - `deployed`: "The PR was merged/deployed, delivery evidence was captured, and Linear closeout ran."
 - `implemented-needs-preflight`: "Implementation finished locally and needs preflight before PR/ship."
 - `scope-drift-needs-handoff`: "Implementation found material scope drift that should be reflected in Linear before continuing."
@@ -75,7 +75,7 @@ Prefer:
 
 ```text
 Что дальше:
-1. Run `linear-deploy` сейчас - рекомендую, потому что review/CI зеленые и unresolved feedback нет.
+1. Run `mono-deploy` сейчас - рекомендую, потому что review/CI зеленые и unresolved feedback нет.
 2. Оставить PR в review - если хочешь руками посмотреть UI перед merge.
 ```
 
@@ -163,14 +163,14 @@ Example:
 ```text
 Реализация остановлена. Durable: ветка `feat/settings-skeleton`, все файлы закоммичены.
 Где остановился: не могу получить доступ к Linear Issue — токен истёк.
-Нужно от тебя: обнови Linear API token и перезапусти /linear-implement.
+Нужно от тебя: обнови Linear API token и перезапусти /mono-implement.
 ```
 
 ## Machine Blocks In Linear Comments
 
 Certificates and closeouts posted to Linear are dual-audience: the next workflow stage recovers them by their stable English marker and field keys.
 
-Every such comment MUST open with 1-2 Russian sentences (project config language when set) stating the human outcome and the next step — e.g. `Ветка готова к PR: автоматическое ревью чистое, локальные проверки прошли. Дальше — linear-ship.` — followed by the unchanged machine block.
+Every such comment MUST open with 1-2 Russian sentences (project config language when set) stating the human outcome and the next step — e.g. `Ветка готова к PR: автоматическое ревью чистое, локальные проверки прошли. Дальше — mono-ship.` — followed by the unchanged machine block.
 
 The marker line, field names, and status tokens inside the machine block must never be translated, reworded, or summarized away.
 

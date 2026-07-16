@@ -5,7 +5,7 @@ contract, and one project config contract.
 
 Canonical workflow truth lives in:
 
-- `skills/linear-*/SKILL.md`
+- `skills/mono-*/SKILL.md`
 - `references/*`
 - `templates/*`
 - `scripts/install-local.mjs`
@@ -21,17 +21,17 @@ node scripts/install-local.mjs --check
 ```
 
 The default `--all-roots` mode discovers every installed skills root by
-checking for `.linear-agent-workflow.lock.json` in the known roots
+checking for `.mono-agent-workflow.lock.json` in the known roots
 (`~/.codex/skills`, `~/.claude/skills`, and any root recorded in a discovered
 lockfile) and syncs or checks each of them in one run, reporting the per-root
 installed version. On a fresh machine it falls back to `~/.codex/skills`.
 
 The install writes local runtime files into each installed skills root:
 
-- `linear-*/SKILL.md` as executable generated local skill bodies;
-- `linear-*/AGENTS.md` beside each generated local skill;
-- `linear-*/references/*` and `linear-*/templates/*` beside each generated local skill;
-- `.linear-agent-workflow.lock.json` with upstream identity, version, commit, dirty flag, installed skill paths/hashes, and copied asset hashes.
+- `mono-*/SKILL.md` as executable generated local skill bodies;
+- `mono-*/AGENTS.md` beside each generated local skill;
+- `mono-*/references/*` and `mono-*/templates/*` beside each generated local skill;
+- `.mono-agent-workflow.lock.json` with upstream identity, version, commit, dirty flag, installed skill paths/hashes, and copied asset hashes.
 
 Opening `<skills-root>/<name>/SKILL.md` must be enough for the agent runtime
 to follow the skill. Project repos must not carry workflow execution logic.
@@ -67,12 +67,12 @@ Example shape:
     "templates": [{ "path": "prd.md", "sha256": "..." }]
   },
   "runtimeScripts": [
-    { "path": ".linear-agent-workflow/scripts/resolve-issue-context.mjs", "sha256": "..." }
+    { "path": ".mono-agent-workflow/scripts/resolve-issue-context.mjs", "sha256": "..." }
   ],
   "installedSkills": [
     {
-      "name": "linear-check",
-      "path": "linear-check/SKILL.md",
+      "name": "mono-check",
+      "path": "mono-check/SKILL.md",
       "sha256": "..."
     }
   ]
@@ -85,7 +85,7 @@ meaningful release metadata.
 
 ## Project Config Contract
 
-Project-specific workflow choices live in `.agents/linear-workflow.config.json`.
+Project-specific workflow choices live in `.agents/mono-workflow.config.json`.
 
 Required fields:
 
@@ -104,27 +104,27 @@ Workflow fields:
 - `Ship workflow`: creates/syncs the branch or PR through the project repo's normal ship command.
 - `Documentation workflow`: updates repo documentation after PR creation and before final PR green certification.
 - `Review feedback workflow`: resolves actionable PR review feedback, such as Greptile comments.
-- `Deploy workflow`: merges and verifies/deploys the PR after `linear-ship` records a green certificate.
-- `Autoreview helper`: records the external `autoreview` skill/helper prerequisite required by `linear-preflight`.
+- `Deploy workflow`: merges and verifies/deploys the PR after `mono-ship` records a green certificate.
+- `Autoreview helper`: records the external `autoreview` skill/helper prerequisite required by `mono-preflight`.
 - `Artifact roots`: names narrow local discovery/review artifact roots.
 
 Use `null` for optional workflows that are not configured. When
-`workflows.implementation` is `null`, `linear-implement` uses the documented
+`workflows.implementation` is `null`, `mono-implement` uses the documented
 default selection table. When `workflows.documentation` is `null`,
-`linear-ship` skips repo documentation sync and says so. When
-`workflows.reviewFeedback` is `null`, `linear-ship` waits for checks/reviews
+`mono-ship` skips repo documentation sync and says so. When
+`workflows.reviewFeedback` is `null`, `mono-ship` waits for checks/reviews
 once and stops if actionable feedback appears. When `workflows.deploy` is
-`null`, `linear-deploy` stops with a clear blocked report instead of inventing
+`null`, `mono-deploy` stops with a clear blocked report instead of inventing
 a merge/deploy path.
 
 `Autoreview helper` is required, not optional. When
 `prerequisites.autoreviewHelper` is missing or not `true`, project config
 checks fail. When the field is present but the helper is unavailable in the
-agent runtime, `linear-preflight` stops `blocked` instead of replacing the
+agent runtime, `mono-preflight` stops `blocked` instead of replacing the
 review gate.
 
 The helper remains external and independently updateable. Model selection is
-therefore owned by this workflow: `linear-preflight` passes the explicit
+therefore owned by this workflow: `mono-preflight` passes the explicit
 GPT-5.6 model and reasoning effort defined in
 `references/autoreview-routing.md` for the final risk class. Project config
 does not duplicate this technical routing table.
@@ -158,7 +158,7 @@ Example Zeni project config:
 `Land workflow` is not a supported compatibility alias. Projects must use
 `workflows.deploy`.
 
-Every placeholder value in `.agents/linear-workflow.config.json` must be
+Every placeholder value in `.agents/mono-workflow.config.json` must be
 resolved before the project config is ready.
 
 ## Updates
@@ -183,20 +183,20 @@ Project migrations are config-only:
 `node scripts/install-local.mjs --check` verifies, for every installed skills
 root:
 
-- each expected local `<skills-root>/linear-*` skill exists;
+- each expected local `<skills-root>/mono-*` skill exists;
 - installed skill contents match the current upstream-generated body;
 - copied `AGENTS.md`, `references/`, and `templates/` match the upstream checkout;
-- `.linear-agent-workflow.lock.json` has matching paths, SHA-256 hashes, and upstream version/commit.
+- `.mono-agent-workflow.lock.json` has matching paths, SHA-256 hashes, and upstream version/commit.
 
 `node scripts/project-config.mjs --repo /path/to/project --check` verifies:
 
-- `.agents/linear-workflow.config.json` exists and is valid JSON;
+- `.agents/mono-workflow.config.json` exists and is valid JSON;
 - required fields are present and have the expected JSON shape;
 - no unresolved `<...>` placeholders remain;
 - `prerequisites.autoreviewHelper` is `true`;
 - legacy generated workflow project files and updater CI are absent.
 
-`linear-check` may report project config status, but local skill install,
+`mono-check` may report project config status, but local skill install,
 update, stale detection, and project cleanup belong to `scripts/install-local.mjs`
 and `scripts/project-config.mjs`.
 

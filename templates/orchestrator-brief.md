@@ -1,6 +1,6 @@
 # Шаблоны оркестратора: бриф и статус
 
-User-facing shapes for `linear-orchestrate`. User-visible text is Russian per
+User-facing shapes for `mono-orchestrate`. User-visible text is Russian per
 project config (`languages.linear`).
 
 ## Бриф решения (Decision Brief)
@@ -21,7 +21,7 @@ project config (`languages.linear`).
 
 Package-approval briefs: include an option that explicitly bundles
 implementation start («это одновременно approval на старт кода») so the
-bundled-approval rule from `linear-implement` applies and the orchestrator
+bundled-approval rule from `mono-implement` applies and the orchestrator
 does not re-ask before dispatching workers.
 
 Design questions: prepare side-by-side variants first (`/design-html` when the

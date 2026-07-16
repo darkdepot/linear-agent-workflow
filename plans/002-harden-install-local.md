@@ -84,7 +84,7 @@ All excerpts are from `scripts/install-local.mjs` at commit `889742b`.
   (`isGeneratedLinearSkillDir`, lines 216-220; used by
   `removeStaleFromPreviousLock` lines 222-231 and
   `removeGeneratedStaleLinearDirs` lines 233-243) — directories without the
-  `Installed from darkdepot/linear-agent-workflow` marker are never deleted.
+  `Installed from darkdepot/mono-agent-workflow` marker are never deleted.
   This is the behavior that must gain a test fixture; do not change its logic.
 
 - The existing functional harness to extend is
@@ -107,8 +107,8 @@ All excerpts are from `scripts/install-local.mjs` at commit `889742b`.
 |---------|---------|---------------------|
 | Syntax check | `node --check scripts/install-local.mjs` | exit 0 |
 | Syntax check | `node --check scripts/validate-workflow.mjs` | exit 0 |
-| Full validation incl. new fixtures | `node scripts/validate-workflow.mjs` | exit 0, `Linear workflow validation passed (12 skills checked).` |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Full validation incl. new fixtures | `node scripts/validate-workflow.mjs` | exit 0, `Mono workflow validation passed (12 skills checked).` |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 
 ## Scope
 
@@ -118,7 +118,7 @@ All excerpts are from `scripts/install-local.mjs` at commit `889742b`.
 - `plans/README.md` (status row)
 
 **Out of scope** (do NOT touch):
-- `scripts/project-config.mjs`, `scripts/lint-linear-artifacts.mjs`
+- `scripts/project-config.mjs`, `scripts/lint-mono-artifacts.mjs`
 - All markdown under `skills/`, `references/`, `templates/`, `examples/`
 - The lockfile schema (`schemaVersion: 2`) and the generated-marker text —
   changing either invalidates every existing install.
@@ -183,20 +183,20 @@ after the existing edited-reference fixture (line 303), still inside the
 a. **Corrupt lockfile**: re-run a clean install
    (`runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot])`),
    then overwrite the lockfile with invalid JSON:
-   `fs.writeFileSync(path.join(skillsRoot, ".linear-agent-workflow.lock.json"), "not json\n")`,
+   `fs.writeFileSync(path.join(skillsRoot, ".mono-agent-workflow.lock.json"), "not json\n")`,
    then `expectCommandFailure("install-local --check corrupt lockfile fixture",
    () => runNode([... "--check"]), "Lockfile is corrupted")`.
 
 b. **Stale generated dir removed, user dir preserved**: create
-   `linear-oldskill/SKILL.md` inside the temp root containing the line
-   `Installed from darkdepot/linear-agent-workflow` (the generated marker),
-   and `linear-mine/SKILL.md` containing just `# my own skill`. Run
+   `mono-oldskill/SKILL.md` inside the temp root containing the line
+   `Installed from darkdepot/mono-agent-workflow` (the generated marker),
+   and `mono-mine/SKILL.md` containing just `# my own skill`. Run
    `runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--remove-stale"])`.
-   Then `fail(...)` unless: `linear-oldskill` no longer exists AND
-   `linear-mine/SKILL.md` still exists. Finally remove `linear-mine`
+   Then `fail(...)` unless: `mono-oldskill` no longer exists AND
+   `mono-mine/SKILL.md` still exists. Finally remove `mono-mine`
    (`fs.rmSync(..., { recursive: true, force: true })`) and run a plain
    `--check` to confirm the root is clean again — note that `--check` flags
-   unexpected `linear-*` dirs only via the lockfile comparison, so the
+   unexpected `mono-*` dirs only via the lockfile comparison, so the
    explicit cleanup keeps later fixtures deterministic.
 
 **Verify**: `node --check scripts/validate-workflow.mjs` → exit 0.
@@ -205,7 +205,7 @@ b. **Stale generated dir removed, user dir preserved**: create
 
 ### Step 5: Full suite
 
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0.
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0.
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 **Verify** (only if plan 001 landed): `node scripts/verify.mjs` → exit 0.
 
@@ -215,7 +215,7 @@ The new tests ARE Step 4 (fixtures a and b), written inside the repo's
 existing harness, modeled directly on the edited-skill fixture at
 `scripts/validate-workflow.mjs:290-295`. Cases covered: corrupt lockfile
 detection in `--check`; `--remove-stale` deletes generated stale dirs and
-preserves user-owned `linear-*` dirs.
+preserves user-owned `mono-*` dirs.
 
 ## Done criteria
 
@@ -234,7 +234,7 @@ Machine-checkable. ALL must hold:
 Stop and report back (do not improvise) if:
 
 - The excerpts above don't match the live code (file drifted).
-- The stale-removal fixture fails because `linear-mine` was deleted — that
+- The stale-removal fixture fails because `mono-mine` was deleted — that
   would mean the marker guard (`isGeneratedLinearSkillDir`) does not work as
   described; this is a real bug worth reporting, not patching ad hoc.
 - You find yourself wanting to change the lockfile schema or

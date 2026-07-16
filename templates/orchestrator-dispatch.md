@@ -1,13 +1,13 @@
 # Worker Dispatch Prompt
 
-Template for spawning one worker session per Issue from `linear-orchestrate`.
+Template for spawning one worker session per Issue from `mono-orchestrate`.
 Fill every placeholder. The worker must be able to start immediately with no
 Linear access: the snapshot below is its whole world until Linear MCP is up.
 
 ## Assignment
 
 - Issue: <ISSUE-KEY> — <title>
-- Stage skill: <linear-implement | linear-preflight | linear-ship>
+- Stage skill: <mono-implement | mono-preflight | mono-ship>
 - Worktree/branch: <path / branch>
 - Worker session name: `<ISSUE-KEY>: <stage>`
 - Chip title (user-visible, Russian): `<ISSUE-KEY>: <стадия по-русски>`
@@ -37,7 +37,7 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
   starting and follow it exactly; its `references/` and `templates/` live
   beside it. (For claude-code-desktop or fallback workers: invoke the
   installed `<stage-skill>` skill instead.)
-- Project config: `.agents/linear-workflow.config.json` at the repo root.
+- Project config: `.agents/mono-workflow.config.json` at the repo root.
 - Report delivery: write to the mailbox path below. If the sandbox denies
   that write, write the same JSON to
   `<worktree>/.orchestrator/<ISSUE-KEY>-<stage>.json` instead; never commit
@@ -69,7 +69,7 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 ## Mailbox
 
 - Write the exit report to
-  `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>.json`
+  `~/.mono-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>.json`
   following `templates/orchestrator-report.md`.
 - Write the report on stage completion, on any blocker, and before stopping
   for any other reason.

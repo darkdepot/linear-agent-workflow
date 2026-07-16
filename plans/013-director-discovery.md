@@ -23,7 +23,7 @@
 ## Why this matters
 
 The maintainer (a product person) runs the workflow through
-`linear-orchestrate` and wants a different discovery economy. Today the
+`mono-orchestrate` and wants a different discovery economy. Today the
 orchestrate skill says discovery runs «live with the user», and the discovery
 skills (`/office-hours`, `/brainstorming`, `/plan-design-review`,
 `/plan-eng-review`) are interrogative: they extract decisions from their
@@ -63,7 +63,7 @@ Every task below implements these; do not re-litigate them mid-execution.
    current runtime, run an equivalent internal review pass over the same
    ground (product, engineering, and design lenses) and record the
    substitution in the discovery notes — same convention as the
-   `linear-implement`/`linear-ship` runtime-availability fallbacks.
+   `mono-implement`/`mono-ship` runtime-availability fallbacks.
 4. **Prototype bar.** The UX checkpoint presents a prototype, not prose:
    prepared via `/design-html` when the runtime provides it (concrete textual
    variants otherwise), with realistic product content and correct states,
@@ -76,7 +76,7 @@ Every task below implements these; do not re-litigate them mid-execution.
    not touch the worker no-sub-delegation rule — workers still never spawn
    anything.
 6. **Multi-idea intake.** The user may bring several ideas in one session:
-   run `linear-idea` intake per idea, queue discovery, and run Director
+   run `mono-idea` intake per idea, queue discovery, and run Director
    Discovery one project at a time while dispatched delivery work continues
    in parallel. The status table shows the discovery queue.
 7. **Ownership unchanged.** Scope boundaries, issue slicing, risk acceptance,
@@ -93,19 +93,19 @@ Every task below implements these; do not re-litigate them mid-execution.
 Excerpts verified at commit `53d9772` (anchor by content).
 
 - `references/orchestration.md` Stage Ownership row:
-  `| \`linear-idea\`, discovery | orchestrator session, live with the user |`
+  `| \`mono-idea\`, discovery | orchestrator session, live with the user |`
   — no director mode; no checkpoint model anywhere in the file.
-- `skills/linear-orchestrate/SKILL.md` workflow state 2:
+- `skills/mono-orchestrate/SKILL.md` workflow state 2:
 
   ```
   2. `intake-and-discovery`
-     - Run `linear-idea` and discovery dialogue directly in this session, live
+     - Run `mono-idea` and discovery dialogue directly in this session, live
        with the user. Scope and design belong to the user.
   ```
 
 - `references/questioning.md` `## Orchestrated Mode` covers only stage skills
   inside dispatched workers; discovery skills in the orchestrator session are
-  uncovered, so their per-stage lines (e.g. `linear-idea`: ask 1-3) apply as
+  uncovered, so their per-stage lines (e.g. `mono-idea`: ask 1-3) apply as
   if the user drove them interactively.
 - `references/lifecycle.md` `## Orchestration` Required/Forbidden lists say
   nothing about who answers discovery questions.
@@ -115,9 +115,9 @@ Excerpts verified at commit `53d9772` (anchor by content).
   (scope, design, risk).`; the flow diagram line reads
   `-> run idea/discovery/handoff with the user in-session`.
 - Validator: `scripts/validate-workflow.mjs` pins the orchestrate contract in
-  the block starting `const orchestrate = read("skills/linear-orchestrate/SKILL.md")`
+  the block starting `const orchestrate = read("skills/mono-orchestrate/SKILL.md")`
   and asserts on questioning/lifecycle/README below it. The questioning pin
-  `` `linear-orchestrate`: ask only for Always-ask escalations `` must keep
+  `` `mono-orchestrate`: ask only for Always-ask escalations `` must keep
   matching after edits.
 
 ## Commands you will need
@@ -125,14 +125,14 @@ Excerpts verified at commit `53d9772` (anchor by content).
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Full validation | `node scripts/validate-workflow.mjs` | exit 0, `…(13 skills checked).` |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 | One-command verify | `node scripts/verify.mjs` | exit 0, `8 checks` |
 
 ## Scope
 
 **In scope**:
 - `references/orchestration.md`
-- `skills/linear-orchestrate/SKILL.md`
+- `skills/mono-orchestrate/SKILL.md`
 - `references/questioning.md`
 - `references/lifecycle.md`
 - `templates/orchestrator-brief.md`
@@ -141,8 +141,8 @@ Excerpts verified at commit `53d9772` (anchor by content).
 - `plans/README.md` (status row)
 
 **Out of scope**:
-- `linear-idea`, `linear-handoff`, worker-side skills — their contracts
-  already work under Director Discovery (linear-idea's 1-3 direction
+- `mono-idea`, `mono-handoff`, worker-side skills — their contracts
+  already work under Director Discovery (mono-idea's 1-3 direction
   questions ARE checkpoint 1; handoff's package brief IS checkpoint 3).
 - `templates/orchestrator-dispatch.md`, `templates/orchestrator-report.md` —
   worker plumbing is untouched.
@@ -152,7 +152,7 @@ Excerpts verified at commit `53d9772` (anchor by content).
 ## Git workflow
 
 - Branch: current branch of the checkout you were dispatched into.
-- Commit style: `feat: director discovery — checkpoint model and UX-checkpoint brief for linear-orchestrate`.
+- Commit style: `feat: director discovery — checkpoint model and UX-checkpoint brief for mono-orchestrate`.
 - Do NOT push or open a PR unless the operator instructed it.
 
 ## Steps
@@ -160,9 +160,9 @@ Excerpts verified at commit `53d9772` (anchor by content).
 ### Step 1: `references/orchestration.md` — Director Discovery section
 
 a. In `## Stage Ownership`, replace the row
-   `| \`linear-idea\`, discovery | orchestrator session, live with the user |`
+   `| \`mono-idea\`, discovery | orchestrator session, live with the user |`
    with
-   `| \`linear-idea\`, discovery | orchestrator session (Director Discovery) |`
+   `| \`mono-idea\`, discovery | orchestrator session (Director Discovery) |`
 b. In `## Decision Authority`, in the Design and UX bullet, append after
    `concrete textual variants otherwise).`:
    ` Under Director Discovery, batch design/UX escalations into the UX
@@ -197,7 +197,7 @@ c. After the `## Decision Authority` section, add a new section:
 
    Checkpoints — the only moments that touch the user:
 
-   1. Intake direction questions: 1-3 per idea per `linear-idea`; zero when
+   1. Intake direction questions: 1-3 per idea per `mono-idea`; zero when
       the idea is already clear.
    2. UX checkpoint (user-facing surface only): one brief per
       `templates/orchestrator-brief.md` with a reviewed near-production
@@ -214,20 +214,20 @@ c. After the `## Decision Authority` section, add a new section:
    prototype is near-production, never a first draft.
 
    Multi-idea intake: the user may bring several ideas in one session. Run
-   `linear-idea` per idea, queue discovery, and run Director Discovery one
+   `mono-idea` per idea, queue discovery, and run Director Discovery one
    project at a time while dispatched delivery work continues in parallel;
    show the discovery queue in the status table.
    ```
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 
-### Step 2: `skills/linear-orchestrate/SKILL.md` — stage 2 and rules
+### Step 2: `skills/mono-orchestrate/SKILL.md` — stage 2 and rules
 
 a. Replace workflow state 2 in full:
 
    ```markdown
    2. `intake-and-discovery`
-      - Run `linear-idea` per idea in this session; with several ideas, queue
+      - Run `mono-idea` per idea in this session; with several ideas, queue
         them and run discovery one project at a time (Director Discovery in
         `references/orchestration.md`) while dispatched work continues.
       - Run the recommended discovery route and review skills in this session
@@ -255,11 +255,11 @@ b. In `Rules:`, add after the «Never ask the user an unprepared question»
    ```
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
-**Verify**: `grep -c "live with the user" skills/linear-orchestrate/SKILL.md` → 0.
+**Verify**: `grep -c "live with the user" skills/mono-orchestrate/SKILL.md` → 0.
 
 ### Step 3: `references/questioning.md` — Orchestrated Mode covers discovery
 
-a. In the stage list, extend the `linear-orchestrate` line by appending
+a. In the stage list, extend the `mono-orchestrate` line by appending
    before its final period:
    `; batch design/UX escalations into the UX checkpoint with a prepared
    prototype per Director Discovery in references/orchestration.md`
@@ -318,11 +318,11 @@ design-review pass already applied. Never bring a first draft.
 ````
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0.
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0.
 
 ### Step 6: `README.md` — director mode surfaced
 
-a. In the `linear-orchestrate` bullet (line ~27), append before the final
+a. In the `mono-orchestrate` bullet (line ~27), append before the final
    period:
    `; runs discovery in director mode — answers discovery-skill questions
    itself and brings the user reviewed prototypes at checkpoints`
@@ -374,10 +374,10 @@ re-run green.
 - [ ] `grep -n "## Director Discovery" references/orchestration.md` → 1 hit;
       the section contains the five checkpoints, the prototype bar, the
       runtime fallback, and the multi-idea queue
-- [ ] `grep -c "live with the user" skills/linear-orchestrate/SKILL.md` → 0
-- [ ] `grep -c "Director Discovery" skills/linear-orchestrate/SKILL.md` ≥ 2
+- [ ] `grep -c "live with the user" skills/mono-orchestrate/SKILL.md` → 0
+- [ ] `grep -c "Director Discovery" skills/mono-orchestrate/SKILL.md` ≥ 2
 - [ ] questioning.md Orchestrated Mode covers discovery skills; the pinned
-      `linear-orchestrate` stage-line prefix is byte-identical
+      `mono-orchestrate` stage-line prefix is byte-identical
 - [ ] lifecycle.md Orchestration has the Director Discovery Required and
       Forbidden lines
 - [ ] orchestrator-brief.md has the «UX-чекпоинт» shape with the
@@ -390,7 +390,7 @@ re-run green.
 ## STOP conditions
 
 - Any existing validator pin fails after your edits (especially the
-  questioning pin `` `linear-orchestrate`: ask only for Always-ask
+  questioning pin `` `mono-orchestrate`: ask only for Always-ask
   escalations `` and the orchestrate contract pins) — restore and stop if the
   conflict is structural.
 - You are tempted to weaken package approval, any lifecycle gate, or the

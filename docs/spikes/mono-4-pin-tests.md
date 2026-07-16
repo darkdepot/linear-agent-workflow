@@ -12,7 +12,7 @@ break run reported exactly one failure line — the deliberately broken pin.
 
 `validateRealBackendContractSampling()` pins, all additive:
 
-- `skills/linear-spec/SKILL.md`: the real-response requirement
+- `skills/mono-spec/SKILL.md`: the real-response requirement
   (`sample of real responses from the deployed instance`,
   `not just an endpoint list`), the blocker classification
   (`spec blocker, not an implementation surprise`), and the degradation
@@ -36,13 +36,13 @@ required-sections pattern): `### Реальные ответы бэкенда` a
 
 1. `sample of real responses from the deployed instance` replaced with
    `list of endpoints exposed by the deployed instance` in
-   `skills/linear-spec/SKILL.md` →
-   `- skills/linear-spec/SKILL.md missing "sample of real responses from
+   `skills/mono-spec/SKILL.md` →
+   `- skills/mono-spec/SKILL.md missing "sample of real responses from
    the deployed instance"` (exit 1). Restored → green.
 2. `contract-verification spike Issue goes first in the wave` replaced
    with `contract-verification spike Issue can go later in the wave` in
-   `skills/linear-spec/SKILL.md` →
-   `- skills/linear-spec/SKILL.md missing "contract-verification spike
+   `skills/mono-spec/SKILL.md` →
+   `- skills/mono-spec/SKILL.md missing "contract-verification spike
    Issue goes first in the wave"` (exit 1). Restored → green.
 3. `"Endpoint exists" is not contract verification` replaced with
    `"Endpoint exists" is sufficient contract verification` in

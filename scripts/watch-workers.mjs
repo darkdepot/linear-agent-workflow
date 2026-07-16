@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// External heartbeat for `linear-orchestrate` (references/orchestration.md,
+// External heartbeat for `mono-orchestrate` (references/orchestration.md,
 // "## Heartbeat"). Watches one orchestrator mailbox root and prints one
 // stable line per worker liveness event to stdout:
 //
@@ -39,7 +39,7 @@ const FIRST_LINE_BYTES = 4096;
 const DETAIL_SNIPPET_LENGTH = 80;
 
 // <ISSUE-KEY>-<stage>.jsonl or <ISSUE-KEY>-<stage>-a<attempt>.jsonl,
-// where <stage> itself may contain hyphens (e.g. linear-implement).
+// where <stage> itself may contain hyphens (e.g. mono-implement).
 const LOG_NAME_PATTERN = /^([A-Za-z][A-Za-z0-9]*-\d+)-(.+?)(?:-a(\d+))?\.jsonl$/;
 
 function usage(exitCode = 2) {
@@ -50,7 +50,7 @@ function usage(exitCode = 2) {
   console.error("  <ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>");
   console.error("");
   console.error("Options:");
-  console.error("  --root <dir>        Orchestrator root, e.g. ~/.linear-agent-workflow/orchestrator/<product> (required)");
+  console.error("  --root <dir>        Orchestrator root, e.g. ~/.mono-agent-workflow/orchestrator/<product> (required)");
   console.error(`  --stall-sec <n>     Stall threshold in seconds (default ${DEFAULT_STALL_SEC}, minimum ${MIN_STALL_SEC})`);
   console.error(`  --repeat-sec <n>    Do not repeat the same event more often than this (default ${DEFAULT_REPEAT_SEC})`);
   console.error(`  --interval-sec <n>  Scan interval in seconds (default ${DEFAULT_INTERVAL_SEC})`);

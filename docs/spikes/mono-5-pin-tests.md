@@ -23,8 +23,8 @@ exactly one failure line — the deliberately broken pin.
   `enumerate every «Как проверить» item`,
   `require a reason in `` `evidence` ``, `silently missing`,
   ``replaces the report `status` set``).
-- `skills/linear-implement/SKILL.md` and
-  `skills/linear-preflight/SKILL.md`: the stage exit report rule
+- `skills/mono-implement/SKILL.md` and
+  `skills/mono-preflight/SKILL.md`: the stage exit report rule
   (`enumerates every «Как проверить» item`, `pass | deferred | not-run`,
   `verification_items`,
   `cannot claim completion while an item is silently missing`,
@@ -59,13 +59,13 @@ and the pre-existing status pins (`needs-decision`, `needs-human`,
    not-run"` (exit 1). Restored → green.
 5. `cannot claim completion while an item is silently missing` replaced
    with `may claim completion even if an item is missing` in
-   `skills/linear-implement/SKILL.md` →
-   `- skills/linear-implement/SKILL.md missing "cannot claim completion
+   `skills/mono-implement/SKILL.md` →
+   `- skills/mono-implement/SKILL.md missing "cannot claim completion
    while an item is silently missing"` (exit 1). Restored → green.
 6. `enumerates every «Как проверить» item` replaced with
    `summarizes the «Как проверить» items` in
-   `skills/linear-preflight/SKILL.md` →
-   `- skills/linear-preflight/SKILL.md missing "enumerates every «Как
+   `skills/mono-preflight/SKILL.md` →
+   `- skills/mono-preflight/SKILL.md missing "enumerates every «Как
    проверить» item"` (exit 1). Restored → green.
 
 After the final restore: `node scripts/verify.mjs` green (9 checks),

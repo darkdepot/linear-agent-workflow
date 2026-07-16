@@ -19,11 +19,13 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const MARKER_LINE = "linear-issue-only marker";
+const MARKER_LINE = "mono-issue-only marker";
 // A real marker line stands alone with 0-3 spaces of indentation. A 4+-space (or
 // tab) indent makes it a Markdown indented code block — a documentation example,
 // never an authoritative marker.
-const MARKER_LINE_RE = /^ {0,3}linear-issue-only marker[ \t]*$/;
+// The previous brand marker remains readable so a rename cannot invalidate an
+// already-approved durable Linear comment. New writes always use MARKER_LINE.
+const MARKER_LINE_RE = /^ {0,3}(?:mono|linear)-issue-only marker[ \t]*$/;
 const MARKER_VERSION = 1;
 const ISSUE_ONLY_LABEL = "issue-only";
 const RISK_CLASSES = ["tiny", "standard", "deep", "risky"];

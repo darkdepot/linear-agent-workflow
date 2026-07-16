@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- templates/check-output.md templates/ship-output.md templates/deploy-output.md templates/review-output.md references/human-friendly-output.md skills/linear-ship/SKILL.md skills/linear-check/SKILL.md scripts/validate-workflow.mjs`
+> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- templates/check-output.md templates/ship-output.md templates/deploy-output.md templates/review-output.md references/human-friendly-output.md skills/mono-ship/SKILL.md skills/mono-check/SKILL.md scripts/validate-workflow.mjs`
 > On any mismatch with the "Current state" excerpts, treat as a STOP condition.
 
 ## Status
@@ -24,12 +24,12 @@ The chat blocks the operator reads after each stage mix three label registers
 in one screen: English status keywords (`PASS - Linear handoff ready`),
 English section labels (`Meaning:`, `Notes:`, `Review status:`, `Next action:`),
 and Russian section labels (`Проверено:`, `Что дальше:`). The most frequently
-rendered block (check output — linear-check fires after almost every stage)
+rendered block (check output — mono-check fires after almost every stage)
 carries its one human-facing line in English engineer-speak ("not
 deterministic proof"). The review report opens with a raw verdict token and
 files decisions the operator owes under «Решения:», which reads as "decisions
 already made". The ship block buries the decision under ~20 lines of
-telemetry and ends with a raw `Next: <linear-deploy | needs-human | blocked>`
+telemetry and ends with a raw `Next: <mono-deploy | needs-human | blocked>`
 — the exact thing the repo's glossary says to "never leave raw". AGENTS.md:11-12
 states "Linear-facing templates and output examples are written in Russian";
 these templates half-violate it. This plan makes Russian the language of every
@@ -52,7 +52,7 @@ All excerpts verified at commit `889742b`.
   ```
 
   BLOCKED shape (lines 16-26) has English `Missing: / Drift: / Risk: / Next action:`
-  mixed with Russian `Проверено:`. `skills/linear-check/SKILL.md:45` keeps
+  mixed with Russian `Проверено:`. `skills/mono-check/SKILL.md:45` keeps
   PASS/FAIL/BLOCKED "in the status line for machine readability, but add a
   one-line human meaning immediately after it" — the meaning line itself may
   be Russian. **No validator pins exist on check-output.md** (verified).
@@ -79,23 +79,23 @@ All excerpts verified at commit `889742b`.
 - `templates/ship-output.md` — default user-facing block (lines 5-43): outcome
   sentence first (good), then `Latest head SHA`, an 8-bullet `Review status:`
   block naming Greptile and merge state, `CI status:`, a `Green certificate:`
-  block whose line 28 is `- Next: <linear-deploy | needs-human | blocked>.`,
+  block whose line 28 is `- Next: <mono-deploy | needs-human | blocked>.`,
   then Russian `Проверено/Не проверено/Что дальше`. Lines 45-64 already define
   an "Optional internal summary for logs or Linear comments". Line 75 mandates
-  an English say-string: `For `green`, say "PR is ready for `linear-deploy`; it has not been merged or deployed by `linear-ship`."`.
+  an English say-string: `For `green`, say "PR is ready for `mono-deploy`; it has not been merged or deployed by `mono-ship`."`.
   Validator pins on this template (validate-workflow.mjs:212-215 and 572-579):
   `Preflight: <ready/blocked/drift-candidate/needs-human/not run>`,
-  `Bug/perf proof: …`, `linear-ship green certificate`, `Documentation workflow`,
-  `Next: <linear-deploy | needs-human | blocked>` — pins are whole-file
+  `Bug/perf proof: …`, `mono-ship green certificate`, `Documentation workflow`,
+  `Next: <mono-deploy | needs-human | blocked>` — pins are whole-file
   substring checks, so MOVING a pinned line into the internal-summary section
   of the same file keeps validation green.
 - `templates/deploy-output.md:62-64` — English say-strings ("PR changed after
-  review; run `linear-ship` again before deploy.").
+  review; run `mono-ship` again before deploy.").
 - `references/human-friendly-output.md:17-37` — the status glossary translates
   verdicts into ENGLISH meanings; it has no entries for risk tiers
   (tiny/standard/deep/risky), gate kinds (required/advisory), or tooling
   vocabulary (Greptile, head SHA, merge state, CI checks, exit codes).
-- `skills/linear-ship/SKILL.md:61-83` — "Required review status shape when a
+- `skills/mono-ship/SKILL.md:61-83` — "Required review status shape when a
   PR exists" duplicates the template's English-labeled block; lines 52, 48-51
   contain English say-strings.
 
@@ -104,7 +104,7 @@ All excerpts verified at commit `889742b`.
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Full validation | `node scripts/validate-workflow.mjs` | exit 0 |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 
 ## Scope
 
@@ -112,8 +112,8 @@ All excerpts verified at commit `889742b`.
 - `templates/check-output.md`, `templates/ship-output.md`,
   `templates/deploy-output.md`, `templates/review-output.md`
 - `references/human-friendly-output.md` (glossary extensions)
-- `skills/linear-ship/SKILL.md` (review-status shape + say-strings),
-  `skills/linear-check/SKILL.md` (only if it restates English labels)
+- `skills/mono-ship/SKILL.md` (review-status shape + say-strings),
+  `skills/mono-check/SKILL.md` (only if it restates English labels)
 - `scripts/validate-workflow.mjs` (update/add pins in tandem)
 - `plans/README.md` (status row)
 
@@ -152,7 +152,7 @@ b. `## Tooling Glossary` — `Greptile` → «внешний авто-ревью
 ### Step 2: check-output.md — full Russian human layer
 
 Keep `PASS - Linear <mode> ready` / `BLOCKED - …` / `FAIL - …` first lines
-verbatim (parse anchors; linear-check SKILL.md:45 mandates them). Replace the
+verbatim (parse anchors; mono-check SKILL.md:45 mandates them). Replace the
 English labels with Russian across all three shapes:
 `Meaning:` → `Смысл: <по-русски, например: посмотрел нужные артефакты, блокеров не нашёл; ручную проверку это не заменяет>`,
 `Notes:` → `Заметки:`, `Missing:` → `Чего не хватает:`, `Drift:` → `Расхождения:`,
@@ -185,18 +185,18 @@ c. Rename `Решения:` → `Нужно твоё решение:` and requir
 a. Move from the default user-facing block into the "Optional internal
    summary": `Latest head SHA` line, the `Fixes applied`/`Merge state` bullets,
    and the `Green certificate:` bookkeeping pair — KEEPING the pinned strings
-   (`linear-ship green certificate`, `Next: <linear-deploy | needs-human | blocked>`,
+   (`mono-ship green certificate`, `Next: <mono-deploy | needs-human | blocked>`,
    `Preflight: <ready/…>`, `Documentation workflow`) present in the file
    (inside the internal summary is fine — pins are whole-file).
 b. In the user block, replace the 8-bullet `Review status:` with a Russian
    `Статус ревью:` of 3-4 lines in plain language (who/what reviewed, found,
    fixed, unresolved count), `CI status:` → `Проверки CI:` one line, and close
    with `Проверено/Не проверено/Что дальше` as today. The user block must end
-   with a translated next step (`Дальше: linear-deploy — рекомендую…`), never
+   with a translated next step (`Дальше: mono-deploy — рекомендую…`), never
    the raw enum.
 c. Translate the say-strings at lines 73-79 into Russian equivalents (keep
    verdict tokens in backticks inside them).
-d. Mirror the same trim in `skills/linear-ship/SKILL.md:61-83` (the inline
+d. Mirror the same trim in `skills/mono-ship/SKILL.md:61-83` (the inline
    "Required review status shape") and its say-strings at lines 46-52, keeping
    every validator-pinned sentence intact (check pins at
    validate-workflow.mjs:503-524 before editing; `Poll interval: 10 minutes`
@@ -205,12 +205,12 @@ d. Mirror the same trim in `skills/linear-ship/SKILL.md:61-83` (the inline
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 **Verify**: in the default user-facing block of `templates/ship-output.md`
 (lines between "Default user-facing response:" and "Optional internal
-summary"), `grep` finds no `head SHA`, no `Greptile`, no raw `Next: <linear-deploy`.
+summary"), `grep` finds no `head SHA`, no `Greptile`, no raw `Next: <mono-deploy`.
 
 ### Step 5: deploy-output.md — translate say-strings
 
 Replace the English verdict-to-human say-strings (lines 59-64) with Russian
-(e.g. for stale certificate: «PR изменился после ревью; прогони `linear-ship`
+(e.g. for stale certificate: «PR изменился после ревью; прогони `mono-ship`
 ещё раз перед деплоем.»). Keep all pinned strings
 (`Ship certificate: <found/missing/stale>`, `Deploy workflow`,
 `Learnings recorded`, `stale certificates` — pins at validate-workflow.mjs:216-221
@@ -225,7 +225,7 @@ The handoff chat final currently must include six snake_case intake fields.
 The maintainer decided: the chat layer becomes one human sentence; the
 structured record moves to Linear. Three files in tandem:
 
-a. `skills/linear-handoff/SKILL.md` — replace the final-response bullet
+a. `skills/mono-handoff/SKILL.md` — replace the final-response bullet
    `- Artifact intake summary with `read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, and `confidence_boundary`.`
    with
    `- Artifact intake, one Russian sentence: what fed the package, what was unavailable or conflicting, where confidence is low (e.g. «Читал: discovery-план и PRD; не нашёл: заметки office-hours; конфликтов нет»). The structured intake record (`read`, `unavailable`, `stale_or_ignored`, `conflicts`, `decisions_carried_forward`, `confidence_boundary`) is recorded in the package-approval Linear comment, not the chat final.`
@@ -241,11 +241,11 @@ c. `scripts/validate-workflow.mjs` — update the pinned sentence
    exist). Update the failure message accordingly.
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
-**Verify**: `grep -c "decisions_carried_forward" skills/linear-handoff/SKILL.md` ≥ 1 (field names preserved for the Linear-comment requirement).
+**Verify**: `grep -c "decisions_carried_forward" skills/mono-handoff/SKILL.md` ≥ 1 (field names preserved for the Linear-comment requirement).
 
 ### Step 7: Full suite + language sweep
 
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0.
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0.
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 **Verify** (manual scan): each template's DEFAULT user-facing shape contains
 no English section labels other than status tokens and pinned machine fields.
@@ -263,7 +263,7 @@ renamed), confirm `node scripts/validate-workflow.mjs` fails on the old
 - [ ] review-output.md: `Коротко:` first; `Нужно твоё решение:` present; tiers/gates translated with canonical tokens in parens
 - [ ] ship-output.md user block: no head SHA / Greptile / raw Next enum; pinned strings still present in file
 - [ ] human-friendly-output.md has Risk And Gate Glossary + Tooling Glossary
-- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-linear-artifacts.mjs` exits 0
+- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-mono-artifacts.mjs` exits 0
 - [ ] `git status --porcelain` only in-scope files
 - [ ] `plans/README.md` status row updated
 

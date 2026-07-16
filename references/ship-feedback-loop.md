@@ -1,8 +1,8 @@
 # Ship Feedback Loop
 
-`linear-ship` owns orchestration only. It must not reimplement the project ship workflow, documentation workflow, review feedback resolver, or deploy workflow.
+`mono-ship` owns orchestration only. It must not reimplement the project ship workflow, documentation workflow, review feedback resolver, or deploy workflow.
 
-The loop goal is a deploy-ready PR and a durable `linear-ship green certificate`. Merge, deploy, post-ship check, Linear closeout, and learning capture belong to `linear-deploy`.
+The loop goal is a deploy-ready PR and a durable `mono-ship green certificate`. Merge, deploy, post-ship check, Linear closeout, and learning capture belong to `mono-deploy`.
 
 ## Inputs
 
@@ -74,7 +74,7 @@ The output must be empty for the worker's own reviews. This submitted-check is a
 
 ## Green Exit
 
-Return `green` and record `linear-ship green certificate` when all are true:
+Return `green` and record `mono-ship green certificate` when all are true:
 
 - Latest head SHA is stable.
 - Documentation workflow either ran for the latest head, made no changes, or is intentionally unavailable.
@@ -88,10 +88,10 @@ Return `green` and record `linear-ship green certificate` when all are true:
 
 ## Green Certificate
 
-The green certificate must be durable in Linear comments or resources so a fresh `linear-deploy` agent can recover it.
+The green certificate must be durable in Linear comments or resources so a fresh `mono-deploy` agent can recover it.
 
 ```text
-linear-ship green certificate
+mono-ship green certificate
 Ship: green
 Issue(s): <keys>
 PR: <number/url>
@@ -105,7 +105,7 @@ Unresolved review threads: <0/count/unknown>
 Merge state: <clean/blocked/conflict/unknown>
 Checked: <states inspected>
 Not checked: <manual/browser/mobile/prod/deploy surfaces not inspected>
-Next: linear-deploy
+Next: mono-deploy
 ```
 
 ## Review Status Reporting
@@ -124,11 +124,11 @@ Include:
 - Latest head SHA after the final documentation/resolver run.
 - Merge state after the final re-check.
 - CI/check state after the final re-check.
-- Whether the `linear-ship green certificate` was recorded.
+- Whether the `mono-ship green certificate` was recorded.
 
 If the loop fixed feedback, make the timeline clear: initial review result, feedback found, fix pushed, post-fix review/check status.
 
-Do not collapse a completed loop into "Greptile passed" when the user needs to know whether code review is actually done. Say whether actionable feedback remains and whether the PR is safe for `linear-deploy` from the review/CI perspective.
+Do not collapse a completed loop into "Greptile passed" when the user needs to know whether code review is actually done. Say whether actionable feedback remains and whether the PR is safe for `mono-deploy` from the review/CI perspective.
 
 Also state what was not checked. If the loop did not run manual browser QA, production smoke, mobile QA, deploy verification, or user acceptance, say so explicitly instead of letting "green" imply broader confidence.
 
@@ -144,7 +144,7 @@ Return `needs-human` when any are true:
 - Branch or worktree is dirty in a way unrelated to the loop.
 - PR head changes by another actor during a fix attempt.
 
-Deploy approval is never a ship gate: `linear-ship` certifies green without it, and `linear-deploy` owns asking for and recording deploy approval per the configured `deployApproval` policy.
+Deploy approval is never a ship gate: `mono-ship` certifies green without it, and `mono-deploy` owns asking for and recording deploy approval per the configured `deployApproval` policy.
 
 ## Blocked Or Timed Out
 
@@ -159,5 +159,5 @@ Linear-facing comments must be in Russian. Keep them concise and factual:
 - PR created and moved to review.
 - Documentation workflow completed, skipped, or changed the PR head.
 - Review loop completed or stopped with reason.
-- `linear-ship green certificate` recorded or blocked with reason.
+- `mono-ship green certificate` recorded or blocked with reason.
 - Human decision needed, including the exact question and linked PR context.

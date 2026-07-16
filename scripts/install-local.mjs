@@ -9,18 +9,21 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 const UPSTREAM_REPO = "darkdepot/linear-agent-workflow";
-const LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
-const GENERATED_MARKER = `Installed from ${UPSTREAM_REPO}`;
+const LOCKFILE_NAME = ".mono-agent-workflow.lock.json";
+const LEGACY_LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
+const GENERATED_MARKER = "Installed by Mono Agent Workflow";
+const LEGACY_GENERATED_MARKER = "Installed from darkdepot/linear-agent-workflow";
 
 // Pack-private shared directory at the skills root (a sibling of LOCKFILE_NAME).
 // It holds workflow runtime scripts the installed skills invoke at delivery time
 // — today the issue-only lane resolver the create-then-approve intake runs. It is
-// hidden (leading dot) so it is never mistaken for an installed `linear-*` skill
-// directory by discovery or stale-cleanup, which scan for `linear-` prefixes.
-const RUNTIME_DIR = ".linear-agent-workflow";
+// hidden (leading dot) so it is never mistaken for an installed `mono-*` skill
+// directory by discovery or stale-cleanup, which scan for `mono-` prefixes.
+const RUNTIME_DIR = ".mono-agent-workflow";
+const LEGACY_RUNTIME_DIR = ".linear-agent-workflow";
 const RUNTIME_SCRIPTS_SUBDIR = "scripts";
 // Upstream scripts/ files published into
-// <skills-root>/.linear-agent-workflow/scripts/. The resolver imports only Node
+// <skills-root>/.mono-agent-workflow/scripts/. The resolver imports only Node
 // built-ins, so it has no sibling-script dependencies; add any future sibling it
 // imports here so the whole runtime dependency set is installed together.
 const RUNTIME_SCRIPTS = ["resolve-issue-context.mjs"];
@@ -32,7 +35,7 @@ function usage() {
   console.error("");
   console.error(`Default mode is --all-roots: discover every installed skills root (a directory holding ${LOCKFILE_NAME})`);
   console.error("among the known roots (~/.codex/skills, ~/.claude/skills, roots recorded in discovered lockfiles,");
-  console.error("or the LINEAR_WORKFLOW_KNOWN_ROOTS override) and sync/check each of them in one run.");
+  console.error("or the MONO_WORKFLOW_KNOWN_ROOTS override) and sync/check each of them in one run.");
   process.exit(2);
 }
 
@@ -80,7 +83,9 @@ function parseArgs(argv) {
 }
 
 function knownRootCandidates() {
-  const envValue = process.env.LINEAR_WORKFLOW_KNOWN_ROOTS;
+  const envValue =
+    process.env.MONO_WORKFLOW_KNOWN_ROOTS ??
+    process.env.LINEAR_WORKFLOW_KNOWN_ROOTS;
   if (envValue !== undefined) {
     return envValue
       .split(path.delimiter)
@@ -102,9 +107,12 @@ function discoverInstalledRoots(candidates) {
     const candidate = path.resolve(queue.shift());
     if (seen.has(candidate)) continue;
     seen.add(candidate);
-    if (!fs.existsSync(path.join(candidate, LOCKFILE_NAME))) continue;
+    const lockPath = [LOCKFILE_NAME, LEGACY_LOCKFILE_NAME]
+      .map((name) => path.join(candidate, name))
+      .find((candidatePath) => fs.existsSync(candidatePath));
+    if (!lockPath) continue;
     installed.push(candidate);
-    const lock = readLock(path.join(candidate, LOCKFILE_NAME));
+    const lock = readLock(lockPath);
     if (typeof lock?.skillsRoot === "string" && lock.skillsRoot) {
       queue.push(lock.skillsRoot);
     }
@@ -114,7 +122,9 @@ function discoverInstalledRoots(candidates) {
 }
 
 function installedRootVersion(skillsRoot) {
-  const lock = readLock(path.join(skillsRoot, LOCKFILE_NAME));
+  const lock =
+    readLock(path.join(skillsRoot, LOCKFILE_NAME)) ??
+    readLock(path.join(skillsRoot, LEGACY_LOCKFILE_NAME));
   return lock?.upstreamVersion || "unknown";
 }
 
@@ -172,7 +182,7 @@ function readVersion(root) {
 function listSourceSkills(root) {
   return fs
     .readdirSync(path.join(root, "skills"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("linear-"))
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("mono-"))
     .map((entry) => entry.name)
     .sort();
 }
@@ -218,7 +228,7 @@ function copyDirectory(source, destination) {
 function installedSkillBody(sourceText, commit, dirty) {
   const marker = dirty ? `${commit} dirty` : commit;
   const metadata = `<!-- ${GENERATED_MARKER} @ ${marker}. Do not edit manually. -->`;
-  let body = sourceText.replace(/`skills\/(linear-[^`]+\/SKILL\.md)`/g, "`../$1`");
+  let body = sourceText.replace(/`skills\/(mono-[^`]+\/SKILL\.md)`/g, "`../$1`");
 
   const lines = body.split("\n");
   const h1Index = lines.findIndex((line) => line.startsWith("# "));
@@ -227,7 +237,7 @@ function installedSkillBody(sourceText, commit, dirty) {
       h1Index + 1,
       0,
       "",
-      "Installed local note: read the active project's `.agents/linear-workflow.config.json` when present for Linear team, language, artifact roots, and workflow policy. Shared `references/` and `templates/` are copied into this skill directory."
+      "Installed local note: read the active project's `.agents/mono-workflow.config.json` when present for Linear team, language, artifact roots, and workflow policy. Shared `references/` and `templates/` are copied into this skill directory."
     );
     body = lines.join("\n");
   }
@@ -242,7 +252,7 @@ function installedSkillBody(sourceText, commit, dirty) {
 }
 
 // The pack-private runtime scripts to publish into
-// <skills-root>/.linear-agent-workflow/scripts/. `relativePath` is skills-root
+// <skills-root>/.mono-agent-workflow/scripts/. `relativePath` is skills-root
 // relative (the lockfile and --check key); `destPath` is the absolute install
 // target; `sourcePath` is the upstream file copied verbatim.
 function plannedRuntimeScripts(root, skillsRoot) {
@@ -333,10 +343,11 @@ function readLock(lockPath, failures = []) {
   }
 }
 
-function isGeneratedLinearSkillDir(skillDir) {
+function isGeneratedWorkflowSkillDir(skillDir) {
   const skillPath = path.join(skillDir, "SKILL.md");
   if (!fs.existsSync(skillPath)) return false;
-  return fs.readFileSync(skillPath, "utf8").includes(GENERATED_MARKER);
+  const body = fs.readFileSync(skillPath, "utf8");
+  return body.includes(GENERATED_MARKER) || body.includes(LEGACY_GENERATED_MARKER);
 }
 
 function removeStaleFromPreviousLock(lock, expectedSkills, skillsRoot) {
@@ -344,19 +355,24 @@ function removeStaleFromPreviousLock(lock, expectedSkills, skillsRoot) {
   for (const skill of lock.installedSkills || []) {
     if (!skill.name || expectedSkills.has(skill.name)) continue;
     const skillDir = path.join(skillsRoot, skill.name);
-    if (isGeneratedLinearSkillDir(skillDir)) {
+    if (isGeneratedWorkflowSkillDir(skillDir)) {
       fs.rmSync(skillDir, { recursive: true, force: true });
     }
   }
 }
 
-function removeGeneratedStaleLinearDirs(skillsRoot, expectedSkills) {
+function removeGeneratedStaleWorkflowDirs(skillsRoot, expectedSkills) {
   if (!fs.existsSync(skillsRoot)) return;
   for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!entry.isDirectory() || !entry.name.startsWith("linear-")) continue;
+    if (
+      !entry.isDirectory() ||
+      (!entry.name.startsWith("mono-") && !entry.name.startsWith("linear-"))
+    ) {
+      continue;
+    }
     if (expectedSkills.has(entry.name)) continue;
     const skillDir = path.join(skillsRoot, entry.name);
-    if (isGeneratedLinearSkillDir(skillDir)) {
+    if (isGeneratedWorkflowSkillDir(skillDir)) {
       fs.rmSync(skillDir, { recursive: true, force: true });
     }
   }
@@ -366,10 +382,11 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
   fs.mkdirSync(skillsRoot, { recursive: true });
   const plan = plannedInstall(root, skillsRoot, commit, dirty);
   const expectedSkills = new Set(plan.skills);
-  const previousLock = readLock(plan.lockPath);
+  const legacyLockPath = path.join(skillsRoot, LEGACY_LOCKFILE_NAME);
+  const previousLock = readLock(plan.lockPath) ?? readLock(legacyLockPath);
 
   removeStaleFromPreviousLock(previousLock, expectedSkills, skillsRoot);
-  if (removeStale) removeGeneratedStaleLinearDirs(skillsRoot, expectedSkills);
+  if (removeStale) removeGeneratedStaleWorkflowDirs(skillsRoot, expectedSkills);
 
   const manifestSkills = [];
   for (const file of plan.files) {
@@ -387,9 +404,9 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
   }
 
   // Publish the pack-private runtime scripts (the issue-only resolver + any
-  // sibling it imports) into <skills-root>/.linear-agent-workflow/scripts/, the
+  // sibling it imports) into <skills-root>/.mono-agent-workflow/scripts/, the
   // canonical location the installed skills invoke at delivery time. The whole
-  // .linear-agent-workflow/ directory is installer-owned and fully rewritten each
+  // .mono-agent-workflow/ directory is installer-owned and fully rewritten each
   // sync, so a removed upstream script — or any file planted anywhere under it —
   // leaves no copy behind. (The lockfile sits beside this directory, not inside
   // it, so it is untouched.)
@@ -414,8 +431,10 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
     installedSkills: manifestSkills,
   };
   fs.writeFileSync(plan.lockPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.rmSync(legacyLockPath, { force: true });
+  fs.rmSync(path.join(skillsRoot, LEGACY_RUNTIME_DIR), { recursive: true, force: true });
 
-  console.log(`Installed ${manifestSkills.length} Linear workflow skills into ${skillsRoot} (version ${version || "unknown"})`);
+  console.log(`Installed ${manifestSkills.length} Mono workflow skills into ${skillsRoot} (version ${version || "unknown"})`);
 }
 
 function check(root, skillsRoot, commit, dirty, version) {
@@ -445,8 +464,8 @@ function check(root, skillsRoot, commit, dirty, version) {
   // The pack-private runtime scripts must be installed, current, and free of
   // extras, so the create-then-approve intake finds the resolver at the
   // canonical path in every synced root. The extra-file scan walks the WHOLE
-  // .linear-agent-workflow/ root (not just scripts/), so a file planted one level
-  // up — e.g. .linear-agent-workflow/evil.mjs — is flagged too. The lockfile
+  // .mono-agent-workflow/ root (not just scripts/), so a file planted one level
+  // up — e.g. .mono-agent-workflow/evil.mjs — is flagged too. The lockfile
   // lives beside this root, not inside it, so nothing here should exist outside
   // the expected runtime-script set.
   const packDir = path.join(skillsRoot, RUNTIME_DIR);
@@ -526,10 +545,10 @@ if (args.check) {
     const failures = check(root, skillsRoot, commit, dirty, version);
     if (failures.length > 0) {
       failed = true;
-      console.error(`Linear workflow local install check failed for ${skillsRoot}:`);
+      console.error(`Mono workflow local install check failed for ${skillsRoot}:`);
       for (const failure of failures) console.error(`- ${failure}`);
     } else {
-      console.log(`Linear workflow local install check passed for ${skillsRoot} (version ${installedRootVersion(skillsRoot)})`);
+      console.log(`Mono workflow local install check passed for ${skillsRoot} (version ${installedRootVersion(skillsRoot)})`);
     }
   }
   process.exit(failed ? 1 : 0);

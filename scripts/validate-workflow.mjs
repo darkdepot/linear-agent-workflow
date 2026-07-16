@@ -9,20 +9,20 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
 const EXPECTED_SKILLS = [
-  "linear-check",
-  "linear-deploy",
-  "linear-handoff",
-  "linear-idea",
-  "linear-implement",
-  "linear-issue",
-  "linear-issue-intake",
-  "linear-orchestrate",
-  "linear-preflight",
-  "linear-prd",
-  "linear-project",
-  "linear-review",
-  "linear-ship",
-  "linear-spec",
+  "mono-check",
+  "mono-deploy",
+  "mono-handoff",
+  "mono-idea",
+  "mono-implement",
+  "mono-issue",
+  "mono-issue-intake",
+  "mono-orchestrate",
+  "mono-preflight",
+  "mono-prd",
+  "mono-project",
+  "mono-review",
+  "mono-ship",
+  "mono-spec",
 ];
 
 function read(relativePath) {
@@ -45,7 +45,7 @@ function assertIncludes(relativePath, text, label = text) {
 function listSkillNames() {
   return fs
     .readdirSync(path.join(root, "skills"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name.startsWith("linear-"))
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith("mono-"))
     .map((entry) => entry.name)
     .sort();
 }
@@ -280,34 +280,37 @@ function validateTemplateSections() {
 }
 
 function validateReviewCheckBoundary() {
-  const review = read("skills/linear-review/SKILL.md");
-  const check = read("skills/linear-check/SKILL.md");
+  const review = read("skills/mono-review/SKILL.md");
+  const check = read("skills/mono-check/SKILL.md");
 
   for (const required of [
     "report-only",
     "must not create, update, delete, or silently repair",
     "Do not use `PASS`, `FAIL`, or `BLOCKED`",
-    "`linear-review` is report-only",
+    "`mono-review` is report-only",
   ]) {
-    if (!review.includes(required)) fail(`linear-review skill boundary missing: ${required}`);
+    if (!review.includes(required)) fail(`mono-review skill boundary missing: ${required}`);
   }
 
   if (check.includes("templates/review-output.md") || check.includes("Linear review:") || check.includes("Ревью Linear:")) {
-    fail("linear-check must not use the review output template");
+    fail("mono-check must not use the review output template");
   }
 
-  if (!check.includes("Do not emit review findings")) fail("linear-check must explicitly avoid review findings");
-  if (!check.includes("Never edit Project, documents, or Issues from `linear-check`")) {
-    fail("linear-check must be strictly readiness-only");
+  if (!check.includes("Do not emit review findings")) fail("mono-check must explicitly avoid review findings");
+  if (!check.includes("Never edit Project, documents, or Issues from `mono-check`")) {
+    fail("mono-check must be strictly readiness-only");
   }
-  if (!check.includes("return `FAIL` if the required `linear-review` gate is missing")) {
-    fail("linear-check must fail missing required review gates");
+  if (!check.includes("return `FAIL` if the required `mono-review` gate is missing")) {
+    fail("mono-check must fail missing required review gates");
   }
 }
 
 function validateLocalInstallBehavior() {
-  const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-skills-"));
-  const installedResolver = path.join(skillsRoot, ".linear-agent-workflow", "scripts", "resolve-issue-context.mjs");
+  const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-skills-"));
+  const installedResolver = path.join(skillsRoot, ".mono-agent-workflow", "scripts", "resolve-issue-context.mjs");
+  const legacySkillDir = path.join(skillsRoot, "linear-check");
+  const legacyLockPath = path.join(skillsRoot, ".linear-agent-workflow.lock.json");
+  const legacyRuntimeDir = path.join(skillsRoot, ".linear-agent-workflow");
   try {
     expectCommandFailure(
       "install-local --check --remove-stale conflict",
@@ -315,7 +318,23 @@ function validateLocalInstallBehavior() {
       "--remove-stale has no effect in --check mode"
     );
 
-    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--remove-stale"]);
+    fs.mkdirSync(legacySkillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(legacySkillDir, "SKILL.md"),
+      "<!-- Installed from darkdepot/linear-agent-workflow @ legacy. Do not edit manually. -->\n"
+    );
+    fs.mkdirSync(legacyRuntimeDir, { recursive: true });
+    fs.writeFileSync(path.join(legacyRuntimeDir, "legacy.mjs"), "// legacy\n");
+    fs.writeFileSync(
+      legacyLockPath,
+      `${JSON.stringify({ installedSkills: [{ name: "linear-check" }] }, null, 2)}\n`
+    );
+
+    runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+
+    if (fs.existsSync(legacySkillDir)) fail("Local install kept previous-brand linear-check");
+    if (fs.existsSync(legacyLockPath)) fail("Local install kept previous-brand lockfile");
+    if (fs.existsSync(legacyRuntimeDir)) fail("Local install kept previous-brand runtime directory");
 
     for (const skill of EXPECTED_SKILLS) {
       const skillPath = path.join(skillsRoot, skill, "SKILL.md");
@@ -324,13 +343,13 @@ function validateLocalInstallBehavior() {
         continue;
       }
       const skillText = fs.readFileSync(skillPath, "utf8");
-      if (!skillText.includes("Installed from darkdepot/linear-agent-workflow")) {
+      if (!skillText.includes("Installed by Mono Agent Workflow")) {
         fail(`Local install ${skill} missing generated metadata`);
       }
-      if (!skillText.includes("`.agents/linear-workflow.config.json`")) {
+      if (!skillText.includes("`.agents/mono-workflow.config.json`")) {
         fail(`Local install ${skill} missing project config note`);
       }
-      if (/`skills\/linear-/.test(skillText)) {
+      if (/`skills\/mono-/.test(skillText)) {
         fail(`Local install ${skill} kept repo-root peer skill paths`);
       }
     }
@@ -355,7 +374,7 @@ function validateLocalInstallBehavior() {
 
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
 
-    fs.appendFileSync(path.join(skillsRoot, "linear-review", "SKILL.md"), "\nBROKEN\n");
+    fs.appendFileSync(path.join(skillsRoot, "mono-review", "SKILL.md"), "\nBROKEN\n");
     expectCommandFailure(
       "install-local --check edited skill fixture",
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
@@ -363,7 +382,7 @@ function validateLocalInstallBehavior() {
     );
 
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
-    fs.appendFileSync(path.join(skillsRoot, "linear-review", "references", "review-rubric.md"), "\nBROKEN\n");
+    fs.appendFileSync(path.join(skillsRoot, "mono-review", "references", "review-rubric.md"), "\nBROKEN\n");
     expectCommandFailure(
       "install-local --check edited reference fixture",
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
@@ -393,17 +412,17 @@ function validateLocalInstallBehavior() {
     // The "unexpected" branch: an extra file under the canonical scripts dir is
     // flagged (mirrors the copied-asset unexpected-file test).
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
-    fs.writeFileSync(path.join(skillsRoot, ".linear-agent-workflow", "scripts", "stray.mjs"), "// stray\n");
+    fs.writeFileSync(path.join(skillsRoot, ".mono-agent-workflow", "scripts", "stray.mjs"), "// stray\n");
     expectCommandFailure(
       "install-local --check unexpected runtime script fixture",
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
       "Unexpected installed runtime script"
     );
 
-    // The tamper scan walks the whole .linear-agent-workflow/ root: a file planted
+    // The tamper scan walks the whole .mono-agent-workflow/ root: a file planted
     // one level up (not under scripts/) is flagged too.
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
-    fs.writeFileSync(path.join(skillsRoot, ".linear-agent-workflow", "evil.mjs"), "// evil\n");
+    fs.writeFileSync(path.join(skillsRoot, ".mono-agent-workflow", "evil.mjs"), "// evil\n");
     expectCommandFailure(
       "install-local --check pack-root stray file fixture",
       () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
@@ -414,7 +433,7 @@ function validateLocalInstallBehavior() {
     // runtimeScripts) fails --check loudly, and a re-sync upgrades it to a clean
     // v3 install that passes.
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
-    const lockPath = path.join(skillsRoot, ".linear-agent-workflow.lock.json");
+    const lockPath = path.join(skillsRoot, ".mono-agent-workflow.lock.json");
     const v2Lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
     v2Lock.schemaVersion = 2;
     delete v2Lock.runtimeScripts;
@@ -432,14 +451,14 @@ function validateLocalInstallBehavior() {
 }
 
 function validateMultiRootInstallBehavior() {
-  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-multi-root-"));
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-multi-root-"));
   const codexRoot = path.join(baseDir, "codex", "skills");
   const claudeRoot = path.join(baseDir, "claude", "skills");
   const recordedRoot = path.join(baseDir, "recorded", "skills");
-  const lockName = ".linear-agent-workflow.lock.json";
+  const lockName = ".mono-agent-workflow.lock.json";
   const env = {
     ...process.env,
-    LINEAR_WORKFLOW_KNOWN_ROOTS: [codexRoot, claudeRoot].join(path.delimiter),
+    MONO_WORKFLOW_KNOWN_ROOTS: [codexRoot, claudeRoot].join(path.delimiter),
   };
   const version = read("VERSION").trim();
 
@@ -466,18 +485,18 @@ function validateMultiRootInstallBehavior() {
     runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
     const syncOutput = runNode(["scripts/install-local.mjs", "--all-roots", "--remove-stale"], { env });
     for (const skillsRoot of [codexRoot, claudeRoot]) {
-      if (!syncOutput.includes(`Installed ${EXPECTED_SKILLS.length} Linear workflow skills into ${skillsRoot} (version ${version})`)) {
+      if (!syncOutput.includes(`Installed ${EXPECTED_SKILLS.length} Mono workflow skills into ${skillsRoot} (version ${version})`)) {
         fail(`install-local --all-roots must report a per-root install for ${skillsRoot}`);
       }
       // AC3: every synced root gets the pack-private resolver at the canonical path.
-      if (!fs.existsSync(path.join(skillsRoot, ".linear-agent-workflow", "scripts", "resolve-issue-context.mjs"))) {
+      if (!fs.existsSync(path.join(skillsRoot, ".mono-agent-workflow", "scripts", "resolve-issue-context.mjs"))) {
         fail(`install-local --all-roots must install the issue-only resolver into ${skillsRoot}`);
       }
     }
 
     const checkOutput = runNode(["scripts/install-local.mjs", "--check"], { env });
     for (const skillsRoot of [codexRoot, claudeRoot]) {
-      if (!checkOutput.includes(`Linear workflow local install check passed for ${skillsRoot} (version ${version})`)) {
+      if (!checkOutput.includes(`Mono workflow local install check passed for ${skillsRoot} (version ${version})`)) {
         fail(`install-local --check must report the per-root version for ${skillsRoot}`);
       }
     }
@@ -489,7 +508,7 @@ function validateMultiRootInstallBehavior() {
     claudeLock.skillsRoot = recordedRoot;
     fs.writeFileSync(claudeLockPath, `${JSON.stringify(claudeLock, null, 2)}\n`);
     const recordedOutput = runNode(["scripts/install-local.mjs"], { env });
-    if (!recordedOutput.includes(`Installed ${EXPECTED_SKILLS.length} Linear workflow skills into ${recordedRoot}`)) {
+    if (!recordedOutput.includes(`Installed ${EXPECTED_SKILLS.length} Mono workflow skills into ${recordedRoot}`)) {
       fail("install-local --all-roots must sync roots recorded in discovered lockfiles");
     }
 
@@ -506,10 +525,10 @@ function validateMultiRootInstallBehavior() {
     runNode(["scripts/install-local.mjs"], { env });
 
     // One edited root: the multi-root check must fail naming the broken root and still pass the healthy one.
-    fs.appendFileSync(path.join(claudeRoot, "linear-review", "SKILL.md"), "\nBROKEN\n");
+    fs.appendFileSync(path.join(claudeRoot, "mono-review", "SKILL.md"), "\nBROKEN\n");
     for (const expectedText of [
-      `Linear workflow local install check failed for ${claudeRoot}`,
-      `Linear workflow local install check passed for ${codexRoot}`,
+      `Mono workflow local install check failed for ${claudeRoot}`,
+      `Mono workflow local install check passed for ${codexRoot}`,
     ]) {
       expectCommandFailure(
         "install-local --check multi-root edited skill fixture",
@@ -547,7 +566,7 @@ function writeLegacyProjectConfig(repo) {
 }
 
 function validateProjectConfigBehavior() {
-  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-project-"));
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-project-"));
   try {
     fs.writeFileSync(path.join(repo, "AGENTS.md"), "# Fixture Project\n");
     writeLegacyProjectConfig(repo);
@@ -563,7 +582,7 @@ function validateProjectConfigBehavior() {
 
     runNode(["scripts/project-config.mjs", "--repo", repo, "--write", "--clean"]);
 
-    const configPath = path.join(repo, ".agents", "linear-workflow.config.json");
+    const configPath = path.join(repo, ".agents", "mono-workflow.config.json");
     if (!fs.existsSync(configPath)) fail("project-config must write JSON config");
     const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
     if (config.projectName !== "Fixture") fail("project-config must preserve legacy Consumer as projectName");
@@ -644,14 +663,55 @@ function validateProjectConfigBehavior() {
 
     runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]);
 
-    fs.mkdirSync(path.join(repo, ".agents", "skills", "linear-idea"), { recursive: true });
-    fs.writeFileSync(path.join(repo, ".agents", "skills", "linear-idea", "SKILL.md"), "legacy\n");
+    fs.mkdirSync(path.join(repo, ".agents", "skills", "mono-idea"), { recursive: true });
+    fs.writeFileSync(path.join(repo, ".agents", "skills", "mono-idea", "SKILL.md"), "legacy\n");
     expectCommandFailure(
       "project-config --check vendored skill fixture",
       () => runNode(["scripts/project-config.mjs", "--repo", repo, "--check"]),
-      "Legacy Linear workflow project install file must be removed"
+      "Legacy Mono workflow project install file must be removed"
     );
     runNode(["scripts/project-config.mjs", "--repo", repo, "--clean", "--check"]);
+
+    const jsonMigrationRepo = path.join(repo, "previous-json-project");
+    fs.mkdirSync(path.join(jsonMigrationRepo, ".agents"), { recursive: true });
+    const previousJsonConfig = {
+      schemaVersion: 1,
+      projectName: "Previous JSON Fixture",
+      linearTeam: "Mono",
+      languages: { linear: "Russian", repo: "English" },
+      artifactRoots: ["plans"],
+      workflows: {
+        implementation: null,
+        ship: "gstack ship",
+        documentation: null,
+        reviewFeedback: null,
+        deploy: "gstack land-and-deploy",
+      },
+      prerequisites: { autoreviewHelper: true },
+      deployApproval: "risky-only",
+    };
+    fs.writeFileSync(
+      path.join(jsonMigrationRepo, ".agents", "linear-workflow.config.json"),
+      `${JSON.stringify(previousJsonConfig, null, 2)}\n`
+    );
+    expectCommandFailure(
+      "project-config standalone clean preserves previous-brand JSON fixture",
+      () => runNode(["scripts/project-config.mjs", "--repo", jsonMigrationRepo, "--clean", "--check"]),
+      "Refusing to clean the only project config"
+    );
+    if (!fs.existsSync(path.join(jsonMigrationRepo, ".agents", "linear-workflow.config.json"))) {
+      fail("project-config standalone clean must preserve the only previous-brand JSON config");
+    }
+    runNode(["scripts/project-config.mjs", "--repo", jsonMigrationRepo, "--write", "--clean", "--check"]);
+    const migratedJsonConfig = JSON.parse(
+      fs.readFileSync(path.join(jsonMigrationRepo, ".agents", "mono-workflow.config.json"), "utf8")
+    );
+    if (migratedJsonConfig.projectName !== previousJsonConfig.projectName) {
+      fail("project-config must preserve previous-brand JSON config during migration");
+    }
+    if (fs.existsSync(path.join(jsonMigrationRepo, ".agents", "linear-workflow.config.json"))) {
+      fail("project-config --clean must remove the previous-brand JSON config after migration");
+    }
 
     config.projectName = "<set project>";
     fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
@@ -670,7 +730,7 @@ function validateIssueOnlyLaneBehavior() {
   // 5-field contract, the marker ≠ route-record boundary, and the fail-closed
   // invariant.
   for (const pin of [
-    "linear-issue-only marker",
+    "mono-issue-only marker",
     "Marker version: 1",
     "Scope fingerprint",
     "Acceptance IDs",
@@ -693,12 +753,12 @@ function validateIssueOnlyLaneBehavior() {
     "opt-in gate",
     "issueOnlyLane.enabled: true",
     "ownerPrincipal",
-    ".linear-agent-workflow/scripts/resolve-issue-context.mjs",
+    ".mono-agent-workflow/scripts/resolve-issue-context.mjs",
   ]) {
     assertIncludes("references/issue-only-lane.md", pin);
   }
 
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "linear-workflow-issue-only-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
   try {
     // MONO-19: the issue-only lane is a config opt-in. issue-only is granted only
     // when --config enables the lane AND names an owner principal. Every fixture
@@ -746,7 +806,7 @@ function validateIssueOnlyLaneBehavior() {
     );
 
     const writeMarker = (fields) =>
-      fs.writeFileSync(markerPath, `${["linear-issue-only marker", ...fields].join("\n")}\n`);
+      fs.writeFileSync(markerPath, `${["mono-issue-only marker", ...fields].join("\n")}\n`);
 
     // Fixture 1 — legacy-unchanged: a project-first issue (no marker) resolves
     // to project-first. The lane never activates without a marker.
@@ -792,6 +852,26 @@ function validateIssueOnlyLaneBehavior() {
     if (happy.risk_class !== "standard") fail("resolve-issue-context issue-only must read the recorded risk class");
     if (happy.approval_status !== "approved-fresh") {
       fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
+    }
+
+    // Brand migration compatibility: previously approved durable Linear
+    // comments keep resolving. New writes use mono; reads accept the old marker.
+    fs.writeFileSync(
+      markerPath,
+      `${[
+        "linear-issue-only marker",
+        "Marker version: 1",
+        `Scope fingerprint: ${fingerprint}`,
+        "Acceptance IDs: AC1, AC2",
+        "Risk class: standard",
+        `Approval: ${fingerprint}`,
+      ].join("\n")}\n`
+    );
+    const previousBrandMarker = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, ...issueOnlyArgs])
+    );
+    if (previousBrandMarker.package_kind !== "issue-only") {
+      fail("resolve-issue-context must preserve previous-brand durable marker approvals");
     }
 
     // Guard (must-fix #3): the fingerprint binds the FULL Issue contract, not
@@ -869,7 +949,7 @@ function validateIssueOnlyLaneBehavior() {
         "",
         "## Что сделать",
         "",
-        "Document the `linear-issue-only marker` convention; Marker version: 1 is inline prose.",
+        "Document the `mono-issue-only marker` convention; Marker version: 1 is inline prose.",
         "",
         "## Критерии приёмки",
         "",
@@ -976,7 +1056,7 @@ function validateIssueOnlyLaneBehavior() {
     const fencedMarkerPath = path.join(dir, "issue-fenced-marker.md");
     fs.writeFileSync(
       fencedMarkerPath,
-      ["# Doc", "", "## Что сделать", "", "Example marker format:", "", "```text", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: abc", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+      ["# Doc", "", "## Что сделать", "", "Example marker format:", "", "```text", "mono-issue-only marker", "Marker version: 1", "Scope fingerprint: abc", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", "```", "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
     );
     const fencedMarker = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", fencedMarkerPath]));
     if (fencedMarker.package_kind !== "project-first") {
@@ -1018,7 +1098,7 @@ function validateIssueOnlyLaneBehavior() {
     const incompleteMarkerPath = path.join(dir, "marker-incomplete.md");
     fs.writeFileSync(
       incompleteMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${incompleteFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${incompleteFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${incompleteFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${incompleteFp}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context incomplete contract fixture",
@@ -1039,7 +1119,7 @@ function validateIssueOnlyLaneBehavior() {
     const inlineFp = emitFingerprint(inlinePath);
     fs.writeFileSync(
       inlinePath,
-      `${inlineBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${inlineFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${inlineFp}\n`
+      `${inlineBody}\nmono-issue-only marker\nMarker version: 1\nScope fingerprint: ${inlineFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${inlineFp}\n`
     );
     const inlineResolved = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", inlinePath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", inlineFp])
@@ -1058,7 +1138,7 @@ function validateIssueOnlyLaneBehavior() {
     const renewFp = emitFingerprint(renewPath);
     fs.writeFileSync(
       renewPath,
-      `${renewBody}\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: deadbeefdead\nAcceptance IDs: AC1, AC2\nRisk class: deep\nApproval: deadbeefdead\n\nlinear-issue-only marker\nMarker version: 1\nScope fingerprint: ${renewFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${renewFp}\n`
+      `${renewBody}\nmono-issue-only marker\nMarker version: 1\nScope fingerprint: deadbeefdead\nAcceptance IDs: AC1, AC2\nRisk class: deep\nApproval: deadbeefdead\n\nmono-issue-only marker\nMarker version: 1\nScope fingerprint: ${renewFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${renewFp}\n`
     );
     const renewResolved = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", renewPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", renewFp])
@@ -1079,7 +1159,7 @@ function validateIssueOnlyLaneBehavior() {
     const negMarkerPath = path.join(dir, "marker-neg.md");
     fs.writeFileSync(
       negMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${negFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${negFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${negFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${negFp}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context negative-heading behavior fixture",
@@ -1101,7 +1181,7 @@ function validateIssueOnlyLaneBehavior() {
     const cmdVerifyMarkerPath = path.join(dir, "marker-cmd-verify.md");
     fs.writeFileSync(
       cmdVerifyMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cmdVerifyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cmdVerifyFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cmdVerifyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cmdVerifyFp}`].join("\n")}\n`
     );
     const cmdVerify = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", cmdVerifyPath, "--marker", cmdVerifyMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", cmdVerifyFp])
@@ -1125,7 +1205,7 @@ function validateIssueOnlyLaneBehavior() {
     const scopeExclMarkerPath = path.join(dir, "marker-scope-excl.md");
     fs.writeFileSync(
       scopeExclMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${scopeExclFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${scopeExclFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${scopeExclFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${scopeExclFp}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context scope-exclusions heading fixture",
@@ -1144,7 +1224,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(nestedVerifyPath, nestedVerifyBody);
     const nvFp = emitFingerprint(nestedVerifyPath);
     const nvMarkerPath = path.join(dir, "marker-nv.md");
-    fs.writeFileSync(nvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nvFp}`].join("\n")}\n`);
+    fs.writeFileSync(nvMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nvFp}`].join("\n")}\n`);
     const nv = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedVerifyPath, "--marker", nvMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", nvFp])
     );
@@ -1160,7 +1240,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(nestedBehaviorPath, nestedBehaviorBody);
     const nbFp = emitFingerprint(nestedBehaviorPath);
     const nbMarkerPath = path.join(dir, "marker-nb.md");
-    fs.writeFileSync(nbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nbFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nbFp}`].join("\n")}\n`);
+    fs.writeFileSync(nbMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nbFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nbFp}`].join("\n")}\n`);
     const nb = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", nestedBehaviorPath, "--marker", nbMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", nbFp])
     );
@@ -1175,7 +1255,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(emptyFencePath, emptyFenceBody);
     const efFp = emitFingerprint(emptyFencePath);
     const efMarkerPath = path.join(dir, "marker-ef.md");
-    fs.writeFileSync(efMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${efFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${efFp}`].join("\n")}\n`);
+    fs.writeFileSync(efMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${efFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${efFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context empty-fence behavior fixture",
       () =>
@@ -1190,7 +1270,7 @@ function validateIssueOnlyLaneBehavior() {
     // text like "Endpoint: /admin/delete" after a (superseded) marker line stays
     // in the fingerprint, so changing it stales the approval.
     const afterMarker = (endpoint) =>
-      ["# AM", "", "## Что сделать", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeefdead", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `Endpoint: ${endpoint}`, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+      ["# AM", "", "## Что сделать", "", "mono-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeefdead", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `Endpoint: ${endpoint}`, "", "## Критерии приёмки", "", "- AC1: x", "", "## Как проверить", "", "1. s", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
     const amAPath = path.join(dir, "issue-am-a.md");
     const amBPath = path.join(dir, "issue-am-b.md");
     fs.writeFileSync(amAPath, afterMarker("/admin/read"));
@@ -1221,7 +1301,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const enFp = emitFingerprint(emptyNestedPath);
     const enMarkerPath = path.join(dir, "marker-en.md");
-    fs.writeFileSync(enMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${enFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${enFp}`].join("\n")}\n`);
+    fs.writeFileSync(enMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${enFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${enFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context empty nested behavior fixture",
       () =>
@@ -1253,7 +1333,7 @@ function validateIssueOnlyLaneBehavior() {
     const fencedFieldsMarkerPath = path.join(dir, "marker-fenced-fields.md");
     fs.writeFileSync(
       fencedFieldsMarkerPath,
-      `${["linear-issue-only marker", "```text", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`, "```"].join("\n")}\n`
+      `${["mono-issue-only marker", "```text", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`, "```"].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context fenced marker fields fixture",
@@ -1286,7 +1366,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const hcFp = emitFingerprint(htmlCommentPath);
     const hcMarkerPath = path.join(dir, "marker-hc.md");
-    fs.writeFileSync(hcMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hcFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hcFp}`].join("\n")}\n`);
+    fs.writeFileSync(hcMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hcFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hcFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context html-comment behavior fixture",
       () =>
@@ -1305,7 +1385,7 @@ function validateIssueOnlyLaneBehavior() {
     const biFp = emitFingerprint(blankInlinePath);
     fs.writeFileSync(
       blankInlinePath,
-      `${blankInlineBody}\nlinear-issue-only marker\n\nMarker version: 1\nScope fingerprint: ${biFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${biFp}\n`
+      `${blankInlineBody}\nmono-issue-only marker\n\nMarker version: 1\nScope fingerprint: ${biFp}\nAcceptance IDs: AC1, AC2\nRisk class: standard\nApproval: ${biFp}\n`
     );
     const blankInline = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", blankInlinePath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", biFp])
@@ -1322,7 +1402,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(crossRefPath, crossRefBody);
     const crFp = emitFingerprint(crossRefPath);
     const crMarkerPath = path.join(dir, "marker-cr.md");
-    fs.writeFileSync(crMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${crFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${crFp}`].join("\n")}\n`);
+    fs.writeFileSync(crMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${crFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${crFp}`].join("\n")}\n`);
     const cr = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", crossRefPath, "--marker", crMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", crFp])
     );
@@ -1339,7 +1419,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(reGateAPath, reGateA);
     const rgaFp = emitFingerprint(reGateAPath);
     const rgaMarkerPath = path.join(dir, "marker-rga.md");
-    fs.writeFileSync(rgaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rgaFp}`].join("\n")}\n`);
+    fs.writeFileSync(rgaMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rgaFp}`].join("\n")}\n`);
     const rga = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateAPath, "--marker", rgaMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rgaFp])
     );
@@ -1354,7 +1434,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(reGateBPath, reGateB);
     const rgbFp = emitFingerprint(reGateBPath);
     const rgbMarkerPath = path.join(dir, "marker-rgb.md");
-    fs.writeFileSync(rgbMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgbFp}`, "Acceptance IDs: AC1", "Risk class: deep", `Approval: ${rgbFp}`].join("\n")}\n`);
+    fs.writeFileSync(rgbMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rgbFp}`, "Acceptance IDs: AC1", "Risk class: deep", `Approval: ${rgbFp}`].join("\n")}\n`);
     const rgb = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", reGateBPath, "--marker", rgbMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rgbFp])
     );
@@ -1369,7 +1449,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(drPath, downRetier);
     const drFp = emitFingerprint(drPath);
     const drMarkerPath = path.join(dir, "marker-dr.md");
-    fs.writeFileSync(drMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${drFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${drFp}`].join("\n")}\n`);
+    fs.writeFileSync(drMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${drFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${drFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context downward re-tier fixture",
       () =>
@@ -1389,7 +1469,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const eaFp = emitFingerprint(emptyAcPath);
     const eaMarkerPath = path.join(dir, "marker-ea.md");
-    fs.writeFileSync(eaMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${eaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${eaFp}`].join("\n")}\n`);
+    fs.writeFileSync(eaMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${eaFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${eaFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context empty acceptance criterion fixture",
       () =>
@@ -1409,7 +1489,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const pvFp = emitFingerprint(placeholderVerifyPath);
     const pvMarkerPath = path.join(dir, "marker-pv.md");
-    fs.writeFileSync(pvMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${pvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${pvFp}`].join("\n")}\n`);
+    fs.writeFileSync(pvMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${pvFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${pvFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context placeholder verify fixture",
       () =>
@@ -1429,7 +1509,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const nfFp = emitFingerprint(nestedForeignPath);
     const nfMarkerPath = path.join(dir, "marker-nf.md");
-    fs.writeFileSync(nfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nfFp}`].join("\n")}\n`);
+    fs.writeFileSync(nfMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${nfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${nfFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context nested-foreign-sections fixture",
       () =>
@@ -1446,7 +1526,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(indentStepsPath, indentStepsBody);
     const isFp = emitFingerprint(indentStepsPath);
     const isMarkerPath = path.join(dir, "marker-is.md");
-    fs.writeFileSync(isMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${isFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${isFp}`].join("\n")}\n`);
+    fs.writeFileSync(isMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${isFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${isFp}`].join("\n")}\n`);
     const is = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", indentStepsPath, "--marker", isMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", isFp])
     );
@@ -1464,7 +1544,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const gdFp = emitFingerprint(gateDupPath);
     const gdMarkerPath = path.join(dir, "marker-gd.md");
-    fs.writeFileSync(gdMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${gdFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${gdFp}`].join("\n")}\n`);
+    fs.writeFileSync(gdMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${gdFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${gdFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context review-gate considerations fixture",
       () =>
@@ -1484,7 +1564,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const daFp = emitFingerprint(dupAcPath);
     const daMarkerPath = path.join(dir, "marker-da.md");
-    fs.writeFileSync(daMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${daFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${daFp}`].join("\n")}\n`);
+    fs.writeFileSync(daMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${daFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${daFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context duplicate body acceptance id fixture",
       () =>
@@ -1502,7 +1582,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(chainPath, chainGate);
     const chFp = emitFingerprint(chainPath);
     const chMarkerPath = path.join(dir, "marker-ch.md");
-    fs.writeFileSync(chMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chFp}`].join("\n")}\n`);
+    fs.writeFileSync(chMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context re-tier chain fixture",
       () =>
@@ -1519,7 +1599,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(checklistPath, checklistBody);
     const clFp = emitFingerprint(checklistPath);
     const clMarkerPath = path.join(dir, "marker-cl.md");
-    fs.writeFileSync(clMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${clFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${clFp}`].join("\n")}\n`);
+    fs.writeFileSync(clMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${clFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${clFp}`].join("\n")}\n`);
     const cl = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", checklistPath, "--marker", clMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", clFp])
     );
@@ -1534,7 +1614,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(historyPath, historyGate);
     const hyFp = emitFingerprint(historyPath);
     const hyMarkerPath = path.join(dir, "marker-hy.md");
-    fs.writeFileSync(hyMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hyFp}`].join("\n")}\n`);
+    fs.writeFileSync(hyMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${hyFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${hyFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context risk-history fixture",
       () =>
@@ -1554,7 +1634,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const coFp = emitFingerprint(commentedOraclePath);
     const coMarkerPath = path.join(dir, "marker-co.md");
-    fs.writeFileSync(coMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${coFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${coFp}`].join("\n")}\n`);
+    fs.writeFileSync(coMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${coFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${coFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context commented-oracle fixture",
       () =>
@@ -1573,7 +1653,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(maxPath, maxGate);
     const mgFp = emitFingerprint(maxPath);
     const mgMarkerPath = path.join(dir, "marker-mg.md");
-    fs.writeFileSync(mgMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${mgFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${mgFp}`].join("\n")}\n`);
+    fs.writeFileSync(mgMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${mgFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${mgFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context max-class review-gate fixture",
       () =>
@@ -1591,7 +1671,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(closingHashPath, closingHashBody);
     const chhFp = emitFingerprint(closingHashPath);
     const chhMarkerPath = path.join(dir, "marker-chh.md");
-    fs.writeFileSync(chhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chhFp}`].join("\n")}\n`);
+    fs.writeFileSync(chhMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${chhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${chhFp}`].join("\n")}\n`);
     const chh = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", closingHashPath, "--marker", chhMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", chhFp])
     );
@@ -1606,7 +1686,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(fourSpacePath, fourSpaceFenceBody);
     const fsFp = emitFingerprint(fourSpacePath);
     const fsMarkerPath = path.join(dir, "marker-fs.md");
-    fs.writeFileSync(fsMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fsFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${fsFp}`].join("\n")}\n`);
+    fs.writeFileSync(fsMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fsFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${fsFp}`].join("\n")}\n`);
     const fs4 = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", fourSpacePath, "--marker", fsMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", fsFp])
     );
@@ -1624,7 +1704,7 @@ function validateIssueOnlyLaneBehavior() {
     const indentedMarkerPath = path.join(dir, "issue-indented-marker.md");
     fs.writeFileSync(
       indentedMarkerPath,
-      `${cleanImBody}\n    linear-issue-only marker\n    Marker version: 1\n    Scope fingerprint: ${imFp}\n    Acceptance IDs: AC1\n    Risk class: standard\n    Approval: ${imFp}\n`
+      `${cleanImBody}\n    mono-issue-only marker\n    Marker version: 1\n    Scope fingerprint: ${imFp}\n    Acceptance IDs: AC1\n    Risk class: standard\n    Approval: ${imFp}\n`
     );
     const im = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", indentedMarkerPath, "--label", "issue-only", "--approval-verified", imFp])
@@ -1639,7 +1719,7 @@ function validateIssueOnlyLaneBehavior() {
     const commentedMarkerPath = path.join(dir, "issue-commented-marker.md");
     fs.writeFileSync(
       commentedMarkerPath,
-      ["# CM", "", "## Что сделать", "", "Documents the marker format:", "", "<!--", "linear-issue-only marker", "Marker version: 1", "(fields omitted in this example)", "-->", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+      ["# CM", "", "## Что сделать", "", "Documents the marker format:", "", "<!--", "mono-issue-only marker", "Marker version: 1", "(fields omitted in this example)", "-->", "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
     );
     const cmm = JSON.parse(runNode(["scripts/resolve-issue-context.mjs", "--issue", commentedMarkerPath]));
     if (cmm.package_kind !== "project-first") {
@@ -1653,7 +1733,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(remainderPath, remainderBody);
     const rmFp = emitFingerprint(remainderPath);
     const rmMarkerPath = path.join(dir, "marker-rm.md");
-    fs.writeFileSync(rmMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rmFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rmFp}`].join("\n")}\n`);
+    fs.writeFileSync(rmMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${rmFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${rmFp}`].join("\n")}\n`);
     const rm = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", remainderPath, "--marker", rmMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", rmFp])
     );
@@ -1671,7 +1751,7 @@ function validateIssueOnlyLaneBehavior() {
     );
     const lhFp = emitFingerprint(looseHeadingPath);
     const lhMarkerPath = path.join(dir, "marker-lh.md");
-    fs.writeFileSync(lhMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${lhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${lhFp}`].join("\n")}\n`);
+    fs.writeFileSync(lhMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${lhFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${lhFp}`].join("\n")}\n`);
     expectCommandFailure(
       "resolve-issue-context loose-oracle-heading fixture",
       () =>
@@ -1689,7 +1769,7 @@ function validateIssueOnlyLaneBehavior() {
     const indentedFieldsPath = path.join(dir, "issue-indented-fields.md");
     fs.writeFileSync(
       indentedFieldsPath,
-      ["# IF", "", "## Что сделать", "", "Example:", "", "linear-issue-only marker", "", `    Marker version: 1`, `    Scope fingerprint: ${aFp}`, "    Acceptance IDs: AC1", "    Risk class: standard", `    Approval: ${aFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+      ["# IF", "", "## Что сделать", "", "Example:", "", "mono-issue-only marker", "", `    Marker version: 1`, `    Scope fingerprint: ${aFp}`, "    Acceptance IDs: AC1", "    Risk class: standard", `    Approval: ${aFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
     );
     expectCommandFailure(
       "resolve-issue-context indented marker fields fixture",
@@ -1708,7 +1788,7 @@ function validateIssueOnlyLaneBehavior() {
     fs.writeFileSync(cfPath, commentInFenceBody);
     const cfFp = emitFingerprint(cfPath);
     const cfMarkerPath = path.join(dir, "marker-cf.md");
-    fs.writeFileSync(cfMarkerPath, `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cfFp}`].join("\n")}\n`);
+    fs.writeFileSync(cfMarkerPath, `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${cfFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${cfFp}`].join("\n")}\n`);
     const cf = JSON.parse(
       runNode(["scripts/resolve-issue-context.mjs", "--issue", cfPath, "--marker", cfMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", cfFp])
     );
@@ -1722,7 +1802,7 @@ function validateIssueOnlyLaneBehavior() {
     const tabFieldsPath = path.join(dir, "issue-tab-fields.md");
     fs.writeFileSync(
       tabFieldsPath,
-      ["# TF", "", "## Что сделать", "", "linear-issue-only marker", "", "  \tMarker version: 1", `  \tScope fingerprint: ${tabFp}`, "  \tAcceptance IDs: AC1", "  \tRisk class: standard", `  \tApproval: ${tabFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
+      ["# TF", "", "## Что сделать", "", "mono-issue-only marker", "", "  \tMarker version: 1", `  \tScope fingerprint: ${tabFp}`, "  \tAcceptance IDs: AC1", "  \tRisk class: standard", `  \tApproval: ${tabFp}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n")
     );
     expectCommandFailure(
       "resolve-issue-context tab-indented marker fields fixture",
@@ -1738,7 +1818,7 @@ function validateIssueOnlyLaneBehavior() {
     // Markdown code, not a field — stripMarkerBlock leaves it in the whole-body
     // fingerprint, so changing it invalidates the approval.
     const indentedAfterMarker = (val) =>
-      ["# IAM", "", "## Что сделать", "", "- do it", "", "linear-issue-only marker", "Marker version: 1", "Scope fingerprint: x", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `    Risk class: ${val}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
+      ["# IAM", "", "## Что сделать", "", "- do it", "", "mono-issue-only marker", "Marker version: 1", "Scope fingerprint: x", "Acceptance IDs: AC1", "Risk class: standard", "Approval: none", `    Risk class: ${val}`, "", "## Критерии приёмки", "", "- AC1: real", "", "## Как проверить", "", "1. run", "", "## Что не входит", "", "- ng", "", "## Ревью-гейт", "", "- standard", ""].join("\n");
     const iamAPath = path.join(dir, "issue-iam-a.md");
     const iamBPath = path.join(dir, "issue-iam-b.md");
     fs.writeFileSync(iamAPath, indentedAfterMarker("keep"));
@@ -1818,7 +1898,7 @@ function validateIssueOnlyLaneBehavior() {
       const ineligibleMarkerPath = path.join(dir, `marker-${ineligible}.md`);
       fs.writeFileSync(
         ineligibleMarkerPath,
-        `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${ineligibleFp}`, "Acceptance IDs: AC1, AC2", `Risk class: ${ineligible}`, `Approval: ${ineligibleFp}`].join("\n")}\n`
+        `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${ineligibleFp}`, "Acceptance IDs: AC1, AC2", `Risk class: ${ineligible}`, `Approval: ${ineligibleFp}`].join("\n")}\n`
       );
       const outOfEnvelope = JSON.parse(
         runNode(["scripts/resolve-issue-context.mjs", "--issue", ineligibleIssuePath, "--marker", ineligibleMarkerPath, "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", ineligibleFp])
@@ -1837,7 +1917,7 @@ function validateIssueOnlyLaneBehavior() {
     const downgradeMarkerPath = path.join(dir, "marker-downgrade.md");
     fs.writeFileSync(
       downgradeMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${deepFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${deepFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${deepFp}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${deepFp}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context risk downgrade fixture",
@@ -1851,7 +1931,7 @@ function validateIssueOnlyLaneBehavior() {
     const deepStaleMarkerPath = path.join(dir, "marker-deep-stale.md");
     fs.writeFileSync(
       deepStaleMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeef12ab", "Acceptance IDs: AC1, AC2", "Risk class: deep", "Approval: none"].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", "Scope fingerprint: deadbeef12ab", "Acceptance IDs: AC1, AC2", "Risk class: deep", "Approval: none"].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context corrupt deep marker fixture",
@@ -1911,7 +1991,7 @@ function validateIssueOnlyLaneBehavior() {
     // punctuation-keyed line cannot hide ahead of Marker version.
     fs.writeFileSync(
       markerPath,
-      `${["linear-issue-only marker", "Notes.v2: hidden", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Notes.v2: hidden", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${fingerprint}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context pre-field unparseable line fixture",
@@ -1931,7 +2011,7 @@ function validateIssueOnlyLaneBehavior() {
     const emptyOracleMarkerPath = path.join(dir, "marker-empty-oracle.md");
     fs.writeFileSync(
       emptyOracleMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${emptyFp}`, "Acceptance IDs: ,", "Risk class: standard", `Approval: ${emptyFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${emptyFp}`, "Acceptance IDs: ,", "Risk class: standard", `Approval: ${emptyFp}`].join("\n")}\n`
     );
     expectCommandFailure(
       "resolve-issue-context empty oracle fixture",
@@ -2087,7 +2167,7 @@ function validateIssueOnlyLaneBehavior() {
     const staleMarkerPath = path.join(dir, "marker-stale-after-approval.md");
     fs.writeFileSync(
       staleMarkerPath,
-      `${["linear-issue-only marker", "Marker version: 1", `Scope fingerprint: ${staleFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${staleFp}`].join("\n")}\n`
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${staleFp}`, "Acceptance IDs: AC1", "Risk class: standard", `Approval: ${staleFp}`].join("\n")}\n`
     );
     // Sanity: the unedited body resolves issue-only under the approved marker, so
     // the failures below are caused only by the post-approval body edit.
@@ -2123,7 +2203,7 @@ function validateIssueOnlyLaneBehavior() {
 }
 
 function validateIssueIntakeContract() {
-  // MONO-15: the linear-issue-intake front door plus the idea/issue guard edits
+  // MONO-15: the mono-issue-intake front door plus the idea/issue guard edits
   // and the issue-only fingerprint-approval contract. Pins anchor the load-bearing
   // prose; the create-then-approve transaction itself is agent work backed by the
   // existing resolver, exercised by validateIssueOnlyLaneBehavior's fixtures.
@@ -2141,7 +2221,7 @@ function validateIssueIntakeContract() {
     "readiness check before activation",
     "Phase-1 staging boundary",
     "activation into a startable state is deferred",
-    ".linear-agent-workflow/scripts/resolve-issue-context.mjs",
+    ".mono-agent-workflow/scripts/resolve-issue-context.mjs",
     "owner principal's stable Linear user ID",
     "issueOnlyLane.ownerPrincipal",
     "explicit owner decision",
@@ -2152,56 +2232,56 @@ function validateIssueIntakeContract() {
     "fails closed to Project-first",
     "Do not add a second hashing path",
   ]) {
-    assertIncludes("skills/linear-issue-intake/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-issue-intake/SKILL.md", required, JSON.stringify(required));
   }
 
-  // linear-idea guard: names the issue-only front door but keeps Project-first as
+  // mono-idea guard: names the issue-only front door but keeps Project-first as
   // the default and mandatory for the idea path (does not weaken the terminal
   // Project-creation contract).
   for (const required of [
     "Issue-only front door",
-    "`linear-issue-intake`",
+    "`mono-issue-intake`",
     "Project creation stays mandatory",
-    "Route unmistakably one-PR, projectless issue-only work to the `linear-issue-intake` front door",
+    "Route unmistakably one-PR, projectless issue-only work to the `mono-issue-intake` front door",
   ]) {
-    assertIncludes("skills/linear-idea/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-idea/SKILL.md", required, JSON.stringify(required));
   }
 
-  // linear-issue guard: issue-only create mode does not redirect to handoff and
+  // mono-issue guard: issue-only create mode does not redirect to handoff and
   // emits no Project/PRD/Tech Spec chips; project-first behavior stays unchanged.
   for (const required of [
     "Issue-only mode",
     "package_kind=issue-only",
     "Intake-authorized draft",
     "make only non-body updates",
-    "must not redirect into `linear-handoff`",
+    "must not redirect into `mono-handoff`",
     "must not emit or attach Project, PRD, or Tech Spec chips",
     "the default project-first behavior and is unchanged",
   ]) {
-    assertIncludes("skills/linear-issue/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-issue/SKILL.md", required, JSON.stringify(required));
   }
 
-  // linear-check guard: idea/issue modes are issue-only-aware so the two intake
+  // mono-check guard: idea/issue modes are issue-only-aware so the two intake
   // entry paths (projectless idea route, self-contained issue-only Issue) do not
   // hit a mandatory false failure from the project-first check modes.
   for (const required of [
     "no Project was created by design",
     "judge it against the issue-only contract",
   ]) {
-    assertIncludes("skills/linear-check/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-check/SKILL.md", required, JSON.stringify(required));
   }
 
-  // linear-review guard: an issue-only review mode judges the self-contained
+  // mono-review guard: an issue-only review mode judges the self-contained
   // Issue without requiring Project/PRD/Tech Spec, so the intake review gate is
   // satisfiable for projectless standard work.
   for (const required of [
     "the self-contained Issue is the sole artifact and source of truth",
     "Intake-authorized draft",
   ]) {
-    assertIncludes("skills/linear-review/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-review/SKILL.md", required, JSON.stringify(required));
   }
   // The mandatory review-output template must offer the issue-only mode so a
-  // linear-review issue-only run can state its actual mode and still conform.
+  // mono-review issue-only run can state its actual mode and still conform.
   assertIncludes("templates/review-output.md", "issue-only", '"issue-only" in review-output mode enum');
 
   // artifact-rules: the issue-only approval contract is the whole-body scope
@@ -2218,9 +2298,9 @@ function validateIssueIntakeContract() {
 function validateDocsAndExamples() {
   for (const [relativePath, texts] of Object.entries({
     "README.md": [
-      "linear-implement",
-      "linear-preflight",
-      "linear-deploy",
+      "mono-implement",
+      "mono-preflight",
+      "mono-deploy",
       "autoreview",
       "node scripts/install-local.mjs",
       "node scripts/project-config.mjs",
@@ -2232,17 +2312,17 @@ function validateDocsAndExamples() {
       "Autonomy with transparency",
     ],
     "AGENTS.md": [
-      "`linear-review` = report-only quality/risk review",
-      "`linear-implement` = Delivery Start",
-      "`linear-preflight` = local branch readiness",
+      "`mono-review` = report-only quality/risk review",
+      "`mono-implement` = Delivery Start",
+      "`mono-preflight` = local branch readiness",
       "mandatory `autoreview` clean gate",
-      "`linear-deploy` = deploy workflow delegation",
-      "Keep `linear-review` report-only",
-      "Project repos must keep only `.agents/linear-workflow.config.json`",
+      "`mono-deploy` = deploy workflow delegation",
+      "Keep `mono-review` report-only",
+      "Project repos must keep only `.agents/mono-workflow.config.json`",
     ],
     "examples/zeni-dogfood.md": [
       "Risk-Based Review Gate Examples",
-      "Zeni keeps only `.agents/linear-workflow.config.json`",
+      "Zeni keeps only `.agents/mono-workflow.config.json`",
       "Use the local skill pack installed from this upstream repo",
       "Correct Risky Handoff Review",
       "Correct Implement To Preflight To Ship",
@@ -2288,12 +2368,12 @@ function validateDocsAndExamples() {
     "references/review-rubric.md": ["Allowed review verdicts:", "`ready`", "`advisory-ready`", "`needs-fixes`", "`blocked`"],
     "references/install.md": [
       "local skill pack",
-      ".agents/linear-workflow.config.json",
+      ".agents/mono-workflow.config.json",
       "does not vendor `autoreview`",
       "--all-roots",
       "~/.claude/skills",
-      ".linear-agent-workflow.lock.json",
-      "LINEAR_WORKFLOW_KNOWN_ROOTS",
+      ".mono-agent-workflow.lock.json",
+      "MONO_WORKFLOW_KNOWN_ROOTS",
       "per-root",
       "references/autoreview-routing.md",
     ],
@@ -2319,7 +2399,7 @@ function validateDocsAndExamples() {
       "git worktree add",
     ],
     "references/questioning.md": [
-      "`linear-deploy`: ask only for deploy approval",
+      "`mono-deploy`: ask only for deploy approval",
       "## Autonomy Defaults",
       "/design-html",
     ],
@@ -2342,17 +2422,17 @@ function validateDocsAndExamples() {
 }
 
 function validateAntiPatterns() {
-  const review = read("skills/linear-review/SKILL.md");
+  const review = read("skills/mono-review/SKILL.md");
   if (/Final response must include:[\s\S]*PASS/.test(review)) {
-    fail("linear-review final response must not use PASS/FAIL/BLOCKED statuses");
+    fail("mono-review final response must not use PASS/FAIL/BLOCKED statuses");
   }
 
-  const handoff = read("skills/linear-handoff/SKILL.md");
-  if (!handoff.includes("Apply accepted review fixes in `linear-handoff`")) {
-    fail("linear-handoff must own accepted review fixes");
+  const handoff = read("skills/mono-handoff/SKILL.md");
+  if (!handoff.includes("Apply accepted review fixes in `mono-handoff`")) {
+    fail("mono-handoff must own accepted review fixes");
   }
   if (!handoff.includes("references/artifact-intake.md")) {
-    fail("linear-handoff must use artifact intake before package synthesis");
+    fail("mono-handoff must use artifact intake before package synthesis");
   }
   for (const required of [
     "`read`",
@@ -2362,31 +2442,31 @@ function validateAntiPatterns() {
     "`decisions_carried_forward`",
     "`confidence_boundary`",
   ]) {
-    if (!handoff.includes(required)) fail(`linear-handoff must expose artifact intake field: ${required}`);
+    if (!handoff.includes(required)) fail(`mono-handoff must expose artifact intake field: ${required}`);
   }
   if (!handoff.includes("Artifact intake, one Russian sentence")) {
-    fail("linear-handoff final response must carry artifact intake one-sentence Russian rendering");
+    fail("mono-handoff final response must carry artifact intake one-sentence Russian rendering");
   }
   if (!handoff.includes("The structured intake record")) {
-    fail("linear-handoff final response must reference the structured intake record location");
+    fail("mono-handoff final response must reference the structured intake record location");
   }
-  if (!handoff.includes("Do not move the Project to Delivery from `linear-handoff`")) {
-    fail("linear-handoff must not own Delivery Start");
+  if (!handoff.includes("Do not move the Project to Delivery from `mono-handoff`")) {
+    fail("mono-handoff must not own Delivery Start");
   }
   if (!handoff.includes("это одновременно approval на старт кода")) {
-    fail("linear-handoff option 2 must label the bundled approval");
+    fail("mono-handoff option 2 must label the bundled approval");
   }
   if (!handoff.includes("«Решил сам:»")) {
-    fail("linear-handoff must include «Решил сам:» ledger in package approval UX");
+    fail("mono-handoff must include «Решил сам:» ledger in package approval UX");
   }
   if (!handoff.includes("Always-ask list")) {
-    fail("linear-handoff rules must reference the Always-ask list in questioning.md");
+    fail("mono-handoff rules must reference the Always-ask list in questioning.md");
   }
 
-  const implement = read("skills/linear-implement/SKILL.md");
+  const implement = read("skills/mono-implement/SKILL.md");
   for (const required of [
     "Use this skill to own Delivery Start",
-    "Run or report `linear-check delivery`",
+    "Run or report `mono-check delivery`",
     "Move the Project to Delivery only after approval and prerequisites are explicit",
     "after the Project is in Delivery",
     "missing or `None`",
@@ -2400,38 +2480,38 @@ function validateAntiPatterns() {
     "gstack-learnings-search",
     "Учтённые learnings:",
   ]) {
-    if (!implement.includes(required)) fail(`linear-implement contract missing: ${required}`);
+    if (!implement.includes(required)) fail(`mono-implement contract missing: ${required}`);
   }
 
-  const ship = read("skills/linear-ship/SKILL.md");
-  if (!ship.includes("`linear-review` is report-only; `linear-ship` owns accepted pre-ship drift sync")) {
-    fail("linear-ship must own accepted pre-ship drift sync");
+  const ship = read("skills/mono-ship/SKILL.md");
+  if (!ship.includes("`mono-review` is report-only; `mono-ship` owns accepted pre-ship drift sync")) {
+    fail("mono-ship must own accepted pre-ship drift sync");
   }
-  if (!ship.includes("read the latest `linear-preflight certificate`")) {
-    fail("linear-ship must consume the preflight certificate when present");
+  if (!ship.includes("read the latest `mono-preflight certificate`")) {
+    fail("mono-ship must consume the preflight certificate when present");
   }
-  if (!ship.includes("If no certificate exists, route to `linear-preflight` before continuing")) {
-    fail("linear-ship must require a preflight certificate before ship");
+  if (!ship.includes("If no certificate exists, route to `mono-preflight` before continuing")) {
+    fail("mono-ship must require a preflight certificate before ship");
   }
   if (!ship.includes("Linear comments or resources")) {
-    fail("linear-ship must recover the preflight certificate from Linear");
+    fail("mono-ship must recover the preflight certificate from Linear");
   }
-  for (const required of ["Documentation workflow", "linear-ship green certificate", "Next: linear-deploy", "Poll interval: 10 minutes"]) {
+  for (const required of ["Documentation workflow", "mono-ship green certificate", "Next: mono-deploy", "Poll interval: 10 minutes"]) {
     if (!ship.includes(required) && !read("references/ship-feedback-loop.md").includes(required)) {
-      fail(`linear-ship ladder contract missing: ${required}`);
+      fail(`mono-ship ladder contract missing: ${required}`);
     }
   }
   if (/Land workflow|configured land workflow|land\/deploy workflow/i.test(ship)) {
-    fail("linear-ship must not reference old Land workflow or own deploy");
+    fail("mono-ship must not reference old Land workflow or own deploy");
   }
-  if (ship.includes("pr-created")) fail("linear-ship must not keep pr-created as a terminal ship verdict");
+  if (ship.includes("pr-created")) fail("mono-ship must not keep pr-created as a terminal ship verdict");
 
-  const deploy = read("skills/linear-deploy/SKILL.md");
+  const deploy = read("skills/mono-deploy/SKILL.md");
   for (const required of [
-    "Requires `linear-ship green certificate`",
+    "Requires `mono-ship green certificate`",
     "Deploy workflow",
     "gstack land-and-deploy",
-    "linear-check post-ship",
+    "mono-check post-ship",
     "gstack-learnings-log",
     "Do not run `/learn prune`, `/learn export`, `/learn stats`",
     "Do not accept `Land workflow` as a compatibility alias",
@@ -2441,17 +2521,17 @@ function validateAntiPatterns() {
     "Learnings consulted:",
     "re-tier review per `references/autoreview-routing.md`",
   ]) {
-    if (!deploy.includes(required)) fail(`linear-deploy contract missing: ${required}`);
+    if (!deploy.includes(required)) fail(`mono-deploy contract missing: ${required}`);
   }
 
-  const preflight = read("skills/linear-preflight/SKILL.md");
+  const preflight = read("skills/mono-preflight/SKILL.md");
   for (const required of [
     "owns local branch readiness only",
     "`ready`",
     "`blocked`",
     "`drift-candidate`",
     "`needs-human`",
-    "linear-preflight certificate",
+    "mono-preflight certificate",
     "Issue(s): <keys>",
     "Branch: <branch>; commit state: <clean/dirty/committed>",
     "Changed files: <count/list or summary>",
@@ -2461,9 +2541,9 @@ function validateAntiPatterns() {
     "Autoreview loop: <iterations>; accepted findings fixed: <none/list>; residual actionable findings: <none/list, must be none for ready>",
     "Drift candidate: <none/summary>",
     "Not checked: <manual QA/browser/mobile/deploy/etc.>",
-    "Next: <linear-ship | linear-handoff | needs-human>",
-    "Do not run or claim `linear-review pre-ship`",
-    "Do not run or claim `linear-check pre-ship`",
+    "Next: <mono-ship | mono-handoff | needs-human>",
+    "Do not run or claim `mono-review pre-ship`",
+    "Do not run or claim `mono-check pre-ship`",
     "Do not create the final PR",
     "Preflight certificate shape",
     "Invoke the installed `autoreview` skill/helper",
@@ -2483,14 +2563,14 @@ function validateAntiPatterns() {
     "Decision needed: <none | точное решение по-русски>",
     "For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md",
   ]) {
-    if (!preflight.includes(required)) fail(`linear-preflight boundary missing: ${required}`);
+    if (!preflight.includes(required)) fail(`mono-preflight boundary missing: ${required}`);
   }
   const forbiddenRoutingCopies = [
     "`tiny` ->",
     "Luna/low for `tiny`",
     "maps `tiny`/`standard` to explicit GPT-5.6 Luna",
   ];
-  for (const relativePath of ["skills/linear-preflight/SKILL.md", "README.md", "CHANGELOG.md", "examples/zeni-dogfood.md"]) {
+  for (const relativePath of ["skills/mono-preflight/SKILL.md", "README.md", "CHANGELOG.md", "examples/zeni-dogfood.md"]) {
     const body = read(relativePath);
     for (const duplicate of forbiddenRoutingCopies) {
       if (body.includes(duplicate)) {
@@ -2504,7 +2584,7 @@ function validateAntiPatterns() {
     fail("ship output template must preserve preflight status boundary");
   }
   if (shipOutput.includes("pr-created")) fail("ship output template must stay focused on green/needs-human/blocked/timed-out");
-  for (const required of ["linear-ship green certificate", "Documentation workflow", "Next: <linear-deploy | needs-human | blocked>"]) {
+  for (const required of ["mono-ship green certificate", "Documentation workflow", "Next: <mono-deploy | needs-human | blocked>"]) {
     if (!shipOutput.includes(required)) fail(`ship output template missing ladder field: ${required}`);
   }
 
@@ -2513,27 +2593,27 @@ function validateAntiPatterns() {
     if (!deployOutput.includes(required)) fail(`deploy output template missing: ${required}`);
   }
 
-  const check = read("skills/linear-check/SKILL.md");
-  if (!check.includes("local branch readiness is known through a `linear-preflight` certificate")) {
-    fail("linear-check pre-ship must require the preflight certificate");
+  const check = read("skills/mono-check/SKILL.md");
+  if (!check.includes("local branch readiness is known through a `mono-preflight` certificate")) {
+    fail("mono-check pre-ship must require the preflight certificate");
   }
-  if (!check.includes("project-config")) fail("linear-check must expose project-config mode");
+  if (!check.includes("project-config")) fail("mono-check must expose project-config mode");
   if (check.includes("generated consumer skills are full executable copies")) {
-    fail("linear-check must not enforce the removed generated consumer install contract");
+    fail("mono-check must not enforce the removed generated consumer install contract");
   }
 
   const dogfood = read("examples/zeni-dogfood.md");
   for (const banned of [
-    "Zeni `.agents/skills/linear-*` contains generated full copies from upstream",
-    "Zeni `.claude/skills/linear-*` contains tiny discovery wrappers to `.agents`",
-    "Zeni stores consumer policy in `.agents/linear-workflow.config.md`",
+    "Zeni `.agents/skills/mono-*` contains generated full copies from upstream",
+    "Zeni `.claude/skills/mono-*` contains tiny discovery wrappers to `.agents`",
+    "Zeni stores consumer policy in `.agents/mono-workflow.config.md`",
     "Install generated full skills into Zeni",
   ]) {
     if (dogfood.includes(banned)) fail(`Zeni dogfood example preserves removed install contract: ${banned}`);
   }
 
-  const spec = read("skills/linear-spec/SKILL.md");
-  if (spec.includes("linear-review design")) fail("linear-spec must not reference unsupported linear-review design mode");
+  const spec = read("skills/mono-spec/SKILL.md");
+  if (spec.includes("mono-review design")) fail("mono-spec must not reference unsupported mono-review design mode");
 
   const projectTemplate = read("templates/project.md");
   for (const banned of ["# Lifecycle", "# Документы", "# План задач", "# Ревью-гейт", "# Текущий статус"]) {
@@ -2541,34 +2621,34 @@ function validateAntiPatterns() {
   }
 
   const techSpecTemplate = read("templates/tech-spec.md");
-  for (const banned of ["## Skill contracts", "## linear-check design", "## Дизайн linear-check", "## Дизайн linear-review"]) {
+  for (const banned of ["## Skill contracts", "## mono-check design", "## Дизайн mono-check", "## Дизайн mono-review"]) {
     if (techSpecTemplate.includes(banned)) fail(`Tech Spec template must not expose workflow mechanics section: ${banned}`);
   }
 
   // New dual-layer comment contract pins (plan 005)
   if (!preflight.includes("<1-2 предложения по-русски: итог и следующий шаг>")) {
-    fail("linear-preflight human comment shape missing Russian human-lead placeholder");
+    fail("mono-preflight human comment shape missing Russian human-lead placeholder");
   }
   if (!preflight.includes("The Russian human lead (1-2 sentences) is required")) {
-    fail("linear-preflight must require the Russian human lead in Linear comment");
+    fail("mono-preflight must require the Russian human lead in Linear comment");
   }
 
   if (!deploy.includes("Выкатили: <что получили пользователи>; проверено на <среда>.")) {
-    fail("linear-deploy closeout shape missing required product-outcome Russian lead");
+    fail("mono-deploy closeout shape missing required product-outcome Russian lead");
   }
   if (!deploy.includes("The Russian product-outcome lead is required in Linear")) {
-    fail("linear-deploy must require the Russian product-outcome lead");
+    fail("mono-deploy must require the Russian product-outcome lead");
   }
 
-  const idea = read("skills/linear-idea/SKILL.md");
-  if (!idea.includes("Выйди из Plan Mode (или перезапусти /linear-idea в обычном режиме) — я создам Project в статусе Idea.")) {
-    fail("linear-idea blocked message missing Russian unblock instruction");
+  const idea = read("skills/mono-idea/SKILL.md");
+  if (!idea.includes("Выйди из Plan Mode (или перезапусти /mono-idea в обычном режиме) — я создам Project в статусе Idea.")) {
+    fail("mono-idea blocked message missing Russian unblock instruction");
   }
-  if (!idea.includes("BLOCKED / INCOMPLETE - linear-idea cannot complete because")) {
-    fail("linear-idea blocked message must preserve English marker line");
+  if (!idea.includes("BLOCKED / INCOMPLETE - mono-idea cannot complete because")) {
+    fail("mono-idea blocked message must preserve English marker line");
   }
 
-  const orchestrate = read("skills/linear-orchestrate/SKILL.md");
+  const orchestrate = read("skills/mono-orchestrate/SKILL.md");
   for (const required of [
     "control plane",
     "never implement, edit code, fix CI, or rewrite PRs",
@@ -2585,8 +2665,8 @@ function validateAntiPatterns() {
     "deployApproval",
     "Session verdicts:",
     "timed-out",
-    "~/.linear-agent-workflow/orchestrator/<product>/",
-    "`linear-implement` owns Delivery Start",
+    "~/.mono-agent-workflow/orchestrator/<product>/",
+    "`mono-implement` owns Delivery Start",
     "codex-cli",
     "workers.json",
     "codex exec resume",
@@ -2597,15 +2677,15 @@ function validateAntiPatterns() {
     "Touch the user only at checkpoints",
     "Second Voice",
   ]) {
-    if (!orchestrate.includes(required)) fail(`linear-orchestrate contract missing: ${required}`);
+    if (!orchestrate.includes(required)) fail(`mono-orchestrate contract missing: ${required}`);
   }
   if (!implement.includes("not available in the current runtime")) {
-    fail("linear-implement must define the engine runtime-availability fallback");
+    fail("mono-implement must define the engine runtime-availability fallback");
   }
   if (!ship.includes("not available in the current runtime")) {
-    fail("linear-ship must define the workflow runtime-availability fallback");
+    fail("mono-ship must define the workflow runtime-availability fallback");
   }
-  assertIncludes("references/questioning.md", "`linear-orchestrate`: ask only for Always-ask escalations");
+  assertIncludes("references/questioning.md", "`mono-orchestrate`: ask only for Always-ask escalations");
   assertIncludes("references/questioning.md", "## Orchestrated Mode");
   assertIncludes("references/lifecycle.md", "## Orchestration");
   assertIncludes("references/orchestration.md", "## Director Discovery");
@@ -2622,9 +2702,9 @@ function validateAntiPatterns() {
   assertIncludes("templates/orchestrator-brief.md", "UX-чекпоинт");
   assertIncludes("README.md", "director mode");
   assertIncludes("README.md", "Second Voice");
-  assertIncludes("README.md", "`linear-orchestrate`: control-plane orchestrator");
+  assertIncludes("README.md", "`mono-orchestrate`: control-plane orchestrator");
   assertIncludes("README.md", "Codex CLI worker");
-  assertIncludes("AGENTS.md", "`linear-orchestrate` = product-level control plane");
+  assertIncludes("AGENTS.md", "`mono-orchestrate` = product-level control plane");
   assertIncludes("references/install.md", "\"orchestration\"");
   assertIncludes("references/install.md", "maxParallelWorkers");
 }
@@ -2658,7 +2738,7 @@ function validateHeartbeatContract() {
     "nudge → respawn → session rotation",
     "an empty thread id",
   ]) {
-    assertIncludes("skills/linear-orchestrate/SKILL.md", required, `heartbeat contract: ${JSON.stringify(required)}`);
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, `heartbeat contract: ${JSON.stringify(required)}`);
   }
 }
 
@@ -2688,7 +2768,7 @@ function validateHonestLedgerContract() {
   }
 
   for (const required of ["«Простои и отклонения:»", "«Контекст: ~N%»"]) {
-    assertIncludes("skills/linear-orchestrate/SKILL.md", required, `status update contract: ${required}`);
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, `status update contract: ${required}`);
   }
 }
 
@@ -2712,7 +2792,7 @@ function validateLiveQaGateContract() {
     "qaAuth",
     "explicit recorded reason",
   ]) {
-    assertIncludes("skills/linear-deploy/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-deploy/SKILL.md", required, JSON.stringify(required));
   }
 
   for (const required of [
@@ -2746,7 +2826,7 @@ function validateLiveQaGateContract() {
     "explicit owner mandate",
     "Feature code NEVER",
   ]) {
-    assertIncludes("skills/linear-orchestrate/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, JSON.stringify(required));
   }
 
   for (const required of [
@@ -2769,7 +2849,7 @@ function validateRealBackendContractSampling() {
     "contract-verification spike Issue goes first in the wave",
     "When unsure whether a feature qualifies, sample",
   ]) {
-    assertIncludes("skills/linear-spec/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-spec/SKILL.md", required, JSON.stringify(required));
   }
   assertIncludes(
     "templates/tech-spec.md",
@@ -2800,7 +2880,7 @@ function validateRealBackendContractSampling() {
 
 function validateGoalContractBinding() {
   assertIncludes(
-    "skills/linear-orchestrate/SKILL.md",
+    "skills/mono-orchestrate/SKILL.md",
     "wholesale\n     deferral with no `pass` items, is treated as non-green",
     '"wholesale deferral is non-green"'
   );
@@ -2828,7 +2908,7 @@ function validateGoalContractBinding() {
     assertIncludes("templates/orchestrator-report.md", required, JSON.stringify(required));
   }
 
-  for (const relativePath of ["skills/linear-implement/SKILL.md", "skills/linear-preflight/SKILL.md"]) {
+  for (const relativePath of ["skills/mono-implement/SKILL.md", "skills/mono-preflight/SKILL.md"]) {
     for (const required of [
       "enumerates every «Как проверить» item",
       "pass | deferred | not-run",
@@ -2869,7 +2949,7 @@ function validateReviewLoopHygiene() {
     "Review Bot Configuration Check, Finding Dedup with its fail-safe, Published Replies, and Non-Blocking Convergence rules in `references/ship-feedback-loop.md`",
     "the Published Replies submitted-check is an additional green-certificate precondition",
   ]) {
-    assertIncludes("skills/linear-ship/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-ship/SKILL.md", required, JSON.stringify(required));
   }
 }
 
@@ -2908,7 +2988,7 @@ function validateCostTelemetry() {
     "«Цена волны» block",
     "Cost is telemetry,\n  not a gate: it never blocks, pauses, or pages.",
   ]) {
-    assertIncludes("skills/linear-orchestrate/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, JSON.stringify(required));
   }
 }
 
@@ -2960,7 +3040,7 @@ function validateOpsLessons() {
   // mid-wave resume drill. Pins anchor the contract prose; resolving a bad
   // checkout, reconciling a PR via gh, and running the drill stay judgment
   // and operational work, not pin-enforceable mechanisms.
-  for (const relativePath of ["skills/linear-deploy/SKILL.md", "references/install.md"]) {
+  for (const relativePath of ["skills/mono-deploy/SKILL.md", "references/install.md"]) {
     for (const required of [
       "the installing checkout's HEAD must equal the expected merge SHA",
       "git rev-parse HEAD",
@@ -2977,7 +3057,7 @@ function validateOpsLessons() {
     "never from thread memory",
     "state assumed from memory is treated as unverified",
   ]) {
-    assertIncludes("skills/linear-ship/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-ship/SKILL.md", required, JSON.stringify(required));
   }
 
   for (const required of [
@@ -3012,9 +3092,9 @@ validateBriefIntegrity();
 validateOpsLessons();
 
 if (failures.length > 0) {
-  console.error("Linear workflow validation failed:");
+  console.error("Mono workflow validation failed:");
   for (const failure of failures) console.error(`- ${failure}`);
   process.exit(1);
 }
 
-console.log(`Linear workflow validation passed (${listSkillNames().length} skills checked).`);
+console.log(`Mono workflow validation passed (${listSkillNames().length} skills checked).`);

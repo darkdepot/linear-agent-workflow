@@ -1,6 +1,6 @@
 # Orchestration Policy
 
-Control-plane policy for `linear-orchestrate`. The orchestrator inspects,
+Control-plane policy for `mono-orchestrate`. The orchestrator inspects,
 delegates, monitors, decides or escalates, records, and reports. It never
 implements stage work itself.
 
@@ -11,8 +11,8 @@ implements stage work itself.
 - Orchestrator: one session per product; owns worker dispatch, monitoring, all
   Linear mutations during orchestration, technical decisions, deploy
   delegation, and the ledger.
-- Workers: one Issue each; run `linear-implement` → `linear-preflight` →
-  `linear-ship` sequentially in the same session and worktree under the AFK
+- Workers: one Issue each; run `mono-implement` → `mono-preflight` →
+  `mono-ship` sequentially in the same session and worktree under the AFK
   contract from `templates/orchestrator-dispatch.md`; they never write to
   Linear directly.
 
@@ -20,10 +20,10 @@ implements stage work itself.
 
 | Stage | Runs in |
 | --- | --- |
-| `linear-idea`, discovery | orchestrator session (Director Discovery) |
-| `linear-handoff` | orchestrator session |
-| `linear-implement`, `linear-preflight`, `linear-ship` | worker session |
-| `linear-deploy` | orchestrator session |
+| `mono-idea`, discovery | orchestrator session (Director Discovery) |
+| `mono-handoff` | orchestrator session |
+| `mono-implement`, `mono-preflight`, `mono-ship` | worker session |
+| `mono-deploy` | orchestrator session |
 
 Gate ordering from `references/lifecycle.md` is preserved verbatim. The
 orchestrator sequences gates; it never skips, weakens, or replaces them, and
@@ -51,7 +51,7 @@ under «Решил сам:» with a one-line reason:
 
 - All technical and implementation questions from workers.
 - Implementation start after package approval (recorded explicitly; the
-  bundled-approval rule from `linear-implement` applies).
+  bundled-approval rule from `mono-implement` applies).
 - Technical review-finding acceptance, CI repair, and PR stabilization
   routing.
 - Merge/deploy for risk classes the configured `deployApproval` allows (all
@@ -97,7 +97,7 @@ discovery-skill question stream to the user.
 
 Checkpoints — the only moments that touch the user:
 
-1. Intake direction questions: 1-3 per idea per `linear-idea`; zero when
+1. Intake direction questions: 1-3 per idea per `mono-idea`; zero when
    the idea is already clear.
 2. UX checkpoint (user-facing surface only): one brief per
    `templates/orchestrator-brief.md` with a reviewed near-production
@@ -115,7 +115,7 @@ choice exists, and a design-lens Second Voice pass already applied
 never a first draft.
 
 Multi-idea intake: the user may bring several ideas in one session. Run
-`linear-idea` per idea, queue discovery, and run Director Discovery one
+`mono-idea` per idea, queue discovery, and run Director Discovery one
 project at a time while dispatched delivery work continues in parallel;
 show the discovery queue in the status table.
 
@@ -190,11 +190,11 @@ Desktop, then `fallback`. Per-runtime bindings:
   codex exec --json \
     --cd <worktree> \
     --sandbox workspace-write \
-    --add-dir ~/.linear-agent-workflow/orchestrator/<product> \
+    --add-dir ~/.mono-agent-workflow/orchestrator/<product> \
     -c 'model="<pinned model>"' \
     -c 'model_reasoning_effort="high"' \
     "$(cat <dispatch-prompt-file>)" < /dev/null \
-    > ~/.linear-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.jsonl 2>&1 &
+    > ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a1.jsonl 2>&1 &
   ```
 
   Spawn verification, mandatory for every spawn attempt:
@@ -247,8 +247,8 @@ transport feature the runtime lacks.
 
 ## Mailbox And Ledger
 
-- Root: `~/.linear-agent-workflow/orchestrator/<product>/` — never inside a
-  project repo (project repos keep only `.agents/linear-workflow.config.json`).
+- Root: `~/.mono-agent-workflow/orchestrator/<product>/` — never inside a
+  project repo (project repos keep only `.agents/mono-workflow.config.json`).
 - Reports: `reports/<ISSUE-KEY>-<stage>.json` per
   `templates/orchestrator-report.md`. Workers write reports; the orchestrator
   reads them instead of parsing worker transcripts.
@@ -333,7 +333,7 @@ directory's history; retired Issues' logs are outside its scope.
 
 - At wave start — before the first worker spawn — the orchestrator must
   start the watcher against the mailbox root:
-  `node scripts/watch-workers.mjs --root ~/.linear-agent-workflow/orchestrator/<product>`.
+  `node scripts/watch-workers.mjs --root ~/.mono-agent-workflow/orchestrator/<product>`.
   Run it through the runtime's monitor primitive (Claude Code: the Monitor
   tool with `persistent: true`); a runtime without one falls back to a
   background process plus a periodic wakeup that reads its stdout. Record

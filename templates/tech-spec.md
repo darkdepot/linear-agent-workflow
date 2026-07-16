@@ -53,6 +53,6 @@ Rules:
 - Avoid transcript summaries and historical repair language.
 - Keep concrete enough for a zero-context implementation agent.
 - Keep workflow mechanics internal. Do not add visible sections such as
-  `Skill contracts`, `linear-check design`, lifecycle status, readiness checks,
+  `Skill contracts`, `mono-check design`, lifecycle status, readiness checks,
   or instructions about when to create Issues/PRs.
 - Before finalizing, ask: does every HOW decision trace back to the PRD, and did we introduce any product behavior that belongs in PRD instead?

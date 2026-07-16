@@ -11,7 +11,7 @@ Linear source-of-truth artifacts.
 
 The bad path looked plausible in the moment:
 
-1. `linear-idea` captured a real product improvement.
+1. `mono-idea` captured a real product improvement.
 2. `/office-hours` shaped the product direction.
 3. The agent produced PRD, Tech Spec, and Issue-like content.
 4. The Project moved toward Delivery too early.
@@ -24,16 +24,16 @@ The fix is stronger artifact construction, not more template bureaucracy.
 
 ## Expected Lifecycle
 
-- Project starts in Idea after `linear-idea`.
+- Project starts in Idea after `mono-idea`.
 - Project moves to Discovery when PRD and Tech Spec are created.
 - Project remains Discovery after PRD and Tech Spec creation.
-- `linear-handoff` packages Project, PRD, Tech Spec, and proposed Issue slicing
+- `mono-handoff` packages Project, PRD, Tech Spec, and proposed Issue slicing
   for user approval.
-- Delivery starts through `linear-implement` and requires an approved execution
+- Delivery starts through `mono-implement` and requires an approved execution
   Issue plus explicit implementation-start approval.
 - Implementation starts from the approved Issue, not from `/office-hours`,
   `/brainstorming`, PRD, Tech Spec, or a local review plan.
-- Local branch readiness is proven by `linear-preflight` before `linear-ship`
+- Local branch readiness is proven by `mono-preflight` before `mono-ship`
   owns formal pre-ship review/check and PR lifecycle.
 
 ## Good Project Fragment
@@ -186,7 +186,7 @@ Active Tech Spec: ...
 
 # План задач
 
-Run linear-check delivery, then create a PR.
+Run mono-check delivery, then create a PR.
 ```
 
 Why it fails: Project body became a workflow dashboard.
@@ -196,7 +196,7 @@ Bad Tech Spec body:
 ```markdown
 ## Skill contracts
 
-linear-check design must pass before linear-issue runs.
+mono-check design must pass before mono-issue runs.
 Move Project to Delivery after PRD and Tech Spec exist.
 ```
 

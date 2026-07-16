@@ -31,7 +31,7 @@ pin.
   `## Цена волны (Wave Cost Summary)`, `Цена волны:`,
   `never blocking, never a gate`,
   `` Cost Telemetry in `references/orchestration.md` ``).
-- `skills/linear-orchestrate/SKILL.md`, the final-response cost item
+- `skills/mono-orchestrate/SKILL.md`, the final-response cost item
   (`Cost telemetry: the per-Issue cost tail in the status table`,
   `«Цена волны» block`, `Cost is telemetry, not a gate: it never blocks,
   pauses, or pages.`).
@@ -42,7 +42,7 @@ ledger timestamps) and is stated as not pin-enforceable in the policy.
 Cost stays telemetry — the pins bind the no-thresholds/no-blocking rule
 so a future edit cannot silently turn cost into a gate. No existing pin
 was weakened; the MONO-2 status-update pins on
-`skills/linear-orchestrate/SKILL.md` («Простои и отклонения:»,
+`skills/mono-orchestrate/SKILL.md` («Простои и отклонения:»,
 «Контекст: ~N%») and every other pinned string stayed byte-intact and
 green throughout.
 
@@ -76,8 +76,8 @@ to a working copy backed up with `cp` and restored with `cp` — never
    Restored → green.
 6. `Cost is telemetry, not a gate: it never blocks, pauses, or pages.`
    replaced with `Cost is a budget gate: block workers that exceed it.`
-   in `skills/linear-orchestrate/SKILL.md` →
-   `- skills/linear-orchestrate/SKILL.md missing "Cost is telemetry,\n
+   in `skills/mono-orchestrate/SKILL.md` →
+   `- skills/mono-orchestrate/SKILL.md missing "Cost is telemetry,\n
    not a gate: it never blocks, pauses, or pages."` (exit 1).
    Restored → green.
 

@@ -50,4 +50,4 @@ Rules:
 - Scope boundaries must prevent downstream agents from inventing adjacent product behavior.
 - Do not describe implementation architecture, schemas, file layouts, library choices, or rollout mechanics.
 - If discovery workflows were skipped, mark the document as PRD-lite and call out lower confidence.
-- Before finalizing, ask: what would `linear-spec` still have to invent if this PRD ended here? Fix those gaps in the PRD.
+- Before finalizing, ask: what would `mono-spec` still have to invent if this PRD ended here? Fix those gaps in the PRD.

@@ -1,0 +1,148 @@
+---
+name: mono-implement
+description: Use when starting or running implementation from approved Linear Issue(s) after handoff.
+---
+
+# Mono Implement
+
+Use this skill to own Delivery Start and implementation execution from approved Linear Issue(s).
+
+`mono-implement` starts only after `mono-handoff` produced current Project, PRD, Tech Spec, and approved execution Issue(s). It verifies implementation-start approval, moves the Project to Delivery when ready, selects the implementation engine, runs implementation from the approved Issue(s), and exits into `mono-preflight`.
+
+Read first:
+
+1. `AGENTS.md`
+2. `skills/mono-check/SKILL.md`
+3. `skills/mono-review/SKILL.md`
+4. `skills/mono-preflight/SKILL.md`
+5. `references/artifact-rules.md`
+6. `references/artifact-quality.md`
+7. `references/artifact-intake.md`
+8. `references/readiness-gates.md`
+9. `references/execution-quality.md`
+10. `references/lifecycle.md`
+11. `references/questioning.md`
+12. `references/human-friendly-output.md`
+
+When to use:
+
+- The user says "implement", "start implementation", "build this", or equivalent after approved Linear Issue(s) exist.
+- `mono-handoff` completed Issue creation and the user explicitly approved starting now.
+- A fresh implementation agent receives approved Linear Issue(s) and needs a bounded start workflow.
+
+Do not use:
+
+- Before Project, PRD, Tech Spec or explicit no-spec exception, and approved Issue(s) are current.
+- From raw `/office-hours`, `/brainstorming`, review plans, local markdown plans, or chat history alone.
+- For PR creation, review-loop stabilization, deploy, or closeout. PR creation/review belongs to `mono-ship`; deploy and closeout belong to `mono-deploy`.
+
+Inputs to gather:
+
+- Fresh Linear Project, PRD, Tech Spec, approved Issue(s), resources, comments, and review/check state.
+- Handoff artifact intake summary when recorded in Linear comments, resources, or package notes.
+- Package approval comment and implementation-start approval, if already recorded.
+- Project config, including optional `Implementation workflow`.
+- Prior operational learnings for this repo through `gstack-learnings-search` when the helper is available.
+- Minimal repo context needed to understand commands, conventions, and validation.
+- Current git branch, worktree state, and remote/base branch status.
+
+Workflow states:
+
+1. `start-checkpoint`
+   - Fetch fresh Linear context.
+   - Verify approved execution Issue(s) exist.
+   - Verify or obtain explicit implementation-start approval.
+   - Confirm required `mono-review handoff` findings are resolved, accepted, or explicitly deferred.
+   - Confirm delivery prerequisites are present before changing lifecycle state.
+   - Move the Project to Delivery only after approval and prerequisites are explicit.
+   - Run or report `mono-check delivery` after the Project is in Delivery.
+   - Inspect git state and create or switch to a safe implementation branch when needed.
+   - Consult prior learnings with `gstack-learnings-search --limit 10` (optionally `--query`/`--type` scoped to the Issue topic) when the helper is available. Treat results as advisory context only, never as a gate; when the helper is unavailable or returns nothing, proceed and report that.
+   - Record a human Linear comment that implementation started.
+2. `execute`
+   - Select the implementation engine.
+   - Implement only the approved one-PR Issue slice unless the Issue plan explicitly supports parallel slices.
+   - Keep product discovery closed. Ask only for product, UX, business, external access, dirty-worktree, or risk decisions that block safe execution.
+   - Run targeted validation as the implementation progresses.
+3. `exit`
+   - Return exactly one terminal status.
+   - Record changed files, tests/checks run, tests/checks not run, branch/dirty state, drift summary, Linear comment outcome, and next workflow.
+   - For `blocked`, `needs-human`, and `scope-drift-needs-handoff`: post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. (`implemented-needs-preflight` is handled by the next workflow — no extra comment needed here.)
+
+Implementation-start approval UX:
+
+This is the SECOND approval in the workflow. The first approval was package approval granted during `mono-handoff`. Implementation-start approval is a separate, more consequential gate: it authorises Project movement to Delivery, branch creation, and code writing.
+
+Required prompt shape:
+
+```text
+Пакет утверждён. Теперь отдельное решение — старт реализации.
+
+Что это разрешает: Project переходит в Delivery, создаётся ветка, агент пишет код по <Issue keys>.
+Чего это НЕ разрешает: PR, merge и deploy — они потребуют отдельных шагов.
+
+1. Стартовать сейчас — рекомендую, если scope финален.
+2. Отложить — пакет останется утверждённым, старт можно дать позже любой фразой "запускай реализацию".
+```
+
+Implementation engine selection:
+
+- Use the configured `Implementation workflow` when present and not `None`.
+- If the field is missing or `None`, stay backward-compatible and default to this selection table:
+  - Compound `ce-work` for general implementation from an approved Issue or plan.
+  - Superpowers `executing-plans` when a concrete written plan should be executed without rediscovery.
+  - Superpowers `test-driven-development` when acceptance can be encoded as tests or a bug reproduction first.
+  - Superpowers `systematic-debugging` when the Issue is a bug or performance symptom with a repro loop.
+  - Superpowers `subagent-driven-development` only when slices are independent and file/surface boundaries are explicit.
+  - gstack `qa` after implementation when browser, product, or manual-surface verification is the main risk.
+- When the configured or selected engine skill is not available in the current runtime (for example a Codex worker where Compound or Superpowers skills are not invocable), implement directly from the approved Issue under this skill and `references/execution-quality.md`, and record the substitution in the exit report (and in the report `notes` field when running under orchestration).
+
+Exit statuses:
+
+- `implemented-needs-preflight`: code changes exist and the next workflow is `mono-preflight`.
+- `blocked`: required Linear context, repo state, tooling, permissions, or validation are unavailable.
+- `scope-drift-needs-handoff`: implementation discovered material scope drift that must be reflected in Linear before continuing.
+- `needs-human`: a product, UX, business, external access, dirty-worktree, or risk decision is required.
+
+For `tiny` work, follow the Tiny Output Profile in references/readiness-gates.md.
+
+Rules:
+
+- Keep Linear as durable truth. Local discovery artifacts are evidence only after `mono-handoff` translated them into Linear.
+- Do not re-run product discovery unless Linear artifacts are missing or contradictory.
+- Do not start from local discovery artifacts alone.
+- Do not treat package approval as implementation-start approval unless that approval is explicit.
+- Do not infer implementation-start approval from ambiguous phrases; the approval must name implementation or the Issue key(s) explicitly. Choosing a handoff package option that explicitly bundles implementation start (e.g. «это одновременно approval на старт кода») counts as explicit; do not re-ask after it.
+- Do not move the Project to Delivery before approved Issue(s) exist.
+- Do not pass delivery readiness with only PRD and Tech Spec.
+- Do not create PRs directly from `mono-implement`.
+- Do not run or claim `mono-review pre-ship` or `mono-check pre-ship`; those belong to `mono-ship`.
+- If material drift appears, stop as `scope-drift-needs-handoff`.
+- The stage exit report enumerates every «Как проверить» item of the Issue, each with a `pass | deferred | not-run` status and one line of evidence (under orchestration this is the `verification_items` array of the mailbox report). The stage cannot claim completion while an item is silently missing; `deferred`/`not-run` are valid only with a recorded reason in the evidence.
+- Keep Linear-facing comments in the project config language; use Russian when no project config is present.
+
+Implementation-start comment shape:
+
+```text
+Начал реализацию по <Issue keys>.
+
+Проверил: <Project, PRD, Tech Spec, Issue, approval/review/check state>.
+Делаю строго по утверждённому Issue; ничего сверх scope не добавляю.
+Объем: <approved one-PR slice>.
+Workflow реализации: <configured workflow or default selection and why>.
+План проверки: <targeted tests/checks/manual surfaces expected later>.
+Учтённые learnings: <none|ключи|helper unavailable>.
+Пока не проверено: <browser/manual/PR review/deploy/etc.>.
+```
+
+Final response must include:
+
+- Status: one of `implemented-needs-preflight`, `blocked`, `scope-drift-needs-handoff`, or `needs-human`.
+- Issue IDs implemented.
+- Sources read.
+- Branch and dirty/committed state.
+- Changed files.
+- Tests/checks run and not run.
+- Drift summary against Project, PRD, Tech Spec, and Issue.
+- Linear comment outcome.
+- Next workflow recommendation, usually `mono-preflight` when implementation completed.

@@ -4,12 +4,20 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 
-const CONFIG_RELATIVE_PATH = ".agents/linear-workflow.config.json";
-const LEGACY_CONFIG_RELATIVE_PATH = ".agents/linear-workflow.config.md";
+const CONFIG_RELATIVE_PATH = ".agents/mono-workflow.config.json";
+const LEGACY_CONFIG_RELATIVE_PATH = ".agents/mono-workflow.config.md";
+const PREVIOUS_CONFIG_RELATIVE_PATH = ".agents/linear-workflow.config.json";
+const PREVIOUS_LEGACY_CONFIG_RELATIVE_PATH = ".agents/linear-workflow.config.md";
 const LEGACY_FILES = [
+  ".agents/mono-workflow-check.mjs",
+  ".agents/mono-workflow.lock.json",
+  LEGACY_CONFIG_RELATIVE_PATH,
+  ".github/workflows/update-mono-workflow.yml",
+  ".github/workflows/update-mono-agent-workflow.yml",
+  PREVIOUS_CONFIG_RELATIVE_PATH,
+  PREVIOUS_LEGACY_CONFIG_RELATIVE_PATH,
   ".agents/linear-workflow-check.mjs",
   ".agents/linear-workflow.lock.json",
-  LEGACY_CONFIG_RELATIVE_PATH,
   ".github/workflows/update-linear-workflow.yml",
   ".github/workflows/update-linear-agent-workflow.yml",
 ];
@@ -146,6 +154,8 @@ function readJsonConfig(configPath, failures = []) {
 function configFromRepo(repo, projectName) {
   const jsonPath = path.join(repo, CONFIG_RELATIVE_PATH);
   const legacyPath = path.join(repo, LEGACY_CONFIG_RELATIVE_PATH);
+  const previousJsonPath = path.join(repo, PREVIOUS_CONFIG_RELATIVE_PATH);
+  const previousLegacyPath = path.join(repo, PREVIOUS_LEGACY_CONFIG_RELATIVE_PATH);
   if (fs.existsSync(jsonPath)) {
     const failures = [];
     const config = readJsonConfig(jsonPath, failures);
@@ -153,8 +163,18 @@ function configFromRepo(repo, projectName) {
     if (!("deployApproval" in config)) config.deployApproval = "always";
     return config;
   }
+  if (fs.existsSync(previousJsonPath)) {
+    const failures = [];
+    const config = readJsonConfig(previousJsonPath, failures);
+    if (!config) throw new Error(failures.join("\n"));
+    if (!("deployApproval" in config)) config.deployApproval = "always";
+    return config;
+  }
   if (fs.existsSync(legacyPath)) {
     return parseLegacyMarkdownConfig(fs.readFileSync(legacyPath, "utf8"), projectName);
+  }
+  if (fs.existsSync(previousLegacyPath)) {
+    return parseLegacyMarkdownConfig(fs.readFileSync(previousLegacyPath, "utf8"), projectName);
   }
   return defaultConfig(projectName);
 }
@@ -275,7 +295,10 @@ function scanLegacyProjectFiles(repo) {
     const absoluteRoot = path.join(repo, skillsRoot);
     if (!fs.existsSync(absoluteRoot)) continue;
     for (const entry of fs.readdirSync(absoluteRoot, { withFileTypes: true })) {
-      if (entry.isDirectory() && entry.name.startsWith("linear-")) {
+      if (
+        entry.isDirectory() &&
+        (entry.name.startsWith("mono-") || entry.name.startsWith("linear-"))
+      ) {
         legacy.push(path.join(skillsRoot, entry.name));
       }
     }
@@ -302,7 +325,10 @@ function cleanLegacyProjectFiles(repo) {
     const absoluteRoot = path.join(repo, skillsRoot);
     if (!fs.existsSync(absoluteRoot)) continue;
     for (const entry of fs.readdirSync(absoluteRoot, { withFileTypes: true })) {
-      if (entry.isDirectory() && entry.name.startsWith("linear-")) {
+      if (
+        entry.isDirectory() &&
+        (entry.name.startsWith("mono-") || entry.name.startsWith("linear-"))
+      ) {
         fs.rmSync(path.join(absoluteRoot, entry.name), { recursive: true, force: true });
       }
     }
@@ -333,16 +359,16 @@ function checkProject(repo) {
 
   const legacyFiles = scanLegacyProjectFiles(repo);
   for (const relativePath of legacyFiles) {
-    failures.push(`Legacy Linear workflow project install file must be removed: ${relativePath}`);
+    failures.push(`Legacy Mono workflow project install file must be removed: ${relativePath}`);
   }
 
   if (failures.length > 0) {
-    console.error("Linear workflow project config check failed:");
+    console.error("Mono workflow project config check failed:");
     for (const failure of failures) console.error(`- ${failure}`);
     process.exit(1);
   }
 
-  console.log(`Linear workflow project config check passed for ${repo}`);
+  console.log(`Mono workflow project config check passed for ${repo}`);
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -352,6 +378,12 @@ if (!fs.existsSync(args.repo) || !fs.statSync(args.repo).isDirectory()) {
 }
 
 const projectName = args.projectName || titleize(path.basename(args.repo));
+const monoConfigPath = path.join(args.repo, CONFIG_RELATIVE_PATH);
+const migratableConfigPaths = [
+  LEGACY_CONFIG_RELATIVE_PATH,
+  PREVIOUS_CONFIG_RELATIVE_PATH,
+  PREVIOUS_LEGACY_CONFIG_RELATIVE_PATH,
+].map((relativePath) => path.join(args.repo, relativePath));
 
 if (args.write) {
   let config = null;
@@ -366,8 +398,18 @@ if (args.write) {
 }
 
 if (args.clean) {
+  if (
+    !args.write &&
+    !fs.existsSync(monoConfigPath) &&
+    migratableConfigPaths.some((configPath) => fs.existsSync(configPath))
+  ) {
+    console.error(
+      `Refusing to clean the only project config. Run with --write --clean to migrate it to ${CONFIG_RELATIVE_PATH}.`
+    );
+    process.exit(1);
+  }
   cleanLegacyProjectFiles(args.repo);
-  console.log(`Cleaned legacy Linear workflow files for ${args.repo}`);
+  console.log(`Cleaned legacy Mono workflow files for ${args.repo}`);
 }
 
 if (args.print) {
