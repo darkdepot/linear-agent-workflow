@@ -926,16 +926,11 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
     }
 
-    // Fixture 5 runtime proof: the seam distinguishes the two parentless ship
-    // routes. A valid marker + trusted approval is issue-only/approved-fresh;
-    // the same parentless Issue with no marker fails closed to project-first.
-    const parentlessShipApproved = happy;
-    if (
-      parentlessShipApproved.package_kind !== "issue-only" ||
-      parentlessShipApproved.approval_status !== "approved-fresh"
-    ) {
-      fail("parentless-ship valid marker + approval fixture must stay out of handoff");
-    }
+    // Fixture 5 runtime proof: the `happy` assertions above prove the valid
+    // marker + trusted approval route is issue-only/approved-fresh. This second
+    // invocation proves the same parentless candidate with no marker fails
+    // closed to project-first, completing the two ship routes without rechecking
+    // the already-proven happy object.
     const parentlessShipAbsent = JSON.parse(
       runNode([
         "scripts/resolve-issue-context.mjs", "--issue", issuePath,
