@@ -2865,73 +2865,77 @@ function validateHeartbeatContract() {
 
 function validateWatcherContaminationBehavior() {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-watcher-"));
-  const logsDir = path.join(fixtureRoot, "logs");
-  fs.mkdirSync(logsDir);
+  try {
+    const logsDir = path.join(fixtureRoot, "logs");
+    fs.mkdirSync(logsDir);
 
-  const contaminated = [
-    "Reading additional input from stdin...",
-    JSON.stringify({ type: "thread.started", thread_id: "fixture-thread" }),
-    "",
-  ].join("\n");
-  const longEventPrefix = 'Reading additional input from stdin...\n{"type":"thread.started","payload":"';
-  const boundaryPadding = (4095 - Buffer.byteLength(longEventPrefix) % 4096 + 4096) % 4096;
-  const contaminatedWithBoundarySplit = `${longEventPrefix}${"x".repeat(boundaryPadding)}é"}\n`;
-  const fixtures = {
-    "MONO-101-mono-implement-a1.jsonl": contaminated,
-    "MONO-102-mono-implement-a1.jsonl": contaminatedWithBoundarySplit,
-    "MONO-103-mono-implement-a1.jsonl": "Reading additional input from stdin...\n",
-    "MONO-104-mono-implement-a1.jsonl": "\n\n",
-  };
-  const stale = new Date(Date.now() - 181_000);
-  for (const [name, body] of Object.entries(fixtures)) {
-    const logPath = path.join(logsDir, name);
-    fs.writeFileSync(logPath, body);
-    fs.utimesSync(logPath, stale, stale);
-  }
-  fs.writeFileSync(
-    path.join(fixtureRoot, "workers.json"),
-    JSON.stringify({
-      "MONO-101": { transport: "codex-cli", stage: "mono-implement", pid: process.pid, log: path.join(logsDir, "MONO-101-mono-implement-a1.jsonl") },
-      "MONO-102": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-102-mono-implement-a1.jsonl") },
-      "MONO-103": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-103-mono-implement-a1.jsonl") },
-      "MONO-104": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-104-mono-implement-a1.jsonl") },
-    })
-  );
+    const contaminated = [
+      "Reading additional input from stdin...",
+      JSON.stringify({ type: "thread.started", thread_id: "fixture-thread" }),
+      "",
+    ].join("\n");
+    const longEventPrefix = 'Reading additional input from stdin...\n{"type":"thread.started","payload":"';
+    const boundaryPadding = (4095 - Buffer.byteLength(longEventPrefix) % 4096 + 4096) % 4096;
+    const contaminatedWithBoundarySplit = `${longEventPrefix}${"x".repeat(boundaryPadding)}é"}\n`;
+    const fixtures = {
+      "MONO-101-mono-implement-a1.jsonl": contaminated,
+      "MONO-102-mono-implement-a1.jsonl": contaminatedWithBoundarySplit,
+      "MONO-103-mono-implement-a1.jsonl": "Reading additional input from stdin...\n",
+      "MONO-104-mono-implement-a1.jsonl": "\n\n",
+    };
+    const stale = new Date(Date.now() - 181_000);
+    for (const [name, body] of Object.entries(fixtures)) {
+      const logPath = path.join(logsDir, name);
+      fs.writeFileSync(logPath, body);
+      fs.utimesSync(logPath, stale, stale);
+    }
+    fs.writeFileSync(
+      path.join(fixtureRoot, "workers.json"),
+      JSON.stringify({
+        "MONO-101": { transport: "codex-cli", stage: "mono-implement", pid: process.pid, log: path.join(logsDir, "MONO-101-mono-implement-a1.jsonl") },
+        "MONO-102": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-102-mono-implement-a1.jsonl") },
+        "MONO-103": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-103-mono-implement-a1.jsonl") },
+        "MONO-104": { transport: "codex-cli", stage: "mono-implement", pid: 999_999_999, log: path.join(logsDir, "MONO-104-mono-implement-a1.jsonl") },
+      })
+    );
 
-  const result = spawnSync(
-    process.execPath,
-    [
-      "scripts/watch-workers.mjs",
-      "--root",
-      fixtureRoot,
-      "--stall-sec",
-      "90",
-      "--once",
-    ],
-    { cwd: root, encoding: "utf8" }
-  );
-  const stdout = result.stdout || "";
-  const stderr = result.stderr || "";
-  if (result.status !== 0) {
-    fail(`watcher contamination fixture failed to run: ${stderr || result.error?.message || `exit ${result.status}`}`);
-    return;
-  }
+    const result = spawnSync(
+      process.execPath,
+      [
+        "scripts/watch-workers.mjs",
+        "--root",
+        fixtureRoot,
+        "--stall-sec",
+        "90",
+        "--once",
+      ],
+      { cwd: root, encoding: "utf8" }
+    );
+    const stdout = result.stdout || "";
+    const stderr = result.stderr || "";
+    if (result.status !== 0) {
+      fail(`watcher contamination fixture failed to run: ${stderr || result.error?.message || `exit ${result.status}`}`);
+      return;
+    }
 
-  if (!stdout.includes("EVENT:stall MONO-101")) {
-    fail("contaminated watcher log with a live writer must still emit stall");
-  }
-  if (!stdout.includes("EVENT:dead MONO-102")) {
-    fail("contaminated watcher log with a gone writer must still emit dead");
-  }
-  if (/EVENT:spawn-fail MONO-10[12]\b/.test(stdout)) {
-    fail("contaminated watcher logs with valid JSON events must not emit spawn-fail");
-  }
-  if (!stdout.includes("EVENT:spawn-fail MONO-103") || !stdout.includes("EVENT:spawn-fail MONO-104")) {
-    fail("watcher logs without JSON events, including blank-only output, must emit spawn-fail");
-  }
-  const contaminationWarnings = stderr.match(/watch-workers: non-JSON contamination before valid JSON events in MONO-10[12]-mono-implement-a1\.jsonl/g) || [];
-  if (contaminationWarnings.length !== 2) {
-    fail("each contaminated watcher log must emit one diagnostic warning");
+    if (!stdout.includes("EVENT:stall MONO-101")) {
+      fail("contaminated watcher log with a live writer must still emit stall");
+    }
+    if (!stdout.includes("EVENT:dead MONO-102")) {
+      fail("contaminated watcher log with a gone writer must still emit dead");
+    }
+    if (/EVENT:spawn-fail MONO-10[12]\b/.test(stdout)) {
+      fail("contaminated watcher logs with valid JSON events must not emit spawn-fail");
+    }
+    if (!stdout.includes("EVENT:spawn-fail MONO-103") || !stdout.includes("EVENT:spawn-fail MONO-104")) {
+      fail("watcher logs without JSON events, including blank-only output, must emit spawn-fail");
+    }
+    const contaminationWarnings = stderr.match(/watch-workers: non-JSON contamination before valid JSON events in MONO-10[12]-mono-implement-a1\.jsonl/g) || [];
+    if (contaminationWarnings.length !== 2) {
+      fail("each contaminated watcher log must emit one diagnostic warning");
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 }
 
