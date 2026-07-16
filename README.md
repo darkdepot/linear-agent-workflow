@@ -2,6 +2,8 @@
 
 Reusable Mono workflow skills for AI coding agents.
 
+Canonical repository: [github.com/darkdepot/mono](https://github.com/darkdepot/mono).
+
 The workflow keeps Linear as the source of truth from raw idea to landed PR:
 
 ```text

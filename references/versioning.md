@@ -55,7 +55,7 @@ Example shape:
 ```json
 {
   "schemaVersion": 3,
-  "upstreamRepo": "darkdepot/linear-agent-workflow",
+  "upstreamRepo": "darkdepot/mono",
   "upstreamVersion": "0.11.0",
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
   "upstreamDirty": false,
