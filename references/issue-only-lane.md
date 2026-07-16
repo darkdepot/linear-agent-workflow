@@ -4,9 +4,9 @@ The issue-only lane lets a genuinely one-PR change move through the workflow
 without a Project, PRD, and Tech Spec, while staying just as inspectable as the
 full project-first lane. This document is the load-bearing foundation: it fixes
 the versioned **marker**, the normative **5-field context contract** (the seam),
-and the deterministic **resolver** that every issue-only-lane consumer reads
-first. Skill wiring, the assurance vector, the route-record, and the reducer are
-out of scope here and land in later slices.
+the deterministic **resolver** that every issue-only-lane consumer reads first,
+and the no-promotion fallback shared by delivery stages. The assurance vector,
+route-record, and reducer remain out of scope and land in later phases.
 
 ## The Marker
 
@@ -237,3 +237,25 @@ seam. It mirrors the deterministic-config-script structure of
   `../.mono-agent-workflow/scripts/resolve-issue-context.mjs`. Product repos
   never vendor the script — the installer owns the copy. In this upstream
   checkout the same script is `scripts/resolve-issue-context.mjs`.
+
+## Deterministic Project-first fallback
+
+There is **No in-place Issue-to-Project promotion**. An Issue that entered the issue-only lane is never converted into, attached to, or reused as the execution Issue of a new Project. Scope/risk escape is a lane exit with a new Project-first package, not a container mutation.
+
+Fallback triggers include a seam that no longer resolves issue-only, stale or absent approval at Delivery Start, a second outcome or PR, unresolved product/UX/architecture/operations judgment, and a preflight diff whose higher risk classification is `deep` or `risky`. Marker-integrity failures remain hard failures with their stable resolver error; they are not silently downgraded.
+
+The five-field seam stays the only lane authority, but callers retain the trusted package provenance they already read to invoke it: whether the Issue has a parent Project and whether verified issue-only marker/label/approval inputs were present. This is not a sixth seam field and never turns a `project-first` result back into `issue-only`. It only prevents an escaped parentless candidate that resolved fail-closed from being mistaken for a complete Project-first package: with no approved Project artifacts, the caller performs the fallback below instead of running Project lifecycle operations.
+
+### Pre-code exit
+
+Before any implementation code exists:
+
+1. Park the original Issue in a non-startable state and record why the issue-only envelope was left.
+2. Supersede the authoritative marker without editing the approved Issue contract: write a newest exact five-field marker whose fingerprint, acceptance IDs, and risk still match the live body, but whose receipt is `Approval: superseded`; remove the `issue-only` label. The resolver then returns the exact project-first seam. The original approval is annulled and can never authorize the restart.
+3. Restart through `mono-idea` → discovery/handoff as a new Project-first package with new approval. Do not add a Project, PRD, Tech Spec, or Project relationship to the parked Issue. The other allowed outcome is cancellation.
+
+### Post-`ready` exit
+
+After a `mono-preflight` certificate already says `ready`, freeze the independently shippable Issue slice and its current PR scope. A frozen approval remains valid only while the whole-body fingerprint matches: do not edit the Issue body, acceptance IDs, marker fingerprint, or frozen implementation scope. Ship and deploy only that frozen slice as-is, and put every expanded outcome into a separate follow-up Project with its own PRD, Tech Spec, Issue, review, and approval. If the current slice cannot remain independently shippable or its fingerprint no longer matches, cancel it instead; do not repair it by promotion.
+
+An escalation discovered after code exists but before `ready` exits preflight as `drift-candidate`. Because there is no ready independently shippable slice to freeze, the safe choices are to cancel the issue-only attempt and restart Project-first, or stop for the orchestrator's risk decision. In every timing case, in-place promotion is forbidden.

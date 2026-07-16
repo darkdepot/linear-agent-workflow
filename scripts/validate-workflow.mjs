@@ -758,6 +758,48 @@ function validateIssueOnlyLaneBehavior() {
     assertIncludes("references/issue-only-lane.md", pin);
   }
 
+  // MONO-16: downstream delivery consumes the resolver seam without changing
+  // the existing Project-first path. These pins keep the prose contracts tied
+  // to the executable escalation fixture below.
+  for (const required of [
+    "Resolve the 5-field context seam before changing lifecycle state",
+    "`lifecycle_state_entity=issue`",
+    "`approval_status=approved-fresh`",
+    "Run `mono-check delivery` in issue-only mode",
+    "Project-first branch remains unchanged",
+    "A `project` lifecycle entity does not prove that Project artifacts exist",
+    "A resolver integrity error (`broken marker` or `stale marker`) is a hard `needs-human` stop",
+    "A successful fail-closed `project-first` result from an issue-only candidate triggers the deterministic pre-code fallback",
+    "Before coding: park the Issue, supersede the marker approval, and restart Project-first",
+  ]) {
+    assertIncludes("skills/mono-implement/SKILL.md", required, JSON.stringify(required));
+  }
+  const implementDelivery = read("skills/mono-implement/SKILL.md");
+  const issueOnlyDeliveryCheck = implementDelivery.indexOf("Run `mono-check delivery` in issue-only mode");
+  const issueOnlyLifecycleMove = implementDelivery.indexOf("Move the **Issue** into its configured started/in-progress state");
+  if (issueOnlyDeliveryCheck > issueOnlyLifecycleMove) {
+    fail("mono-implement issue-only delivery check must pass before the Issue moves to started/in-progress");
+  }
+  for (const required of [
+    "compare the diff against `behavioral_oracle` plus the live `scope_fingerprint`",
+    "preserve the existing risk-escalation rule",
+    "`deep` or `risky` is a `drift-candidate`",
+    "do not treat it as a genuine Project-first package",
+    "After `ready`: freeze the independently shippable slice",
+  ]) {
+    assertIncludes("skills/mono-preflight/SKILL.md", required, JSON.stringify(required));
+  }
+  for (const required of [
+    "No in-place Issue-to-Project promotion",
+    "Pre-code exit",
+    "Post-`ready` exit",
+    "Approval: superseded",
+    "frozen approval remains valid only while the whole-body fingerprint matches",
+    "separate follow-up Project",
+  ]) {
+    assertIncludes("references/issue-only-lane.md", required, JSON.stringify(required));
+  }
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
   try {
     // MONO-19: the issue-only lane is a config opt-in. issue-only is granted only
@@ -937,6 +979,85 @@ function validateIssueOnlyLaneBehavior() {
       runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", emptyMarkerPath])
     );
     if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
+
+    // Fixture 4 — risk/scope escalation -> project-first. Start with the valid
+    // standard package above, then model the two deterministic exit causes. A
+    // risk reclassification to risky remains structurally valid but leaves the
+    // Phase-1 envelope; a superseded approval parks pre-code scope growth. Both
+    // must resolve through the same five-field seam as project-first.
+    const projectFirstSeam = {
+      package_kind: "project-first",
+      lifecycle_state_entity: "project",
+      behavioral_oracle: null,
+      risk_class: null,
+      approval_status: "absent",
+    };
+    const riskEscalatedIssuePath = path.join(dir, "issue-risk-escalated.md");
+    const riskEscalatedMarkerPath = path.join(dir, "marker-risk-escalated.md");
+    const riskEscalatedBody = fullBody.replace(
+      "REVIEWGATE_SENTINEL standard, pre-ship review",
+      "REVIEWGATE_SENTINEL risky, pre-ship review (diff reclassified)"
+    );
+    fs.writeFileSync(riskEscalatedIssuePath, riskEscalatedBody);
+    const riskEscalatedFingerprint = emitFingerprint(riskEscalatedIssuePath);
+    fs.writeFileSync(
+      riskEscalatedMarkerPath,
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${riskEscalatedFingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: risky", `Approval: ${riskEscalatedFingerprint}`].join("\n")}\n`
+    );
+    const riskEscalated = JSON.parse(
+      runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", riskEscalatedIssuePath,
+        "--marker", riskEscalatedMarkerPath, "--config", enableConfigPath,
+        "--label", "issue-only", "--approval-verified", riskEscalatedFingerprint,
+      ])
+    );
+    if (JSON.stringify(riskEscalated) !== JSON.stringify(projectFirstSeam)) {
+      fail("resolve-issue-context risky-diff escalation must fall back to the exact project-first seam contract");
+    }
+
+    fs.writeFileSync(
+      markerPath,
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", "Approval: superseded"].join("\n")}\n`
+    );
+    const scopeEscalated = JSON.parse(
+      runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath,
+        "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", fingerprint,
+      ])
+    );
+    if (JSON.stringify(scopeEscalated) !== JSON.stringify(projectFirstSeam)) {
+      fail("resolve-issue-context pre-code scope escalation with superseded approval must fall back to the exact project-first seam contract");
+    }
+
+    // Negative halves of the fixture pin stable integrity failures: pretending
+    // the risky body is still standard is a broken marker, while carrying the
+    // old standard fingerprint into the risky body is stale.
+    fs.writeFileSync(
+      riskEscalatedMarkerPath,
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${riskEscalatedFingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: standard", `Approval: ${riskEscalatedFingerprint}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context risk-escalation downgrade fixture",
+      () => runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", riskEscalatedIssuePath,
+        "--marker", riskEscalatedMarkerPath, "--config", enableConfigPath,
+        "--label", "issue-only", "--approval-verified", riskEscalatedFingerprint,
+      ]),
+      "issue-only-lane: broken marker: marker Risk class"
+    );
+    fs.writeFileSync(
+      riskEscalatedMarkerPath,
+      `${["mono-issue-only marker", "Marker version: 1", `Scope fingerprint: ${fingerprint}`, "Acceptance IDs: AC1, AC2", "Risk class: risky", `Approval: ${fingerprint}`].join("\n")}\n`
+    );
+    expectCommandFailure(
+      "resolve-issue-context risk-escalation stale-scope fixture",
+      () => runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", riskEscalatedIssuePath,
+        "--marker", riskEscalatedMarkerPath, "--config", enableConfigPath,
+        "--label", "issue-only", "--approval-verified", fingerprint,
+      ]),
+      "issue-only-lane: stale marker"
+    );
 
     // Guard: a prose MENTION of the marker line (not standalone) is not a marker —
     // an Issue documenting the convention still resolves to project-first, never a

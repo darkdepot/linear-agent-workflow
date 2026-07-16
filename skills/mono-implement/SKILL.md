@@ -5,9 +5,9 @@ description: Use when starting or running implementation from approved Linear Is
 
 # Mono Implement
 
-Use this skill to own Delivery Start and implementation execution from approved Linear Issue(s).
+Use this skill to own Delivery Start and implementation execution from approved Linear Issue(s), including an approved issue-only package resolved through the shared context seam.
 
-`mono-implement` starts only after `mono-handoff` produced current Project, PRD, Tech Spec, and approved execution Issue(s). It verifies implementation-start approval, moves the Project to Delivery when ready, selects the implementation engine, runs implementation from the approved Issue(s), and exits into `mono-preflight`.
+`mono-implement` starts only after either (a) `mono-handoff` produced a current Project, PRD, Tech Spec, and approved execution Issue(s), or (b) `mono-issue-intake` produced a self-contained Issue whose resolver seam is `issue-only` with fresh owner approval. It verifies implementation-start approval, moves the resolved lifecycle entity into Delivery/started state when ready, selects the implementation engine, runs implementation from the approved Issue(s), and exits into `mono-preflight`.
 
 Read first:
 
@@ -23,22 +23,24 @@ Read first:
 10. `references/lifecycle.md`
 11. `references/questioning.md`
 12. `references/human-friendly-output.md`
+13. `references/issue-only-lane.md`
 
 When to use:
 
 - The user says "implement", "start implementation", "build this", or equivalent after approved Linear Issue(s) exist.
 - `mono-handoff` completed Issue creation and the user explicitly approved starting now.
+- `mono-issue-intake` completed the issue-only create-then-approve transaction and the live resolver returns `package_kind=issue-only` with `approval_status=approved-fresh`.
 - A fresh implementation agent receives approved Linear Issue(s) and needs a bounded start workflow.
 
 Do not use:
 
-- Before Project, PRD, Tech Spec or explicit no-spec exception, and approved Issue(s) are current.
+- Before either a current approved Project-first package (Project, PRD, Tech Spec or explicit no-spec exception, and execution Issue) or a current resolver-approved issue-only package exists.
 - From raw `/office-hours`, `/brainstorming`, review plans, local markdown plans, or chat history alone.
 - For PR creation, review-loop stabilization, deploy, or closeout. PR creation/review belongs to `mono-ship`; deploy and closeout belong to `mono-deploy`.
 
 Inputs to gather:
 
-- Fresh Linear Project, PRD, Tech Spec, approved Issue(s), resources, comments, and review/check state.
+- Fresh package context: Project, PRD, Tech Spec, approved Issue(s), resources, comments, and review/check state for Project-first; or the self-contained Issue, marker, verified label, authenticated owner approval, and review/check state for issue-only.
 - Handoff artifact intake summary when recorded in Linear comments, resources, or package notes.
 - Package approval comment and implementation-start approval, if already recorded.
 - Project config, including optional `Implementation workflow`.
@@ -69,9 +71,28 @@ Workflow states:
    - Record changed files, tests/checks run, tests/checks not run, branch/dirty state, drift summary, Linear comment outcome, and next workflow.
    - For `blocked`, `needs-human`, and `scope-drift-needs-handoff`: post a short Russian Linear exit comment on the Issue following the Linear Exit Comments rule in `references/human-friendly-output.md`. (`implemented-needs-preflight` is handled by the next workflow — no extra comment needed here.)
 
+## Context-seam branch at Delivery Start
+
+Resolve the 5-field context seam before changing lifecycle state. For every candidate Issue, use the installer-published `../.mono-agent-workflow/scripts/resolve-issue-context.mjs` with the live Issue body, current marker comment, project config, verified `issue-only` label, and the fingerprint read from an authenticated owner-approval comment. Also run the same resolver with `--emit-fingerprint` against the live Issue body at start time. Do not compute a second fingerprint or use the superseded section-hash formula: the resolver's whole-body SHA-256 is authoritative.
+
+Branch only on the resolved seam:
+
+- `lifecycle_state_entity=project`: first validate that the current Issue belongs to a complete, approved Project-first package. A `project` lifecycle entity does not prove that Project artifacts exist: an escaped issue-only candidate also resolves to this fail-closed seam. Preserve the trusted candidate provenance read for the resolver call (parent relationship plus verified marker/label/approval presence) outside the five-field output; it may select fallback handling, but it never reclassifies the seam or adds a sixth field. When Project, PRD, Tech Spec/no-spec exception, and approval are present, execute the existing `start-checkpoint`, Delivery lifecycle move, approval UX, readiness check, implementation-start comment, and execution flow exactly as written above. Project-first branch remains unchanged. When those Project-first prerequisites are absent, park/restart through the deterministic fallback instead of running the Project lifecycle path.
+- `lifecycle_state_entity=issue`: this is the issue-only branch. Require `package_kind=issue-only`, `approval_status=approved-fresh`, a non-empty `behavioral_oracle`, and `risk_class` in `tiny|standard`. The resolver invocation is the start-time fingerprint verification: it must prove that the owner-approved fingerprint, marker fingerprint, caller-verified fingerprint, and freshly emitted whole-body fingerprint still agree. A resolver integrity error (`broken marker` or `stale marker`) is a hard `needs-human` stop and is never silently downgraded. A successful fail-closed `project-first` result from an issue-only candidate triggers the deterministic pre-code fallback in the `project` branch above; it does not enter this branch and is not treated as a complete Project-first package. Never infer issue-only from a parentless Issue or marker text.
+
+For a fresh issue-only branch:
+
+1. Treat the authenticated owner fingerprint approval as the explicit issue-only implementation-start approval; do not ask for a Project-first second approval or manufacture a new approval.
+2. Run `mono-check delivery` in issue-only mode against the resolved self-contained Issue, its review disposition, marker, label, owner approval, oracle, and fingerprint. Do not require a Project, PRD, or Tech Spec in this mode. Anything other than `PASS` stops before code as `needs-human` while the Issue is still non-startable.
+3. Move the **Issue** into its configured started/in-progress state only after the delivery check passes. Do not create or move a Project, because the Issue is the lifecycle carrier.
+4. Record the implementation-start comment on the Issue, naming the Issue-owned lifecycle, approved fingerprint, oracle acceptance IDs, selected engine, and planned verification.
+5. Execute only the one-PR behavior described by the Issue oracle and exit normally into `mono-preflight`.
+
+The issue-only lane never promotes an Issue into a Project in place. Before coding: park the Issue, supersede the marker approval, and restart Project-first when scope, topology, or risk leaves the lane. Follow the deterministic fallback in `references/issue-only-lane.md`; do not retrofit Project/PRD/Tech Spec onto the parked Issue.
+
 Implementation-start approval UX:
 
-This is the SECOND approval in the workflow. The first approval was package approval granted during `mono-handoff`. Implementation-start approval is a separate, more consequential gate: it authorises Project movement to Delivery, branch creation, and code writing.
+For Project-first this is the SECOND approval in the workflow. The first approval was package approval granted during `mono-handoff`. Implementation-start approval is a separate, more consequential gate: it authorises Project movement to Delivery, branch creation, and code writing. Issue-only uses the authenticated owner fingerprint approval rule in the context-seam branch above instead of this Project-specific prompt.
 
 Required prompt shape:
 
@@ -112,6 +133,7 @@ Rules:
 - Do not re-run product discovery unless Linear artifacts are missing or contradictory.
 - Do not start from local discovery artifacts alone.
 - Do not treat package approval as implementation-start approval unless that approval is explicit.
+- The issue-only owner approval is explicit implementation-start approval only when the resolver returns `package_kind=issue-only` and `approval_status=approved-fresh`; otherwise the normal Project-first approval rule above still applies.
 - Do not infer implementation-start approval from ambiguous phrases; the approval must name implementation or the Issue key(s) explicitly. Choosing a handoff package option that explicitly bundles implementation start (e.g. «это одновременно approval на старт кода») counts as explicit; do not re-ask after it.
 - Do not move the Project to Delivery before approved Issue(s) exist.
 - Do not pass delivery readiness with only PRD and Tech Spec.
