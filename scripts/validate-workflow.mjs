@@ -800,6 +800,36 @@ function validateIssueOnlyLaneBehavior() {
     assertIncludes("references/issue-only-lane.md", required, JSON.stringify(required));
   }
 
+  // MONO-17 / fixture 5 — parentless ship gate. The ship contract must consume
+  // the same five-field seam, keep a freshly approved issue-only package out of
+  // handoff, fail closed for an absent/stale marker, and preserve the mandatory
+  // standard+ pre-ship review.
+  for (const required of [
+    "Resolve the 5-field context seam before deciding whether to route to `mono-handoff`",
+    "`package_kind=issue-only` with `approval_status=approved-fresh`",
+    "do not route the parentless Issue to `mono-handoff`",
+    "An absent marker resolves `project-first` and routes the parentless candidate through the deterministic fallback to `mono-handoff`",
+    "A `stale marker` resolver error is a hard stop that routes back to `mono-handoff`",
+    "Project-first ship behavior remains unchanged",
+    "Required `mono-review pre-ship` runs for `standard`, `deep`, `risky`",
+  ]) {
+    assertIncludes("skills/mono-ship/SKILL.md", required, JSON.stringify(required));
+  }
+
+  // MONO-17 / fixture 6 — deploy live Issue oracle. Prepare must be seam-shaped,
+  // issue-only live QA must walk every Issue AC-ID, oracle drift must fail (never
+  // become a skip), and design acceptance is omitted when no prototype exists.
+  for (const required of [
+    "Resolve the 5-field context seam before package-specific prepare fetches",
+    "Project and PRD/Tech Spec as `n/a`",
+    "walk every `behavioral_oracle.acceptance_ids` entry in AC1..ACn order",
+    "Oracle drift is a failed live QA gate, never a skipped sweep",
+    "skip design acceptance when no approved prototype exists",
+    "Project-first deploy behavior remains unchanged",
+  ]) {
+    assertIncludes("skills/mono-deploy/SKILL.md", required, JSON.stringify(required));
+  }
+
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
   try {
     // MONO-19: the issue-only lane is a config opt-in. issue-only is granted only
@@ -895,6 +925,49 @@ function validateIssueOnlyLaneBehavior() {
     if (happy.approval_status !== "approved-fresh") {
       fail("resolve-issue-context issue-only approval must be approved-fresh when the fingerprint matches");
     }
+
+    // Fixture 5 runtime proof: the `happy` assertions above prove the valid
+    // marker + trusted approval route is issue-only/approved-fresh. This second
+    // invocation proves the same parentless candidate with no marker fails
+    // closed to project-first, completing the two ship routes without rechecking
+    // the already-proven happy object.
+    const parentlessShipAbsent = JSON.parse(
+      runNode([
+        "scripts/resolve-issue-context.mjs", "--issue", issuePath,
+        "--config", enableConfigPath, ...issueOnlyArgs,
+      ])
+    );
+    if (
+      parentlessShipAbsent.package_kind !== "project-first" ||
+      parentlessShipAbsent.approval_status !== "absent"
+    ) {
+      fail("parentless-ship absent marker fixture must route back through project-first fallback");
+    }
+
+    // Fixture 6 runtime proof: deploy's live checklist is exactly the Issue
+    // oracle AC-ID sequence. Editing an oracle criterion after approval makes
+    // the marker stale and is a failure, not an excusable not-run sweep.
+    const liveOracleChecklist = happy.behavioral_oracle?.acceptance_ids;
+    if (JSON.stringify(liveOracleChecklist) !== JSON.stringify(["AC1", "AC2"])) {
+      fail("live-oracle fixture checklist must equal the Issue behavioral_oracle AC-ID sequence");
+    }
+    const oracleDriftPath = path.join(dir, "issue-live-oracle-drift.md");
+    fs.writeFileSync(
+      oracleDriftPath,
+      fs.readFileSync(issuePath, "utf8").replace(
+        "AC2: missing marker yields project-first",
+        "AC2: drifted live behavior",
+      ),
+    );
+    expectCommandFailure(
+      "resolve-issue-context live-oracle drift fixture",
+      () =>
+        runNode([
+          "scripts/resolve-issue-context.mjs", "--issue", oracleDriftPath,
+          "--marker", markerPath, "--config", enableConfigPath, ...issueOnlyArgs,
+        ]),
+      "issue-only-lane: stale marker",
+    );
 
     // Brand migration compatibility: previously approved durable Linear
     // comments keep resolving. New writes use mono; reads accept the old marker.

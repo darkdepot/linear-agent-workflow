@@ -21,11 +21,12 @@ Read first:
 6. `references/execution-quality.md`
 7. `references/install.md`
 8. `references/human-friendly-output.md`
-9. `templates/deploy-output.md`
+9. `references/issue-only-lane.md`
+10. `templates/deploy-output.md`
 
 Workflow:
 
-1. `prepare`: fetch fresh Linear Issue, Project, PRD, Tech Spec, PR, and project config.
+1. `prepare`: fetch the fresh Linear Issue, current marker comment, verified labels, authenticated owner-approval fingerprint, PR, and project config. Resolve the 5-field context seam before package-specific prepare fetches, and run the installer-published resolver with `--emit-fingerprint` against the live Issue body. For `lifecycle_state_entity=project`, fetch the current Project, PRD, and Tech Spec exactly as before. For `lifecycle_state_entity=issue`, require `package_kind=issue-only`, `approval_status=approved-fresh`, a non-empty `behavioral_oracle`, and `risk_class` in `tiny|standard`; form the prepare context from the self-contained Issue and seam, recording Project and PRD/Tech Spec as `n/a`.
 2. `prepare`: read the latest `mono-ship green certificate` from Linear comments or resources. If no certificate exists, route to `mono-ship`.
 3. `prepare`: verify the PR URL/number and current PR head SHA match the certificate. If the head changed, route back to `mono-ship` for review stabilization.
 4. `prepare`: confirm required checks, Greptile/review state, unresolved review threads, and merge state are still compatible with the certificate.
@@ -60,8 +61,11 @@ Live QA gate:
 Deploy closeout for a user-facing change is not complete without a live QA pass on the real deployed artifact. The gate runs after deploy verification and before Linear closeout.
 
 - Precondition — version match: before any sweep, verify the deployed version matches the certified merged SHA (deployment metadata, version endpoint/marker, or Deploy workflow evidence). If the deployed content predates the certified version — wave-1 precedent: prod content predated the certified version during an environment migration — stop, treat delivery as unverified, and resolve the deploy before sweeping.
-- Functional smoke: on the real deployed app with real data, walk the PRD acceptance criteria of the shipped Issue and check the console for errors.
-- Design acceptance: compare the live result against the prototype approved at the UX checkpoint and repo design standards; judge autonomously against that approved baseline, never your own taste. When no UX-checkpoint prototype exists (non-UI or tiny work), functional smoke alone suffices.
+- Context freshness: immediately before the sweep, re-read the Issue body, marker comment, verified label, and authenticated owner approval, then resolve the seam and emit the live whole-body fingerprint again. For issue-only, the package must still resolve with the same fresh fingerprint and non-empty oracle used at prepare; never reconstruct or infer an oracle from prose outside the resolver.
+- Functional smoke — Project-first: Project-first deploy behavior remains unchanged. On the real deployed app with real data, walk the PRD acceptance criteria of the shipped Issue and check the console for errors.
+- Functional smoke — issue-only: build the live-QA checklist from the Issue seam and walk every `behavioral_oracle.acceptance_ids` entry in AC1..ACn order, using `behavioral_oracle.verify_steps` as the Issue-authored proof instructions. Record pass/fail evidence for every AC-ID; never substitute nonexistent PRD acceptance criteria or silently drop an ID.
+- Oracle drift: if the live resolver reports a broken/stale marker, no longer returns `package_kind=issue-only` plus `approval_status=approved-fresh`, or returns acceptance IDs/verify steps/fingerprint that differ from the prepared package, stop closeout. Oracle drift is a failed live QA gate, never a skipped sweep; the rule that a recorded reason may excuse only a sweep that did not run, never a failed one, applies to the Issue oracle unchanged.
+- Design acceptance: compare the live result against the prototype approved at the UX checkpoint and repo design standards; judge autonomously against that approved baseline, never your own taste. For either lane, skip design acceptance when no approved prototype exists; functional smoke alone suffices for live QA and is still mandatory unless an explicit permitted not-run reason is recorded.
 - Defect handling — fix-forward: on a live defect, file an immediate hotfix Issue out of queue and dispatch it. The new defect Issue does not block the original Issue's `Done`, but the shipped Issue moves to `Done` only after its own live pass is green. The hotfix Issue gets its own live verification when it ships. On every live defect, also consult the shipped Issue's preflight certificate for its autoreview route: a defect shipped by Luna-reviewed code triggers the standard-route re-tier review per `references/autoreview-routing.md`.
 - Flake adjudication: verify on clean state before calling something a defect (fresh session/reload, cleared transient state). A known-flaky failure outside the shipped diff becomes a separate tiny Issue, not a gate failure (wave-1 pattern).
 - Non-web and non-user-facing surfaces: the gate's spirit is "verify the delivered artifact live". For a skill-pack repo, `node scripts/install-local.mjs --check` green against the delivered version counts as the live pass. Map other surfaces the same way: exercise the delivered artifact where its consumers use it.
