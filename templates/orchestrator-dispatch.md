@@ -52,6 +52,7 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 - Issue-only marker: <current marker comment verbatim, or `n/a (project-first)`>
 - Verified label: <`issue-only`, or `n/a (project-first)`>
 - Scope fingerprint: <fresh whole-body SHA-256, or `n/a (project-first)`>
+- Issue-only config: <`enabled=true; ownerPrincipal=<stable Linear user ID>`, or `n/a (project-first)`>
 - Owner approval: <authenticated author plus approved fingerprint, or `n/a (project-first)`>
 - Context seam: <resolved 5-field JSON, or `n/a` when resolution is blocked>
 - Decisions so far: <user decisions and «Решил сам:» entries relevant to this
