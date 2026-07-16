@@ -21,6 +21,7 @@ Read first:
 8. `references/execution-quality.md`
 9. `references/lifecycle.md`
 10. `references/human-friendly-output.md`
+11. `references/issue-only-lane.md`
 
 When to use:
 
@@ -36,7 +37,7 @@ Do not use:
 
 Inputs to gather:
 
-- Fresh Linear Project, PRD, Tech Spec, and Issue context.
+- Fresh package context: Linear Project, PRD, Tech Spec, and Issue for Project-first; or the self-contained Issue, marker, verified label, authenticated owner approval, and resolver output for issue-only.
 - Current branch, worktree status, staged/unstaged changes, and commit state.
 - Local diff against the intended base branch.
 - Project config and repo validation commands from `AGENTS.md` or project docs.
@@ -46,7 +47,9 @@ Workflow:
 
 1. Confirm there is an approved Linear Issue and implementation is in Delivery or otherwise explicitly approved to proceed.
 2. Inspect git branch and worktree state.
-3. Compare the local diff against Project, PRD, Tech Spec, and Issue scope.
+3. Resolve the same 5-field issue context used at Delivery Start before comparing scope:
+   - For `lifecycle_state_entity=project`, require a complete approved Project-first package before comparing against Project, PRD, Tech Spec, and Issue scope exactly as before. Retain the trusted candidate provenance read for resolution (parent relationship plus verified marker/label/approval presence) outside the five-field seam. If the result came from a parentless issue-only candidate or the required Project artifacts are absent, do not treat it as a genuine Project-first package: mark the exit `drift-candidate` and trigger the deterministic fallback instead. Provenance selects fallback handling only; it does not reclassify the resolver result or expand the seam. The genuine Project-first branch remains unchanged.
+   - For `lifecycle_state_entity=issue`, require `package_kind=issue-only` and `approval_status=approved-fresh`, re-read the authenticated owner approval and current marker, and use the installer-published resolver with `--emit-fingerprint` to obtain the live whole-body `scope_fingerprint`. Then compare the diff against `behavioral_oracle` plus the live `scope_fingerprint`, not against a nonexistent Project, PRD, or Tech Spec. The oracle's acceptance IDs and verification steps define the allowed behavior; the fingerprint proves the exact approved Issue body is still current. A stale marker, mismatched fingerprint, missing approval, or unresolved oracle cannot produce `ready`.
 4. Run targeted tests/checks appropriate to the diff. If a check cannot run, report it under `Not checked`.
 5. Run the mandatory `autoreview` gate:
    - Invoke the installed `autoreview` skill/helper. Do not substitute Compound `ce-code-review`, built-in `/review`, ad hoc self-review, reviewer panels, or a hand-written summary for this gate.
@@ -56,6 +59,8 @@ Workflow:
      - Branch or PR work: run `<autoreview-helper> --mode branch --base <resolved-base-ref>`, using the actual PR/default base when known.
      - Already-landed or single-commit work: `<autoreview-helper> --mode commit --commit <ref>`.
    - Classify the final diff as `tiny`, `standard`, `deep`, or `risky` using the approved Linear package and `references/readiness-gates.md`. If the implementation is riskier than the recorded class, use the higher class and record the drift.
+   - For both lanes, preserve the existing risk-escalation rule: the higher of the approved package and final diff controls the autoreview route, and no issue-only rule weakens or replaces the canonical routing in `references/autoreview-routing.md`.
+   - For an issue-only package, a final diff reclassified to `deep` or `risky` is a `drift-candidate` and triggers the deterministic Project-first fallback in `references/issue-only-lane.md`. Run the mandatory autoreview using that higher risk class, but do not emit `ready` for an out-of-envelope issue-only package.
    - Select the model and effort only from the canonical table in `references/autoreview-routing.md`; do not restate or infer a second copy of the table in this skill.
    - Pass `--engine codex`, `--model`, and `--thinking` explicitly on every helper invocation. Never rely on external helper or environment defaults, never use GPT-5.5 as a normal route, and never silently fall back to another engine, model, or effort.
    - Treat helper exit 0 plus the clean result (`autoreview clean: no accepted/actionable findings reported`) as the only successful review outcome.
@@ -103,6 +108,7 @@ Rules:
 - Do not run or claim `mono-review pre-ship`; it remains owned by `mono-ship`.
 - Do not run or claim `mono-check pre-ship`; it remains owned by `mono-ship`.
 - If drift appears material but not yet confirmed, mark `drift-candidate` and let `mono-ship` own the formal pre-ship review/check decision.
+- The issue-only lane never promotes an Issue into a Project in place. After `ready`: freeze the independently shippable slice while its whole-body fingerprint still matches, keep expanded scope out of the current PR, and create a separate follow-up Project; otherwise cancel. Follow `references/issue-only-lane.md`.
 - If drift is already clearly outside the approved package, route back to `mono-handoff` or explicit atomic artifact repair before PR.
 - Do not cap the review loop at an arbitrary round count. The `autoreview` helper is the loop authority; preflight readiness requires its clean result.
 - Do not call Compound `ce-code-review` for this gate. It is not an acceptable replacement for `autoreview` inside `mono-preflight`.
