@@ -971,11 +971,27 @@ function validateIssueOnlyLaneBehavior() {
       fail("resolve-issue-context must fail closed to project-first when the caller-verified approval does not match the scope fingerprint");
     }
 
+    // Fixture 3 — missing-marker: a marker source without the marker line is
+    // fail-closed to project-first (never silently issue-only).
+    const emptyMarkerPath = path.join(dir, "empty.md");
+    fs.writeFileSync(emptyMarkerPath, "no marker here\n");
+    const missing = JSON.parse(
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", emptyMarkerPath])
+    );
+    if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
+
     // Fixture 4 — risk/scope escalation -> project-first. Start with the valid
     // standard package above, then model the two deterministic exit causes. A
     // risk reclassification to risky remains structurally valid but leaves the
     // Phase-1 envelope; a superseded approval parks pre-code scope growth. Both
     // must resolve through the same five-field seam as project-first.
+    const projectFirstSeam = {
+      package_kind: "project-first",
+      lifecycle_state_entity: "project",
+      behavioral_oracle: null,
+      risk_class: null,
+      approval_status: "absent",
+    };
     const riskEscalatedIssuePath = path.join(dir, "issue-risk-escalated.md");
     const riskEscalatedMarkerPath = path.join(dir, "marker-risk-escalated.md");
     const riskEscalatedBody = fullBody.replace(
@@ -995,13 +1011,7 @@ function validateIssueOnlyLaneBehavior() {
         "--label", "issue-only", "--approval-verified", riskEscalatedFingerprint,
       ])
     );
-    if (JSON.stringify(riskEscalated) !== JSON.stringify({
-      package_kind: "project-first",
-      lifecycle_state_entity: "project",
-      behavioral_oracle: null,
-      risk_class: null,
-      approval_status: "absent",
-    })) {
+    if (JSON.stringify(riskEscalated) !== JSON.stringify(projectFirstSeam)) {
       fail("resolve-issue-context risky-diff escalation must fall back to the exact project-first seam contract");
     }
 
@@ -1015,8 +1025,8 @@ function validateIssueOnlyLaneBehavior() {
         "--config", enableConfigPath, "--label", "issue-only", "--approval-verified", fingerprint,
       ])
     );
-    if (scopeEscalated.package_kind !== "project-first") {
-      fail("resolve-issue-context pre-code scope escalation with superseded approval must fall back to project-first");
+    if (JSON.stringify(scopeEscalated) !== JSON.stringify(projectFirstSeam)) {
+      fail("resolve-issue-context pre-code scope escalation with superseded approval must fall back to the exact project-first seam contract");
     }
 
     // Negative halves of the fixture pin stable integrity failures: pretending
@@ -1048,15 +1058,6 @@ function validateIssueOnlyLaneBehavior() {
       ]),
       "issue-only-lane: stale marker"
     );
-
-    // Fixture 3 — missing-marker: a marker source without the marker line is
-    // fail-closed to project-first (never silently issue-only).
-    const emptyMarkerPath = path.join(dir, "empty.md");
-    fs.writeFileSync(emptyMarkerPath, "no marker here\n");
-    const missing = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", emptyMarkerPath])
-    );
-    if (missing.package_kind !== "project-first") fail("resolve-issue-context missing marker must fail closed to project-first");
 
     // Guard: a prose MENTION of the marker line (not standalone) is not a marker —
     // an Issue documenting the convention still resolves to project-first, never a
