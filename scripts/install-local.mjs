@@ -8,7 +8,7 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-const UPSTREAM_REPO = "darkdepot/linear-agent-workflow";
+const UPSTREAM_REPO = "darkdepot/mono";
 const LOCKFILE_NAME = ".mono-agent-workflow.lock.json";
 const LEGACY_LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
 const GENERATED_MARKER = "Installed by Mono Agent Workflow";

@@ -6,6 +6,20 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-07-16
+
+Completes the public brand migration by renaming the canonical GitHub
+repository from `darkdepot/linear-agent-workflow` to `darkdepot/mono`.
+
+### Changed
+
+- The installer now records `darkdepot/mono` as the canonical upstream
+  repository in generated lockfiles.
+- README and install/versioning documentation now point to
+  `https://github.com/darkdepot/mono`.
+- Previous-brand repository markers remain supported only as migration input
+  for installer-owned `0.19.x` state.
+
 ## [0.20.0] - 2026-07-16
 
 Rebrands the workflow skill pack from `linear-*` to `mono-*` while keeping

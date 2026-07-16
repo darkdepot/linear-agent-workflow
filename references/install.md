@@ -7,9 +7,7 @@ checkers, or updater CI.
 ## Source Of Truth
 
 Canonical workflow truth stays in the current
-`darkdepot/linear-agent-workflow` repository checkout. The installed skill
-pack and public workflow brand are Mono; the external repository slug is
-renamed separately:
+[`darkdepot/mono`](https://github.com/darkdepot/mono) repository checkout:
 
 - `skills/mono-*/SKILL.md`
 - `references/*`
