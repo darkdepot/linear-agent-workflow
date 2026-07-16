@@ -21,12 +21,13 @@ Read first:
 8. `references/install.md`
 9. `references/ship-feedback-loop.md`
 10. `references/human-friendly-output.md`
-11. `templates/ship-output.md`
+11. `references/issue-only-lane.md`
+12. `templates/ship-output.md`
 
 Workflow:
 
-1. `prepare`: fetch the Linear Issue, Project, PRD, and Tech Spec.
-2. `prepare`: if there is no approved Linear Issue linked to the Project with current PRD/Tech Spec context, stop and route to `mono-handoff`.
+1. `prepare`: fetch the Linear Issue plus the trusted context-resolver inputs: current marker comment, verified labels, authenticated owner-approval fingerprint, and project config. Resolve the 5-field context seam before deciding whether to route to `mono-handoff`; also run the installer-published resolver with `--emit-fingerprint` against the live Issue body so freshness is checked from the authoritative whole-body SHA-256.
+2. `prepare`: branch on the resolved seam through the Parentless ship gate below. Project-first ship behavior remains unchanged: a genuine Project-first package still requires an approved Linear Issue linked to the Project with current PRD/Tech Spec context, otherwise stop and route to `mono-handoff`.
 3. `prepare`: read the latest `mono-preflight certificate` from Linear comments or resources. If no certificate exists, route to `mono-preflight` before continuing.
 4. `prepare`: classify scope/risk and compare branch or pending PR scope against Linear artifacts.
 5. `prepare`: run or report `mono-review pre-ship` when required by `references/readiness-gates.md`.
@@ -40,6 +41,14 @@ Workflow:
 13. `stabilize-review`: when a Review feedback workflow is configured, run the feedback loop in `references/ship-feedback-loop.md`.
 14. `green-certificate`: when the review loop is green, record a `mono-ship green certificate` in Linear comments or resources.
 15. Return the concise report in `templates/ship-output.md`.
+
+Parentless ship gate:
+
+- Preserve the trusted candidate provenance used for resolution — parent relationship plus verified marker/label/approval presence — outside the five-field seam. It can distinguish a genuine Project-first package from a parentless issue-only candidate, but it never reclassifies the resolver output or adds another seam field.
+- When a parentless candidate resolves `package_kind=issue-only` with `approval_status=approved-fresh`, require `lifecycle_state_entity=issue`, a non-empty `behavioral_oracle`, and `risk_class` in `tiny|standard`. Continue shipping from the self-contained Issue and its current preflight certificate; do not route the parentless Issue to `mono-handoff` merely because Project, PRD, and Tech Spec do not exist.
+- An absent marker resolves `project-first` and routes the parentless candidate through the deterministic fallback to `mono-handoff`; it must not be mistaken for a complete Project-first package. A `stale marker` resolver error is a hard stop that routes back to `mono-handoff` under the same no-promotion fallback contract. Never continue to formal pre-ship review/check or PR creation with absent, stale, broken, or mismatched issue-only approval state.
+- For issue-only, compare branch/PR scope with the live Issue `behavioral_oracle` and approved whole-body fingerprint recovered through the resolver, not with nonexistent Project artifacts. The issue-only lane never promotes the Issue into a Project in place; follow `references/issue-only-lane.md` for freeze/cancel and follow-up handling.
+- The review policy is lane-independent. Required `mono-review pre-ship` runs for `standard`, `deep`, `risky`, or materially drifted work before PR creation or green certification; only `tiny` remains advisory for the recorded reason.
 
 User-facing ship status UX:
 
@@ -143,7 +152,7 @@ Rules:
 - Sync material drift back to Linear before claiming completion.
 - Use Linear comments for user review acceptance, not Project Updates.
 - `mono-review` is report-only; `mono-ship` owns accepted pre-ship drift sync, `mono-check pre-ship`, PR/review state updates, documentation-before-green orchestration, and the green certificate.
-- Required `mono-review pre-ship` runs for standard, deep, risky, or materially drifted work before PR creation or green certification.
+- Required `mono-review pre-ship` runs for `standard`, `deep`, `risky`, or materially drifted work before PR creation or green certification.
 - `mono-preflight` owns local branch readiness and emits a certificate; it must not run or claim `mono-review pre-ship`, `mono-check pre-ship`, PR creation, deploy, or closeout.
 - Do not continue into formal pre-ship review/check or PR creation without a recoverable `mono-preflight certificate` in Linear comments or resources.
 - Stop with `needs-human` when required review returns unresolved decisions, missing artifacts, or blocking findings.
