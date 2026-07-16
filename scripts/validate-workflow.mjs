@@ -885,7 +885,7 @@ function validateIssueOnlyLaneBehavior() {
     assertIncludes(relativePath, required, JSON.stringify(required));
   }
   const activeProjectConfig = JSON.parse(read(".agents/mono-workflow.config.json"));
-  if (Object.hasOwn(activeProjectConfig, "issueOnlyLane")) {
+  if (activeProjectConfig.issueOnlyLane?.enabled === true) {
     fail("Slice 5 must not enable issueOnlyLane in the upstream repo's real project config");
   }
 
