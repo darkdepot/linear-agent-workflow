@@ -39,8 +39,8 @@ and on every PR.
   git diff --check
   node --check scripts/install-local.mjs
   node --check scripts/project-config.mjs
-  node --check scripts/lint-linear-artifacts.mjs
-  node scripts/lint-linear-artifacts.mjs
+  node --check scripts/lint-mono-artifacts.mjs
+  node scripts/lint-mono-artifacts.mjs
   node --check scripts/validate-workflow.mjs
   node scripts/validate-workflow.mjs
   node scripts/install-local.mjs --check
@@ -83,8 +83,8 @@ and on every PR.
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Syntax check a script | `node --check scripts/<name>.mjs` | exit 0, no output |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0, `Linear artifact regression smoke passed` |
-| Full workflow validation | `node scripts/validate-workflow.mjs` | exit 0, `Linear workflow validation passed (12 skills checked).` |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0, `Linear artifact regression smoke passed` |
+| Full workflow validation | `node scripts/validate-workflow.mjs` | exit 0, `Mono workflow validation passed (12 skills checked).` |
 | Whitespace check | `git diff --check` | exit 0, no output |
 
 ## Scope
@@ -98,7 +98,7 @@ and on every PR.
 
 **Out of scope** (do NOT touch, even though they look related):
 - `scripts/install-local.mjs`, `scripts/project-config.mjs`,
-  `scripts/lint-linear-artifacts.mjs`, `scripts/validate-workflow.mjs` —
+  `scripts/lint-mono-artifacts.mjs`, `scripts/validate-workflow.mjs` —
   verify.mjs orchestrates them; it must not change them.
 - `skills/`, `references/`, `templates/`, `examples/` — no workflow content
   changes in this plan.
@@ -127,10 +127,10 @@ Dependency-free Node ESM, matching the conventions above. Behavior:
   1. `git diff --check`
   2. `node --check scripts/install-local.mjs`
   3. `node --check scripts/project-config.mjs`
-  4. `node --check scripts/lint-linear-artifacts.mjs`
+  4. `node --check scripts/lint-mono-artifacts.mjs`
   5. `node --check scripts/validate-workflow.mjs`
   6. `node --check scripts/verify.mjs`
-  7. `node scripts/lint-linear-artifacts.mjs`
+  7. `node scripts/lint-mono-artifacts.mjs`
   8. `node scripts/validate-workflow.mjs`
 - Use `execFileSync` (never a shell string) with the repo root as `cwd`,
   capturing stdout/stderr. Print one line per step: `PASS <label>` or
@@ -214,7 +214,7 @@ Machine-checkable. ALL must hold:
 - [ ] `node scripts/verify.mjs --bogus-flag` exits 2
 - [ ] `.github/workflows/validate.yml` exists and contains `node scripts/verify.mjs`
 - [ ] `node scripts/validate-workflow.mjs` exits 0
-- [ ] `node scripts/lint-linear-artifacts.mjs` exits 0
+- [ ] `node scripts/lint-mono-artifacts.mjs` exits 0
 - [ ] `git status --porcelain` shows changes only in: `scripts/verify.mjs`, `.github/workflows/validate.yml`, `README.md`, `AGENTS.md`, `plans/README.md`
 - [ ] `plans/README.md` status row updated
 

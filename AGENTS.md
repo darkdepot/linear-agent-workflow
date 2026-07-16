@@ -2,7 +2,7 @@
 
 ## Mission
 
-This repo defines reusable Linear workflow skills for AI coding agents.
+This repo defines reusable Mono workflow skills for AI coding agents.
 
 The workflow helps agents move from raw idea to shipped PR while keeping Linear as the durable source of truth for Project, PRD, Tech Spec, and Issue.
 
@@ -18,14 +18,14 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Linear PRD = WHAT: problem, operator, workflow, scenarios, requirements, acceptance.
 - Linear Tech Spec = HOW: architecture, contracts, failure modes, validation.
 - Linear Issue = one-PR execution contract with context snapshot.
-- `linear-review` = report-only quality/risk review; no Linear mutations.
+- `mono-review` = report-only quality/risk review; no Linear mutations.
 - GitHub = branch, PR, review, CI, deploy, and merge history only.
-- `linear-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
-- `linear-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
-- `linear-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate with risk-routed GPT-5.6 model/effort, commit state, and preflight certificate.
-- `linear-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
-- `linear-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
-- `linear-orchestrate` = product-level control plane: worker dispatch, monitoring, decision routing, single Linear writer during orchestration; never does stage work itself.
+- `mono-handoff` = post-discovery bridge that persists Project, PRD, Tech Spec, and Issue slicing before implementation starts.
+- `mono-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
+- `mono-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate with risk-routed GPT-5.6 model/effort, commit state, and preflight certificate.
+- `mono-ship` = formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
+- `mono-deploy` = deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
+- `mono-orchestrate` = product-level control plane: worker dispatch, monitoring, decision routing, single Linear writer during orchestration; never does stage work itself.
 
 ## Skill Design Rules
 
@@ -34,14 +34,14 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Keep wrappers focused on orchestration.
 - Use `references/` and `templates/` through progressive disclosure.
 - Do not copy long templates into every skill.
-- Keep `linear-review` report-only and `linear-check` readiness-only.
-- Apply accepted review fixes through `linear-handoff`, explicit atomic skills, or `linear-ship`.
-- Keep `linear-handoff`, `linear-implement`, `linear-preflight`, `linear-ship`, and `linear-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
-- Keep `linear-orchestrate` control-plane only: it sequences stages and routes decisions but never absorbs stage ownership or implements.
-- Keep `autoreview` routing explicit and update-safe: `linear-preflight` owns the GPT-5.6 model/effort choice by risk class and never depends on the external helper's built-in default.
+- Keep `mono-review` report-only and `mono-check` readiness-only.
+- Apply accepted review fixes through `mono-handoff`, explicit atomic skills, or `mono-ship`.
+- Keep `mono-handoff`, `mono-implement`, `mono-preflight`, `mono-ship`, and `mono-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
+- Keep `mono-orchestrate` control-plane only: it sequences stages and routes decisions but never absorbs stage ownership or implements.
+- Keep `autoreview` routing explicit and update-safe: `mono-preflight` owns the GPT-5.6 model/effort choice by risk class and never depends on the external helper's built-in default.
 - Do not make Project Updates a required gate.
 - Record user review acceptance as a Linear comment.
-- Project repos must keep only `.agents/linear-workflow.config.json` for this workflow. Do not install, generate, or vendor `.agents/skills/linear-*`, `.claude/skills/linear-*`, workflow lockfiles, local checkers, or updater CI into project repos.
+- Project repos must keep only `.agents/mono-workflow.config.json` for this workflow. Do not install, generate, or vendor `.agents/skills/mono-*`, `.claude/skills/mono-*`, workflow lockfiles, local checkers, or updater CI into project repos.
 
 ## Validation
 

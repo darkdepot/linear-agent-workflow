@@ -2,7 +2,7 @@
 
 ## Idea
 
-Capture a strengthened idea without premature delivery artifacts. `linear-idea` is an intake gate, not a planning skill.
+Capture a strengthened idea without premature delivery artifacts. `mono-idea` is an intake gate, not a planning skill.
 
 Required:
 
@@ -19,7 +19,7 @@ Forbidden:
 - Implementation plan.
 - Code changes.
 
-Gate: `linear-check idea`.
+Gate: `mono-check idea`.
 
 ## Discovery
 
@@ -27,11 +27,11 @@ Use Plan Mode discovery and review skills to shape the idea.
 
 Required:
 
-- Project from `linear-idea`.
+- Project from `mono-idea`.
 - `/office-hours` or `/brainstorming` output when product shape is unclear.
 - `/plan-design-review` when UI or product surface needs design review.
 - `/plan-eng-review` when architecture is ready to review.
-- Handoff to `linear-handoff` instead of direct implementation approval.
+- Handoff to `mono-handoff` instead of direct implementation approval.
 - PRD and Tech Spec may exist while the Project remains in Discovery.
 
 Forbidden:
@@ -41,7 +41,7 @@ Forbidden:
 - Starting implementation from a raw discovery or review plan.
 - Moving the Project to Delivery merely because PRD or Tech Spec exists.
 
-Gate: `linear-check discovery`, then `linear-handoff`.
+Gate: `mono-check discovery`, then `mono-handoff`.
 
 ## Handoff
 
@@ -55,7 +55,7 @@ Required:
 - Current Tech Spec.
 - Package approval recorded as a Linear comment.
 - Risk classification and review-gate policy.
-- `linear-review handoff` when required by `references/readiness-gates.md`.
+- `mono-review handoff` when required by `references/readiness-gates.md`.
 - User approval recorded as a Linear comment.
 - Proposed Issue slicing.
 
@@ -65,9 +65,9 @@ Forbidden:
 - PR creation during handoff.
 - Implementation before approved Issue(s) exist.
 - Moving the Project to Delivery before approved execution Issue(s) exist.
-- Moving the Project to Delivery from `linear-handoff`; Delivery Start belongs to `linear-implement`.
+- Moving the Project to Delivery from `mono-handoff`; Delivery Start belongs to `mono-implement`.
 
-Gate: `linear-review handoff` when required or advisory, then `linear-check handoff`.
+Gate: `mono-review handoff` when required or advisory, then `mono-check handoff`.
 
 ## Issue
 
@@ -93,11 +93,11 @@ Forbidden:
 - Raw document URLs when Linear chips can represent the entities.
 - Code changes before the Issue is sufficient for another agent.
 
-Gate: `linear-check issue`.
+Gate: `mono-check issue`.
 
 ## Delivery
 
-Prepare and run implementation from approved Linear Issue(s). Delivery starts through `linear-implement` only after execution Issue(s) exist and implementation is ready to begin.
+Prepare and run implementation from approved Linear Issue(s). Delivery starts through `mono-implement` only after execution Issue(s) exist and implementation is ready to begin.
 
 Required:
 
@@ -108,8 +108,8 @@ Required:
 - Approval covers the current Issue set and explicitly allows implementation start.
 - Required review findings resolved, accepted, or explicitly deferred.
 - Implementation starts from the approved Issue(s), not from raw discovery output.
-- `linear-implement` verifies or obtains implementation-start approval, moves the Project to Delivery, runs or reports `linear-check delivery`, records the start comment, and selects the implementation engine.
-- `linear-implement` exits as `implemented-needs-preflight`, `blocked`, `scope-drift-needs-handoff`, or `needs-human`.
+- `mono-implement` verifies or obtains implementation-start approval, moves the Project to Delivery, runs or reports `mono-check delivery`, records the start comment, and selects the implementation engine.
+- `mono-implement` exits as `implemented-needs-preflight`, `blocked`, `scope-drift-needs-handoff`, or `needs-human`.
 - Prior operational learnings consulted through `gstack-learnings-search` when the helper is available, advisory only.
 
 Forbidden:
@@ -117,9 +117,9 @@ Forbidden:
 - Passing delivery readiness with only PRD and Tech Spec.
 - Moving to Delivery when package approval did not authorize implementation start.
 - Starting implementation from a raw `/office-hours`, `/brainstorming`, or review plan.
-- Creating PRs, running pre-ship review/check, deploy, or closeout from `linear-implement`.
+- Creating PRs, running pre-ship review/check, deploy, or closeout from `mono-implement`.
 
-Gate: `linear-check delivery`.
+Gate: `mono-check delivery`.
 
 ## Preflight
 
@@ -137,13 +137,13 @@ Required:
 
 Forbidden:
 
-- Running or claiming `linear-review pre-ship`.
-- Running or claiming `linear-check pre-ship`.
+- Running or claiming `mono-review pre-ship`.
+- Running or claiming `mono-check pre-ship`.
 - Creating the final PR.
 - Merging, deploying, or closing Linear Issues.
 - Replacing `autoreview` with Compound `ce-code-review`, built-in `/review`, ad hoc review, or a hand-written self-review.
 
-Gate: `linear-preflight` certificate, then `linear-ship`.
+Gate: `mono-preflight` certificate, then `mono-ship`.
 
 ## Ship
 
@@ -151,16 +151,16 @@ Create, document, and stabilize a PR without losing Linear source of truth.
 
 Required:
 
-- Read the `linear-preflight` certificate when present. If no recoverable certificate exists, route to `linear-preflight` before continuing.
-- `linear-review pre-ship` when risk is standard, deep, risky, or implementation materially drifted from Linear artifacts.
-- `linear-check pre-ship`.
+- Read the `mono-preflight` certificate when present. If no recoverable certificate exists, route to `mono-preflight` before continuing.
+- `mono-review pre-ship` when risk is standard, deep, risky, or implementation materially drifted from Linear artifacts.
+- `mono-check pre-ship`.
 - Delegate PR creation to configured ship workflow.
 - Issue moves to `In Review` after PR creation.
 - Run the configured Documentation workflow before final green when configured.
 - If documentation changes the PR head, rerun review/check stabilization on the new head.
 - If configured, delegate review feedback stabilization to the configured resolver.
 - Poll checks, GitHub review state, unresolved threads, and Greptile every 10 minutes until strict green or terminal stop.
-- Record `linear-ship green certificate` with PR URL, head SHA, CI, Greptile, unresolved feedback count, merge state, checked/not-checked boundary, and next `linear-deploy`.
+- Record `mono-ship green certificate` with PR URL, head SHA, CI, Greptile, unresolved feedback count, merge state, checked/not-checked boundary, and next `mono-deploy`.
 
 Forbidden:
 
@@ -169,7 +169,7 @@ Forbidden:
 - Running post-ship check.
 - Recording deploy evidence or operational learnings.
 
-Gate: `linear-ship green certificate`, then `linear-deploy`.
+Gate: `mono-ship green certificate`, then `mono-deploy`.
 
 ## Deploy
 
@@ -177,7 +177,7 @@ Merge/deploy a green PR and close out Linear only after delivery evidence exists
 
 Required:
 
-- Read the latest `linear-ship green certificate`.
+- Read the latest `mono-ship green certificate`.
 - Verify current PR head SHA still matches the certificate head SHA.
 - Confirm the configured `Deploy workflow` exists and is not `None`.
 - Delegate merge/deploy to the configured Deploy workflow.
@@ -186,7 +186,7 @@ Required:
 - Run the live QA sweep on the deployed app for user-facing changes: functional smoke over the shipped Issue's PRD acceptance criteria plus design acceptance against the approved UX-checkpoint prototype (functional smoke alone when no prototype was approved).
 - Move a user-facing Issue to `Done` only after its own live pass is green.
 - On a live defect, file an immediate hotfix Issue out of queue and dispatch it (fix-forward); the defect Issue does not block the original Issue's `Done`.
-- Run or report `linear-check post-ship` after deploy evidence is known.
+- Run or report `mono-check post-ship` after deploy evidence is known.
 - Move the Linear Issue to `Done` only after verified deploy or an explicit accepted delivery policy says merge is delivery for this repo.
 - Consult prior operational learnings through `gstack-learnings-search` before delegating merge/deploy, advisory only.
 - Record durable operational learnings through `gstack-learnings-log` when they would save future time.
@@ -201,15 +201,15 @@ Forbidden:
 
 ## Orchestration
 
-Optional mode: `linear-orchestrate` runs one control-plane session per
+Optional mode: `mono-orchestrate` runs one control-plane session per
 product and sequences the stages above through delegated workers.
 
 Required:
 
 - Gate ordering of this lifecycle preserved verbatim.
-- `linear-idea`, discovery, `linear-handoff`, and `linear-deploy` run in the
-  orchestrator session; `linear-implement`, `linear-preflight`, and
-  `linear-ship` run in one worker session per Issue.
+- `mono-idea`, discovery, `mono-handoff`, and `mono-deploy` run in the
+  orchestrator session; `mono-implement`, `mono-preflight`, and
+  `mono-ship` run in one worker session per Issue.
 - All Linear mutations during orchestration flow through the orchestrator
   (single writer); workers never write to Linear and queue stage-required
   mutations in mailbox reports.
@@ -230,8 +230,8 @@ Forbidden:
 - Skipping or weakening any gate above because an orchestrator is present.
 - The orchestrator performing implement/preflight/ship work itself.
 - Workers orchestrating: spawning sub-workers or managing other sessions.
-- Moving stage ownership: Delivery Start stays with `linear-implement`, PR
-  lifecycle with `linear-ship`, merge/deploy and closeout with
-  `linear-deploy`.
+- Moving stage ownership: Delivery Start stays with `mono-implement`, PR
+  lifecycle with `mono-ship`, merge/deploy and closeout with
+  `mono-deploy`.
 - Relaying discovery-skill question streams to the user one by one, or
   presenting an unreviewed first-draft prototype at the UX checkpoint.

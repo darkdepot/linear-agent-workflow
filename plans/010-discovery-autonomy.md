@@ -7,7 +7,7 @@
 > in `plans/README.md` — unless a reviewer dispatched you and told you they
 > maintain the index.
 >
-> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- references/questioning.md skills/linear-handoff/SKILL.md skills/linear-idea/SKILL.md README.md scripts/validate-workflow.mjs`
+> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- references/questioning.md skills/mono-handoff/SKILL.md skills/mono-idea/SKILL.md README.md scripts/validate-workflow.mjs`
 > Plans 005-008 may have landed before this one — their diffs to these files
 > are expected; locate anchors by content search, not line numbers. Treat only
 > mismatches in the specific excerpts below as STOP conditions.
@@ -58,25 +58,25 @@ Excerpts verified at commit `889742b` (line numbers may shift after plans
   - Do not ask the user to choose routine implementation details such as file layout, helper naming, or parser mechanics.
   ```
 
-  (Plan 007 adds a `linear-deploy` stage line — keep it.)
+  (Plan 007 adds a `mono-deploy` stage line — keep it.)
 
-- `skills/linear-handoff/SKILL.md:66-78` — "Draft package approval UX" lists
+- `skills/mono-handoff/SKILL.md:66-78` — "Draft package approval UX" lists
   required package-map elements (mutation boundary, Project brief shape, PRD
   decisions, Tech Spec decisions, Issue slicing, review gate, decision
   options). There is no «Решил сам» ledger element. Line 160 requires
   surfacing "Remaining assumptions, if any" — adjacent but not the same: a
   ledger of decisions TAKEN, with reasons, is what makes autonomy auditable.
-- `skills/linear-handoff/SKILL.md:80-111` — the draft package example
+- `skills/mono-handoff/SKILL.md:80-111` — the draft package example
   («Готов handoff draft…») shows Project/PRD/Tech Spec/Issue/Review
   gate/Validation blocks and the «Что делаем?» options.
-- `skills/linear-idea/SKILL.md:21-32` — workflow step 3:
+- `skills/mono-idea/SKILL.md:21-32` — workflow step 3:
   `Ask 2-4 high-leverage AskQuestion-style questions.` No
   prefer-assumptions-over-questions rule.
 - `README.md:178-194` — "Principles" bullet list (additive edits are safe;
   validator pins only `Review/check split` and `Delivery ladder` among these).
 - Validator: `validateDocsAndExamples` in `scripts/validate-workflow.mjs` —
   plan 007 adds a `references/questioning.md` entry; extend it. Handoff pins
-  live in `validateAntiPatterns` (search for `linear-handoff must`); all
+  live in `validateAntiPatterns` (search for `mono-handoff must`); all
   additive.
 - The `/design-html` skill is a runtime-provided gstack skill (like
   `autoreview` in preflight) — the workflow references it by name and degrades
@@ -87,23 +87,23 @@ Excerpts verified at commit `889742b` (line numbers may shift after plans
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Full validation | `node scripts/validate-workflow.mjs` | exit 0, `…(12 skills checked).` |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 | One-command verify (if plan 001 landed) | `node scripts/verify.mjs` | exit 0 |
 
 ## Scope
 
 **In scope**:
 - `references/questioning.md`
-- `skills/linear-handoff/SKILL.md`
-- `skills/linear-idea/SKILL.md`
+- `skills/mono-handoff/SKILL.md`
+- `skills/mono-idea/SKILL.md`
 - `README.md` (one additive Principles bullet)
 - `scripts/validate-workflow.mjs` (additive pins)
 - `plans/README.md` (status row — skip if reviewer maintains the index)
 
 **Out of scope**:
-- `skills/linear-implement/SKILL.md` — its question boundary ("Keep product
+- `skills/mono-implement/SKILL.md` — its question boundary ("Keep product
   discovery closed…") is already correct.
-- `skills/linear-review/SKILL.md`, `linear-check` — report-only, never ask.
+- `skills/mono-review/SKILL.md`, `mono-check` — report-only, never ask.
 - Templates and certificates (plans 005/006/008 own them).
 - Vendoring or wrapping `/design-html` itself.
 
@@ -156,7 +156,7 @@ Always ask (one at a time, options + recommendation):
 
 ### Step 2: «Решил сам» ledger in the handoff package approval
 
-In `skills/linear-handoff/SKILL.md`:
+In `skills/mono-handoff/SKILL.md`:
 
 a. In "Draft package approval UX" required elements, add after the PRD/Tech
    Spec items:
@@ -177,15 +177,15 @@ c. In "Rules:", add:
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
 
-### Step 3: Prefer assumptions over questions in linear-idea
+### Step 3: Prefer assumptions over questions in mono-idea
 
-In `skills/linear-idea/SKILL.md`, replace workflow step 3
+In `skills/mono-idea/SKILL.md`, replace workflow step 3
 (`Ask 2-4 high-leverage AskQuestion-style questions.`) with:
 `3. Ask 1-3 high-leverage AskQuestion-style questions — only those that shape direction: outcome, boundary, or audience. Resolve everything else yourself and record it as explicit assumptions in the strengthened brief, so the user corrects by reading, not by interrogation.`
 Keep step 4 (options + recommended + reason) unchanged.
 
 **Verify**: `node scripts/validate-workflow.mjs` → exit 0.
-**Verify**: `grep -c "Ask 2-4" skills/linear-idea/SKILL.md` → 0.
+**Verify**: `grep -c "Ask 2-4" skills/mono-idea/SKILL.md` → 0.
 
 ### Step 4: README principle + validator pins
 
@@ -204,7 +204,7 @@ b. `scripts/validate-workflow.mjs`:
 
 ### Step 5: Full suite
 
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0;
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0;
 `node scripts/validate-workflow.mjs` → exit 0; if plan 001 landed:
 `node scripts/verify.mjs` → exit 0.
 
@@ -218,10 +218,10 @@ green.
 ## Done criteria
 
 - [ ] `grep -n "## Autonomy Defaults" references/questioning.md` → 1 hit; the section contains the four always-ask bullets and the `/design-html` rule
-- [ ] `grep -c "Решил сам" skills/linear-handoff/SKILL.md` ≥ 3 (UX element, example block, rule)
-- [ ] linear-idea step 3 prefers assumptions; `grep -c "Ask 2-4" skills/linear-idea/SKILL.md` → 0
+- [ ] `grep -c "Решил сам" skills/mono-handoff/SKILL.md` ≥ 3 (UX element, example block, rule)
+- [ ] mono-idea step 3 prefers assumptions; `grep -c "Ask 2-4" skills/mono-idea/SKILL.md` → 0
 - [ ] README has the autonomy principle bullet
-- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-linear-artifacts.mjs` exits 0
+- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-mono-artifacts.mjs` exits 0
 - [ ] `git status --porcelain` shows changes only in in-scope files
 - [ ] plans/README.md row updated (or reviewer maintains index)
 
@@ -246,6 +246,6 @@ green.
 - Reviewer should scrutinize: the always-ask list wording — scope/slicing/risk/
   design must remain unambiguous user property; nothing in the new text may
   imply the agent can decide design silently.
-- Deferred: an analogous autonomy pass for `linear-ship` review-feedback
+- Deferred: an analogous autonomy pass for `mono-ship` review-feedback
   decisions (which findings to accept without asking) — needs dogfood data
   first.

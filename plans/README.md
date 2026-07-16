@@ -25,8 +25,8 @@ maintainer can reorder, reject, or request plans for backlog items below.
 | 008 | Linear exit traces + tiny output profile + boundary delta | P2 | M | 005 | DONE (f681f92) |
 | 009 | Linear docs papercuts: PRD overlap, calque headings, ID slugs, AFK gloss | P2 | M | — | DONE (d835ed9) |
 | 010 | Discovery autonomy: decide-and-surface, always-ask list, /design-html control | P1 | M | 007 | DONE (6ef084c, 2ed6171) |
-| 011 | linear-orchestrate control-plane skill | P1 | M | — | DONE (48b1da6) |
-| 012 | codex-cli worker transport for linear-orchestrate | P1 | M | 011 | DONE (8cbc8c4) |
+| 011 | mono-orchestrate control-plane skill | P1 | M | — | DONE (48b1da6) |
+| 012 | codex-cli worker transport for mono-orchestrate | P1 | M | 011 | DONE (8cbc8c4) |
 | 013 | Director Discovery: orchestrator answers discovery itself, checkpoint model, UX-чекпоинт brief | P1 | M | 010, 011, 012 | DONE (9a81e8c) |
 | 014 | Second Voice: independent reviewer agent interrogates discovery, orchestrator answers, disagreements route to checkpoints | P1 | S-M | 013 | DONE (1fe86af) |
 
@@ -42,8 +42,8 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 006 soft-depends on 005 (both edit `references/human-friendly-output.md`);
   008 reuses 005's dual-layer comment convention. Recommended human-UX order:
   005 → 006 → 007 → 008 → 009.
-- 003, 005, 007, 008 all touch `skills/linear-implement/SKILL.md` and
-  `skills/linear-deploy/SKILL.md` in different sections — land sequentially,
+- 003, 005, 007, 008 all touch `skills/mono-implement/SKILL.md` and
+  `skills/mono-deploy/SKILL.md` in different sections — land sequentially,
   not in parallel worktrees, to avoid merge conflicts.
 - Every plan that edits skill/template wording must update
   `scripts/validate-workflow.mjs` pins in the same change — each plan lists
@@ -52,7 +52,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 ## Backlog (vetted findings, not planned by default)
 
 - **Installed-pack staleness visibility** (direction, MED): the install
-  lockfile (`~/.codex/skills/.linear-agent-workflow.lock.json`) is written by
+  lockfile (`~/.codex/skills/.mono-agent-workflow.lock.json`) is written by
   the installer and read only by `install-local --check`; no workflow stage
   reports which pack version it is running, so a stale local install fails
   silently until behavior drifts. Cheap option: stamp
@@ -81,7 +81,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   branch; lock properties are only accessed when `lock` is non-null.
 - **`artifactRoots`/`linearTeam` config fields unused** (subagent
   DIRECTION-02): false — `references/artifact-intake.md:15,24` and
-  `skills/linear-handoff/SKILL.md:148` consume artifact roots; installed
+  `skills/mono-handoff/SKILL.md:148` consume artifact roots; installed
   skills are instructed to read the config (incl. Linear team) via the note
   injected by `scripts/install-local.mjs:135`.
 - **"No test harness for the scripts"** (subagent TESTS-02, as stated):
@@ -103,7 +103,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - **Add CONTRIBUTING.md** (subagent DX-04): not worth doing — `AGENTS.md` is
   this repo's contributor contract; a second document is a new drift surface.
   Fold any genuinely missing guidance into `AGENTS.md` instead.
-- **Split `linear-handoff/SKILL.md` (261 lines)** (subagent DEBT-04): not now —
+- **Split `mono-handoff/SKILL.md` (261 lines)** (subagent DEBT-04): not now —
   the file is loaded on-demand as one unit and 261 lines is well within what
   an agent navigates reliably; splitting adds an indirection hop at install
   time. Revisit if it grows past ~400 lines.
@@ -130,7 +130,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   unblock, deliberately not an options menu).
 - **Remove «Ревью-гейт» from the Issue body** (F2): by-design — the validator
   deliberately requires it in issue.md and bans it in project.md; the record
-  is load-bearing state for linear-check issue/delivery modes.
+  is load-bearing state for mono-check issue/delivery modes.
 - **Two-tier human/agent Issue restructure** (F3): by-design — the Issue is
   the zero-context agent's execution contract; the operator's approval surface
   is the handoff package map. Residual kernel (AFK/HITL Russian gloss) went
@@ -141,7 +141,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   contract's spirit and the skill's own polished completion example omits it.
   Maintainer design decision needed: humanize the chat layer (move the
   structured record to a Linear comment; requires syncing
-  linear-handoff:211 + artifact-intake.md Output Shape + validator pins
+  mono-handoff:211 + artifact-intake.md Output Shape + validator pins
   482/472-480) or add the block to the example and accept the telemetry.
   Not planned until decided.
 - **Reclassify tooling needs-human triggers as blocked** (IX-05):
@@ -150,7 +150,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - **Declined/on-hold terminal status** (IX-06): duplicate-of-contract — a
   declined start/deploy leaves a durable resumable state; the contract's
   Outcome First rule plus mandatory final fields already cover the disclosure.
-- **linear-idea mini-grill pacing restate** (IX-07): duplicate-of-contract —
+- **mono-idea mini-grill pacing restate** (IX-07): duplicate-of-contract —
   questioning.md (mandatory read) already holds the one-at-a-time rule and the
   2-4 budget; restating it would duplicate the shared policy.
 - **Standing «Статус работы» Project comment** (F7): downgraded by verifier —

@@ -36,32 +36,32 @@ one-file edit and shortens every skill's preamble.
 ## Current state
 
 - Full "Read first" inventory at commit `889742b` (entry counts):
-  linear-handoff 15, linear-implement 12, linear-ship 11, linear-deploy 9,
-  linear-preflight 9, linear-review 8, linear-check 7, linear-idea 6,
-  linear-issue 6, linear-prd 6, linear-spec 6, linear-project 5.
+  mono-handoff 15, mono-implement 12, mono-ship 11, mono-deploy 9,
+  mono-preflight 9, mono-review 8, mono-check 7, mono-idea 6,
+  mono-issue 6, mono-prd 6, mono-spec 6, mono-project 5.
 
 - Core membership matrix (which skills currently list each core doc):
 
   | Doc | Listed by |
   |-----|-----------|
   | `AGENTS.md` | all 12 |
-  | `references/artifact-rules.md` | all except linear-idea |
-  | `references/readiness-gates.md` | all except linear-idea, linear-prd |
-  | `references/execution-quality.md` | all except linear-idea, linear-project |
+  | `references/artifact-rules.md` | all except mono-idea |
+  | `references/readiness-gates.md` | all except mono-idea, mono-prd |
+  | `references/execution-quality.md` | all except mono-idea, mono-project |
   | `references/human-friendly-output.md` | check, deploy, handoff, idea, implement, preflight, review, ship |
 
-- Example of the current shape — `skills/linear-handoff/SKILL.md:12-28`:
+- Example of the current shape — `skills/mono-handoff/SKILL.md:12-28`:
 
   ```
   Read first:
 
   1. `AGENTS.md`
-  2. `skills/linear-project/SKILL.md`
-  3. `skills/linear-prd/SKILL.md`
-  4. `skills/linear-spec/SKILL.md`
-  5. `skills/linear-issue/SKILL.md`
-  6. `skills/linear-review/SKILL.md`
-  7. `skills/linear-check/SKILL.md`
+  2. `skills/mono-project/SKILL.md`
+  3. `skills/mono-prd/SKILL.md`
+  4. `skills/mono-spec/SKILL.md`
+  5. `skills/mono-issue/SKILL.md`
+  6. `skills/mono-review/SKILL.md`
+  7. `skills/mono-check/SKILL.md`
   8. `references/artifact-rules.md`
   9. `references/artifact-quality.md`
   10. `references/readiness-gates.md`
@@ -79,17 +79,17 @@ one-file edit and shortens every skill's preamble.
   - `validateReadFirstPath` (lines 87-94) accepts `AGENTS.md` and existing
     paths under `skills/`, `references/`, `templates/` — a new
     `references/core-reading.md` is valid once the file exists.
-  - `validateAntiPatterns` line 469 requires `linear-handoff` to contain the
+  - `validateAntiPatterns` line 469 requires `mono-handoff` to contain the
     substring `references/artifact-intake.md` — keep that entry in handoff's
     list (it is skill-specific anyway).
   - `validateSkills` line 163 fails any SKILL.md under 900 characters — the
     trimmed lists keep every skill far above that; no risk.
 - Installer interplay (`scripts/install-local.mjs:126`): peer-skill paths
-  (`skills/linear-*/SKILL.md`) are rewritten to `../linear-*/SKILL.md` at
+  (`skills/mono-*/SKILL.md`) are rewritten to `../mono-*/SKILL.md` at
   install time, and the whole `references/` directory is copied into each
   installed skill dir — so `references/core-reading.md` resolves correctly in
   both the repo and installed layouts with no extra work.
-- `scripts/lint-linear-artifacts.mjs` pins nothing about Read-first lists.
+- `scripts/lint-mono-artifacts.mjs` pins nothing about Read-first lists.
 - Language convention: the new reference is repo instruction text → English
   (`AGENTS.md:9-12`).
 
@@ -97,14 +97,14 @@ one-file edit and shortens every skill's preamble.
 
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
-| Full validation | `node scripts/validate-workflow.mjs` | exit 0, `Linear workflow validation passed (12 skills checked).` |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Full validation | `node scripts/validate-workflow.mjs` | exit 0, `Mono workflow validation passed (12 skills checked).` |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 
 ## Scope
 
 **In scope** (the only files you should modify or create):
 - `references/core-reading.md` (create)
-- All 12 `skills/linear-*/SKILL.md` ("Read first" sections only)
+- All 12 `skills/mono-*/SKILL.md` ("Read first" sections only)
 - `README.md` (Documentation Map list — add the new reference, one line)
 - `plans/README.md` (status row)
 
@@ -132,11 +132,11 @@ applicability note for the exceptions:
 
 - `AGENTS.md` — mission, source-of-truth map, skill design rules. All skills.
 - `references/artifact-rules.md` — source-of-truth and Linear-facing artifact
-  rules. All skills except `linear-idea` (no durable artifacts yet at intake).
+  rules. All skills except `mono-idea` (no durable artifacts yet at intake).
 - `references/readiness-gates.md` — risk classes, review policy, owner
-  boundaries. All skills except `linear-idea` and `linear-prd`.
+  boundaries. All skills except `mono-idea` and `mono-prd`.
 - `references/execution-quality.md` — PRD/Issue/bug-perf/architecture
-  guardrails. All skills except `linear-idea` and `linear-project`.
+  guardrails. All skills except `mono-idea` and `mono-project`.
 - `references/human-friendly-output.md` — user-facing status and
   confidence-boundary wording. Skills that talk to the user about state:
   check, deploy, handoff, idea, implement, preflight, review, ship.
@@ -146,22 +146,22 @@ applicability note for the exceptions:
 
 ### Step 2: Rewrite the 12 "Read first" lists
 
-For every `skills/linear-*/SKILL.md`: entry 1 becomes
+For every `skills/mono-*/SKILL.md`: entry 1 becomes
 `` `references/core-reading.md` ``, the five core docs are removed from the
 list, and all remaining skill-specific entries keep their current relative
 order, renumbered. Keep the numbered + backticked format exactly (the parser
-requires it). Example — linear-handoff's list becomes:
+requires it). Example — mono-handoff's list becomes:
 
 ```
 Read first:
 
 1. `references/core-reading.md`
-2. `skills/linear-project/SKILL.md`
-3. `skills/linear-prd/SKILL.md`
-4. `skills/linear-spec/SKILL.md`
-5. `skills/linear-issue/SKILL.md`
-6. `skills/linear-review/SKILL.md`
-7. `skills/linear-check/SKILL.md`
+2. `skills/mono-project/SKILL.md`
+3. `skills/mono-prd/SKILL.md`
+4. `skills/mono-spec/SKILL.md`
+5. `skills/mono-issue/SKILL.md`
+6. `skills/mono-review/SKILL.md`
+7. `skills/mono-check/SKILL.md`
 8. `references/artifact-quality.md`
 9. `references/artifact-intake.md`
 10. `references/questioning.md`
@@ -185,7 +185,7 @@ Documentation Map list (`README.md:152-176`), matching the existing
 
 ### Step 4: Full suite + duplication sweep
 
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0.
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0.
 
 **Verify**: no skill still lists a core doc in its Read first section:
 
@@ -211,7 +211,7 @@ Machine-checkable. ALL must hold:
 - [ ] `grep -l "core-reading.md" skills/*/SKILL.md | wc -l` → 12
 - [ ] The Step 4 duplication sweep returns no matches
 - [ ] `node scripts/validate-workflow.mjs` exits 0
-- [ ] `node scripts/lint-linear-artifacts.mjs` exits 0
+- [ ] `node scripts/lint-mono-artifacts.mjs` exits 0
 - [ ] `git status --porcelain` shows changes only in: `references/core-reading.md`, the 12 SKILL.md files, `README.md`, `plans/README.md`
 - [ ] `plans/README.md` status row updated
 

@@ -36,7 +36,7 @@ line — the deliberately broken pin.
   (`After the authorized final resolver cycle`,
   `get deferral replies, filed as a follow-up issue when warranted`,
   `proceeds to terminal status`, `always escalate instead`).
-- `skills/linear-ship/SKILL.md`, pointer rule
+- `skills/mono-ship/SKILL.md`, pointer rule
   (`Review Bot Configuration Check, Finding Dedup with its fail-safe,
   Published Replies, and Non-Blocking Convergence rules in
   `` `references/ship-feedback-loop.md` ``,
@@ -48,7 +48,7 @@ green-certificate precondition, and dedup cannot exist without its
 fail-safe clause. No existing pin was weakened; the pre-existing
 fallback pins on `references/ship-feedback-loop.md`
 (`Poll interval: 10 minutes`, `Documentation workflow`,
-`linear-ship green certificate`, `Next: linear-deploy`) stayed
+`mono-ship green certificate`, `Next: mono-deploy`) stayed
 byte-intact and green throughout.
 
 ## Protocol Runs
@@ -86,8 +86,8 @@ byte-intact and green throughout.
    final resolver cycle"` (exit 1). Restored → green.
 7. `the Published Replies submitted-check is an additional
    green-certificate precondition` replaced with `the Published Replies
-   submitted-check is advisory` in `skills/linear-ship/SKILL.md` →
-   `- skills/linear-ship/SKILL.md missing "the Published Replies
+   submitted-check is advisory` in `skills/mono-ship/SKILL.md` →
+   `- skills/mono-ship/SKILL.md missing "the Published Replies
    submitted-check is an additional green-certificate precondition"`
    (exit 1). Restored → green.
 

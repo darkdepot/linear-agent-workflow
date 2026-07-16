@@ -24,12 +24,12 @@ Built in a temp directory by a throwaway script (aged mtimes via
 
 | Log / registry entry | Setup | Expected |
 | --- | --- | --- |
-| `MONO-2-linear-implement-a1.jsonl` | valid JSONL, mtime -60s | silent |
-| `MONO-3-linear-implement-a1.jsonl` | valid JSONL, mtime -200s | `stall` |
-| `MONO-4-linear-ship-a1.jsonl` | first line `Reading additional input from stdin...`, mtime **now** | `spawn-fail` immediately |
-| `MONO-5-linear-implement-a2.jsonl` | valid JSONL, mtime -500s | `dead` (over 2x stall) |
-| `MONO-6-linear-preflight-a1.jsonl` | valid JSONL, mtime -300s, plus a fresher `reports/MONO-6-linear-preflight.json` | silent (normal exit) |
-| `MONO-8-linear-implement-a1.jsonl` | valid JSONL, mtime -150s, registry `pid: 999999` (nonexistent) | `dead` (writer pid gone) |
+| `MONO-2-mono-implement-a1.jsonl` | valid JSONL, mtime -60s | silent |
+| `MONO-3-mono-implement-a1.jsonl` | valid JSONL, mtime -200s | `stall` |
+| `MONO-4-mono-ship-a1.jsonl` | first line `Reading additional input from stdin...`, mtime **now** | `spawn-fail` immediately |
+| `MONO-5-mono-implement-a2.jsonl` | valid JSONL, mtime -500s | `dead` (over 2x stall) |
+| `MONO-6-mono-preflight-a1.jsonl` | valid JSONL, mtime -300s, plus a fresher `reports/MONO-6-mono-preflight.json` | silent (normal exit) |
+| `MONO-8-mono-implement-a1.jsonl` | valid JSONL, mtime -150s, registry `pid: 999999` (nonexistent) | `dead` (writer pid gone) |
 | `workers.json` entry `MONO-7` | `log: null` | `dead` (no live log) |
 
 ## Run 1: Single Scan, Default Thresholds
@@ -41,11 +41,11 @@ node scripts/watch-workers.mjs --root <fixture-root> --once
 Output (stdout, verbatim):
 
 ```text
-2026-07-10T14:57:27.608Z EVENT:stall MONO-3 log MONO-3-linear-implement-a1.jsonl last event 200s ago (stall threshold 120s)
-2026-07-10T14:57:27.608Z EVENT:spawn-fail MONO-4 first log line is not JSON: "Reading additional input from stdin..." (MONO-4-linear-ship-a1.jsonl)
-2026-07-10T14:57:27.608Z EVENT:dead MONO-5 log MONO-5-linear-implement-a2.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
-2026-07-10T14:57:27.608Z EVENT:dead MONO-8 log MONO-8-linear-implement-a1.jsonl silent for 150s and writer pid 999999 is gone
-2026-07-10T14:57:27.608Z EVENT:dead MONO-7 workers.json entry (stage linear-implement) has no live log file
+2026-07-10T14:57:27.608Z EVENT:stall MONO-3 log MONO-3-mono-implement-a1.jsonl last event 200s ago (stall threshold 120s)
+2026-07-10T14:57:27.608Z EVENT:spawn-fail MONO-4 first log line is not JSON: "Reading additional input from stdin..." (MONO-4-mono-ship-a1.jsonl)
+2026-07-10T14:57:27.608Z EVENT:dead MONO-5 log MONO-5-mono-implement-a2.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
+2026-07-10T14:57:27.608Z EVENT:dead MONO-8 log MONO-8-mono-implement-a1.jsonl silent for 150s and writer pid 999999 is gone
+2026-07-10T14:57:27.608Z EVENT:dead MONO-7 workers.json entry (stage mono-implement) has no live log file
 ```
 
 All seven expectations hold, including both silent cases (fresh worker,
@@ -56,7 +56,7 @@ normally-exited worker with a fresher mailbox report).
 ```bash
 node scripts/watch-workers.mjs --root <fixture-root> --interval-sec 1 &
 sleep 2
-printf 'Reading additional input from stdin...\n' > <fixture-root>/logs/MONO-9-linear-implement-a1.jsonl
+printf 'Reading additional input from stdin...\n' > <fixture-root>/logs/MONO-9-mono-implement-a1.jsonl
 sleep 4; kill %1
 ```
 
@@ -132,8 +132,8 @@ Fixture with two retired logs (no `workers.json` entry, mtimes -90000s /
 -86000s) reproduced defect 1 verbatim:
 
 ```text
-2026-07-11T03:57:21.946Z EVENT:dead HD-32 log HD-32-linear-implement-a1.jsonl silent for 90000s (over 2x stall threshold 120s) with no writer evidence
-2026-07-11T03:57:21.946Z EVENT:dead HD-33 log HD-33-linear-ship-a1.jsonl silent for 86000s (over 2x stall threshold 120s) with no writer evidence
+2026-07-11T03:57:21.946Z EVENT:dead HD-32 log HD-32-mono-implement-a1.jsonl silent for 90000s (over 2x stall threshold 120s) with no writer evidence
+2026-07-11T03:57:21.946Z EVENT:dead HD-33 log HD-33-mono-ship-a1.jsonl silent for 86000s (over 2x stall threshold 120s) with no writer evidence
 ```
 
 Defect 2 needed one refinement to reproduce: with a report strictly newer
@@ -144,7 +144,7 @@ log *just after* the worker writes the report, leaving the report a hair
 older than the log's last event (report -605s, log -600s):
 
 ```text
-2026-07-11T03:57:43.912Z EVENT:dead HD-50 log HD-50-linear-ship-a1.jsonl silent for 600s (over 2x stall threshold 120s) with no writer evidence
+2026-07-11T03:57:43.912Z EVENT:dead HD-50 log HD-50-mono-ship-a1.jsonl silent for 600s (over 2x stall threshold 120s) with no writer evidence
 ```
 
 ### Fix (as amended by review)
@@ -198,9 +198,9 @@ Run 3 — regression: active-registry silent logs with NO report, plus a
 spawn failure → stall / dead / spawn-fail all still fire:
 
 ```text
-2026-07-11T04:14:06.411Z EVENT:stall HD-60 log HD-60-linear-implement-a1.jsonl last event 200s ago (stall threshold 120s)
-2026-07-11T04:14:06.411Z EVENT:dead HD-61 log HD-61-linear-implement-a1.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
-2026-07-11T04:14:06.411Z EVENT:spawn-fail HD-62 first log line is not JSON: "Reading additional input from stdin..." (HD-62-linear-implement-a1.jsonl)
+2026-07-11T04:14:06.411Z EVENT:stall HD-60 log HD-60-mono-implement-a1.jsonl last event 200s ago (stall threshold 120s)
+2026-07-11T04:14:06.411Z EVENT:dead HD-61 log HD-61-mono-implement-a1.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
+2026-07-11T04:14:06.411Z EVENT:spawn-fail HD-62 first log line is not JSON: "Reading additional input from stdin..." (HD-62-mono-implement-a1.jsonl)
 ```
 
 Run 4 — supplemental (live-case preservation): a registry Issue with
@@ -209,8 +209,8 @@ pid-gone dead, and a registry entry with `log: null` still fires the
 registry dead:
 
 ```text
-2026-07-11T04:14:06.475Z EVENT:dead HD-70 log HD-70-linear-implement-a1.jsonl silent for 150s and writer pid 999999 is gone
-2026-07-11T04:14:06.475Z EVENT:dead HD-71 workers.json entry (stage linear-implement) has no live log file
+2026-07-11T04:14:06.475Z EVENT:dead HD-70 log HD-70-mono-implement-a1.jsonl silent for 150s and writer pid 999999 is gone
+2026-07-11T04:14:06.475Z EVENT:dead HD-71 workers.json entry (stage mono-implement) has no live log file
 ```
 
 Run 5 — review probes. P3: completed worker, no pid, log mtime -150s (in
@@ -221,7 +221,7 @@ at -560s (inside the 120s grace window but older than the log's birth) →
 dead fires:
 
 ```text
-2026-07-11T04:14:06.539Z EVENT:dead HD-82 log HD-82-linear-implement-a2.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
+2026-07-11T04:14:06.539Z EVENT:dead HD-82 log HD-82-mono-implement-a2.jsonl silent for 500s (over 2x stall threshold 120s) with no writer evidence
 ```
 
 The same run5 root against the pre-amendment version (grace in the
@@ -229,8 +229,8 @@ The same run5 root against the pre-amendment version (grace in the
 pid-gone dead (P4), and silence where P5's retry death must fire:
 
 ```text
-2026-07-11T04:14:24.650Z EVENT:stall HD-80 log HD-80-linear-ship-a1.jsonl last event 168s ago (stall threshold 120s)
-2026-07-11T04:14:24.650Z EVENT:dead HD-81 log HD-81-linear-ship-a1.jsonl silent for 168s and writer pid 999999 is gone
+2026-07-11T04:14:24.650Z EVENT:stall HD-80 log HD-80-mono-ship-a1.jsonl last event 168s ago (stall threshold 120s)
+2026-07-11T04:14:24.650Z EVENT:dead HD-81 log HD-81-mono-ship-a1.jsonl silent for 168s and writer pid 999999 is gone
 ```
 
 Verdict: retired-history false deads are silenced by registry scoping, and

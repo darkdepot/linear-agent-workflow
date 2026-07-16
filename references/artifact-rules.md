@@ -17,8 +17,8 @@ Source-of-truth policy:
 - Linear owns requirements and implementation contracts.
 - GitHub owns PR/review/CI/deploy/merge history.
 - GitHub Issues are not the implementation source of truth.
-- `/office-hours`, `/brainstorming`, `/plan-design-review`, and `/plan-eng-review` outputs are discovery inputs until `linear-handoff` persists them to Linear.
-- Local markdown plans are temporary execution scratch unless explicitly promoted into Linear by `linear-handoff`.
+- `/office-hours`, `/brainstorming`, `/plan-design-review`, and `/plan-eng-review` outputs are discovery inputs until `mono-handoff` persists them to Linear.
+- Local markdown plans are temporary execution scratch unless explicitly promoted into Linear by `mono-handoff`.
 - Artifact intake follows `references/artifact-intake.md`: local discovery files are scoped evidence, not broad-search source of truth.
 
 Document policy:
@@ -37,24 +37,24 @@ Document policy:
 - Use Linear chips/entity mentions where available.
 - Do not leave obsolete or closed PR chips in durable Project, PRD, Tech Spec, or Issue body.
 - Do not use raw PR/document URLs in durable body when Linear chips can represent the entity.
-- Keep workflow mechanics internal to skills, checks, and handoff summaries; do not leak `linear-check`, lifecycle gates, or agent instructions into Linear-facing Project, PRD, Tech Spec, or Issue bodies.
+- Keep workflow mechanics internal to skills, checks, and handoff summaries; do not leak `mono-check`, lifecycle gates, or agent instructions into Linear-facing Project, PRD, Tech Spec, or Issue bodies.
 
 Review policy:
 
 - User review acceptance is recorded as a Linear comment.
 - Package approval authorizes durable Project/PRD/Tech Spec updates and Issue creation from the previewed package. The approval comment should name the approved package, PRD/Tech Spec links or intended titles, approved Issue slice titles or ids, and whether implementation may start.
-- For the issue-only lane, package approval is the scope fingerprint. The owner approves the exact whole-body SHA-256 of the Issue contract, computed by `scripts/resolve-issue-context.mjs --emit-fingerprint`, through the create-then-approve intake transaction: create a non-startable Issue, record an owner approval comment (authored by the canonical owner principal) naming the fingerprint, verify the author and read back, then write the `linear-issue-only marker` plus the `issue-only` label; in Phase 1 the transaction stops there with a prepared, non-startable Issue and defers activation to the downstream delivery slices (MONO-16..18). Editing any part of the Issue body after approval changes the whole-body fingerprint and makes the approval stale, so it must be renewed. See `references/issue-only-lane.md` and `skills/linear-issue-intake/SKILL.md`.
+- For the issue-only lane, package approval is the scope fingerprint. The owner approves the exact whole-body SHA-256 of the Issue contract, computed by `scripts/resolve-issue-context.mjs --emit-fingerprint`, through the create-then-approve intake transaction: create a non-startable Issue, record an owner approval comment (authored by the canonical owner principal) naming the fingerprint, verify the author and read back, then write the `mono-issue-only marker` plus the `issue-only` label; in Phase 1 the transaction stops there with a prepared, non-startable Issue and defers activation to the downstream delivery slices (MONO-16..18). Editing any part of the Issue body after approval changes the whole-body fingerprint and makes the approval stale, so it must be renewed. See `references/issue-only-lane.md` and `skills/mono-issue-intake/SKILL.md`.
 - If approval is missing, rejected, changes are requested, or the approval comment cannot be recorded, do not create execution Issues, do not move the Project to Delivery, and return `BLOCKED` or `INCOMPLETE` with current links.
-- Implementation-start approval is owned by `linear-implement`. `linear-handoff` may record that implementation may start, but `linear-implement` verifies or obtains that approval before moving the Project to Delivery.
+- Implementation-start approval is owned by `mono-implement`. `mono-handoff` may record that implementation may start, but `mono-implement` verifies or obtains that approval before moving the Project to Delivery.
 - Project Updates are not a required gate.
-- `linear-review` is report-only. It returns findings, proposed fixes, decisions, FYI notes, verdict, risk, and next workflow.
-- `linear-check` reports drift; it does not silently fix it.
-- `linear-check` owns `PASS`, `FAIL`, and `BLOCKED`; `linear-review` must not use those as its main status.
-- `linear-handoff`, explicit atomic skills, or `linear-ship` apply accepted fixes from a review report.
-- `linear-implement` owns Delivery Start and implementation execution from approved Issue(s).
-- `linear-preflight` owns local branch readiness, targeted verification, the mandatory `autoreview` clean gate, commit state, and preflight certificate.
-- `linear-ship` owns formal pre-ship review/check, PR creation, repo documentation before final green, review-loop stabilization, and the `linear-ship green certificate`.
-- `linear-deploy` owns deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
+- `mono-review` is report-only. It returns findings, proposed fixes, decisions, FYI notes, verdict, risk, and next workflow.
+- `mono-check` reports drift; it does not silently fix it.
+- `mono-check` owns `PASS`, `FAIL`, and `BLOCKED`; `mono-review` must not use those as its main status.
+- `mono-handoff`, explicit atomic skills, or `mono-ship` apply accepted fixes from a review report.
+- `mono-implement` owns Delivery Start and implementation execution from approved Issue(s).
+- `mono-preflight` owns local branch readiness, targeted verification, the mandatory `autoreview` clean gate, commit state, and preflight certificate.
+- `mono-ship` owns formal pre-ship review/check, PR creation, repo documentation before final green, review-loop stabilization, and the `mono-ship green certificate`.
+- `mono-deploy` owns deploy workflow delegation, verified delivery evidence, post-ship check, Linear closeout, and durable learning capture.
 - Risk-based review gates follow `references/readiness-gates.md`.
 - Tiny PRD-lite or no-spec exceptions may use advisory review only when the exception and reason are recorded.
-- Raw discovery implementation plans must not be approved directly in this workflow; run `linear-handoff` first.
+- Raw discovery implementation plans must not be approved directly in this workflow; run `mono-handoff` first.

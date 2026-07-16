@@ -6,7 +6,7 @@
 > report — do not improvise. When done, update the status row for this plan
 > in `plans/README.md`.
 >
-> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- skills/linear-implement/SKILL.md skills/linear-handoff/SKILL.md skills/linear-deploy/SKILL.md references/questioning.md scripts/project-config.mjs scripts/validate-workflow.mjs references/versioning.md references/install.md`
+> **Drift check (run first)**: `git diff --stat 889742b..HEAD -- skills/mono-implement/SKILL.md skills/mono-handoff/SKILL.md skills/mono-deploy/SKILL.md references/questioning.md scripts/project-config.mjs scripts/validate-workflow.mjs references/versioning.md references/install.md`
 > On any mismatch with the "Current state" excerpts, treat as a STOP condition.
 
 ## Status
@@ -28,15 +28,15 @@ The workflow's two most consequential human moments are under-specified:
    и сразу после readiness gate начать реализацию» silently grants BOTH
    approvals in one tap, without telling the operator that the second, more
    consequential gate (Project moves to Delivery, branch created, code
-   written) was just passed. When linear-implement asks for start approval on
+   written) was just passed. When mono-implement asks for start approval on
    its own, no wording, options, or authorizes/doesn't-authorize boundary is
    defined — an agent can infer approval from an ambiguous «ну давай».
-2. **Deploy approval.** linear-deploy step 5 says "if deploy requires explicit
+2. **Deploy approval.** mono-deploy step 5 says "if deploy requires explicit
    user approval and no approval is recorded, stop with needs-human" — but
    nothing defines WHEN deploy requires approval, where approval is recorded,
    or what the ask looks like. questioning.md's per-stage list stops at
-   linear-ship and omits linear-deploy entirely. The green certificate ends
-   with `Next: linear-deploy`, so a chained or fresh agent can merge to
+   mono-ship and omits mono-deploy entirely. The green certificate ends
+   with `Next: mono-deploy`, so a chained or fresh agent can merge to
    production unattended through the fail-open conditional. This is the only
    production-irreversible step in the workflow.
 
@@ -44,11 +44,11 @@ The workflow's two most consequential human moments are under-specified:
 
 All excerpts verified at commit `889742b`.
 
-- `skills/linear-implement/SKILL.md:50-59` — `start-checkpoint` requires
+- `skills/mono-implement/SKILL.md:50-59` — `start-checkpoint` requires
   "Verify or obtain explicit implementation-start approval" with no prompt
   shape. Line 92: "Do not treat package approval as implementation-start
   approval unless that approval is explicit."
-- `skills/linear-handoff/SKILL.md:107-110` — the «Что делаем?» options:
+- `skills/mono-handoff/SKILL.md:107-110` — the «Что делаем?» options:
 
   ```text
   1. Зафиксировать пакет в Linear и остановиться перед кодом. Рекомендую, если хочешь сначала увидеть durable PRD/Spec/Issue.
@@ -59,13 +59,13 @@ All excerpts verified at commit `889742b`.
   Option 2 does not say it also grants the second approval. Line 190:
   "Do not treat package approval as implementation-start approval unless the
   user explicitly approved starting implementation from the created Issue(s)."
-- `skills/linear-deploy/SKILL.md:32` — `5. approve: if deploy requires
+- `skills/mono-deploy/SKILL.md:32` — `5. approve: if deploy requires
   explicit user approval and no approval is recorded, stop with needs-human.`
   Nothing defines the trigger, the record location, or the ask shape. Line 75
   defines `needs-human` as including "explicit deploy approval".
-- `references/questioning.md:14-21` — "Question stages" lists linear-idea,
-  linear-handoff, linear-review, linear-implement, linear-preflight,
-  linear-ship. **No linear-deploy line.**
+- `references/questioning.md:14-21` — "Question stages" lists mono-idea,
+  mono-handoff, mono-review, mono-implement, mono-preflight,
+  mono-ship. **No mono-deploy line.**
 - `scripts/project-config.mjs` — config schema includes `workflows.*`,
   `linearTeam`, `languages`, `artifactRoots`, `prerequisites.autoreviewHelper`.
   No deploy-approval policy field. Config docs: `references/versioning.md:80-130`,
@@ -80,14 +80,14 @@ All excerpts verified at commit `889742b`.
 | Purpose | Command | Expected on success |
 |---------|---------|---------------------|
 | Full validation | `node scripts/validate-workflow.mjs` | exit 0 |
-| Artifact smoke | `node scripts/lint-linear-artifacts.mjs` | exit 0 |
+| Artifact smoke | `node scripts/lint-mono-artifacts.mjs` | exit 0 |
 | Config script check | `node --check scripts/project-config.mjs` | exit 0 |
 
 ## Scope
 
 **In scope**:
-- `skills/linear-implement/SKILL.md`, `skills/linear-handoff/SKILL.md`,
-  `skills/linear-deploy/SKILL.md`
+- `skills/mono-implement/SKILL.md`, `skills/mono-handoff/SKILL.md`,
+  `skills/mono-deploy/SKILL.md`
 - `references/questioning.md`
 - `scripts/project-config.mjs` + `references/versioning.md` +
   `references/install.md` (new optional config field, documented)
@@ -100,7 +100,7 @@ All excerpts verified at commit `889742b`.
 - The ship stage's own approval moments (already specified in
   ship-feedback-loop.md).
 - Making deploy approval interactive-blocking for `tiny` risk when the user
-  explicitly invoked `/linear-deploy` themselves — see design decisions below.
+  explicitly invoked `/mono-deploy` themselves — see design decisions below.
 
 ## Git workflow
 
@@ -110,7 +110,7 @@ All excerpts verified at commit `889742b`.
 
 ## Steps
 
-### Step 1: Implementation-start approval prompt in linear-implement
+### Step 1: Implementation-start approval prompt in mono-implement
 
 Add a subsection `Implementation-start approval UX:` after "Workflow states"
 with: this is the SECOND approval (package approval was the first); the
@@ -133,7 +133,7 @@ must name implementation or the Issue.
 
 ### Step 2: Label the bundled approval in handoff's options
 
-In `skills/linear-handoff/SKILL.md:107-110`, extend option 2 with an explicit
+In `skills/mono-handoff/SKILL.md:107-110`, extend option 2 with an explicit
 marker: `2. Зафиксировать пакет и сразу начать реализацию — это одновременно
 approval на старт кода (Project уйдёт в Delivery, появится ветка).` Add one
 sentence to "Draft package approval UX": every option must say which
@@ -150,7 +150,7 @@ a. `scripts/project-config.mjs`: add an OPTIONAL config field
    pattern (see how `workflows` values are validated in the same file); update
    the written config template so new configs include
    `"deployApproval": "always"`.
-b. `skills/linear-deploy/SKILL.md`: replace the vague step 5 with a defined
+b. `skills/mono-deploy/SKILL.md`: replace the vague step 5 with a defined
    gate: read `deployApproval` from config (absent → `always`); `always` →
    require a recorded approval for every deploy; `risky-only` → require it for
    `standard`/`deep`/`risky` risk classes; `never` → proceed (still report).
@@ -166,7 +166,7 @@ b. `skills/linear-deploy/SKILL.md`: replace the vague step 5 with a defined
    ```
 
 c. `references/questioning.md`: add the missing stage line:
-   `- `linear-deploy`: ask only for deploy approval per the configured
+   `- `mono-deploy`: ask only for deploy approval per the configured
    deploy-approval policy, or a delivery-policy/risk-acceptance decision.`
 d. Document the field in `references/versioning.md` (config fields list,
    ~line 80-90) and `references/install.md` (config example + field list,
@@ -193,7 +193,7 @@ questioning.md deploy line (`references/questioning.md` is not currently in
 
 ### Step 5: Full suite
 
-**Verify**: `node scripts/lint-linear-artifacts.mjs` → exit 0;
+**Verify**: `node scripts/lint-mono-artifacts.mjs` → exit 0;
 `node scripts/validate-workflow.mjs` → exit 0. If plan 001 landed:
 `node scripts/verify.mjs` → exit 0.
 
@@ -208,12 +208,12 @@ validate-workflow.mjs:355).
 
 ## Done criteria
 
-- [ ] linear-implement contains the start-approval prompt shape (Russian) and the no-inference rule
+- [ ] mono-implement contains the start-approval prompt shape (Russian) and the no-inference rule
 - [ ] handoff option 2 names the bundled approval
-- [ ] linear-deploy step 5 reads `deployApproval` with `always` default and defines the ask + record shape
-- [ ] questioning.md has a `linear-deploy` stage line
+- [ ] mono-deploy step 5 reads `deployApproval` with `always` default and defines the ask + record shape
+- [ ] questioning.md has a `mono-deploy` stage line
 - [ ] `node scripts/project-config.mjs --repo <tmp> --write` produces a config containing `deployApproval` (covered by the validator fixture)
-- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-linear-artifacts.mjs` exits 0
+- [ ] `node scripts/validate-workflow.mjs` exits 0; `node scripts/lint-mono-artifacts.mjs` exits 0
 - [ ] `git status --porcelain` only in-scope files
 - [ ] `plans/README.md` status row updated
 

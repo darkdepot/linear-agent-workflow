@@ -1,6 +1,6 @@
 # Worker Report And Ledger Shapes
 
-Machine-facing shapes for the `linear-orchestrate` mailbox. The worker report
+Machine-facing shapes for the `mono-orchestrate` mailbox. The worker report
 JSON is English only, except `verification_items[].item`, which carries the
 Issue's «Как проверить» lines verbatim in their original language. Ledger
 entries are English except the fixed domain term
@@ -9,12 +9,12 @@ either shape.
 
 ## Worker Report
 
-Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>.json`
+Path: `~/.mono-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>.json`
 
 ```json
 {
   "issue": "<ISSUE-KEY>",
-  "stage": "<linear-implement | linear-preflight | linear-ship>",
+  "stage": "<mono-implement | mono-preflight | mono-ship>",
   "status": "<implemented-needs-preflight | ready | green | blocked | needs-decision | needs-human | drift-candidate | timed-out | scope-drift-needs-handoff>",
   "branch": "<branch>",
   "changed_files": ["<path>"],
@@ -25,9 +25,9 @@ Path: `~/.linear-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stag
   "question": "<question text, or null>",
   "recommendation": "<the worker's own recommended answer, or null>",
   "linear_mutations_pending": ["<comment/status text the worker could not apply>"],
-  "certificate": "<preflight certificate or linear-ship green certificate text, or null>",
+  "certificate": "<preflight certificate or mono-ship green certificate text, or null>",
   "notes": "<runtime substitutions or constraints the orchestrator must know, or null>",
-  "next": "<linear-preflight | linear-ship | linear-deploy | null>"
+  "next": "<mono-preflight | mono-ship | mono-deploy | null>"
 }
 ```
 
@@ -36,7 +36,7 @@ carry — e.g. an engine or workflow substitution because the configured skill
 was not available in the worker runtime. It never replaces a status.
 
 `verification_items` is optional in shape but mandatory in coverage: a
-stage-terminal report for `linear-implement` or `linear-preflight` MUST
+stage-terminal report for `mono-implement` or `mono-preflight` MUST
 enumerate every «Как проверить» item of the Issue, each with status
 `pass | deferred | not-run` and one line of evidence. `deferred` and
 `not-run` require a reason in `evidence`; a stage cannot claim completion
@@ -57,7 +57,7 @@ Status semantics:
 
 ## Worker Registry
 
-Path: `~/.linear-agent-workflow/orchestrator/<product>/workers.json`
+Path: `~/.mono-agent-workflow/orchestrator/<product>/workers.json`
 
 Orchestrator-owned runtime metadata; workers never read or write it. One
 entry per Issue, updated on spawn, stage advance, and respawn. The registry
@@ -71,7 +71,7 @@ threads (`codex exec resume <thread_id>`) instead of respawning them.
     "thread_id": "<codex thread id, or null>",
     "worktree": "<absolute path>",
     "branch": "<branch>",
-    "stage": "<linear-implement | linear-preflight | linear-ship>",
+    "stage": "<mono-implement | mono-preflight | mono-ship>",
     "spawned_at": "<ISO 8601>",
     "last_activity_at": "<ISO 8601>",
     "log": "<absolute path to the worker's JSONL log, or null>",
@@ -82,7 +82,7 @@ threads (`codex exec resume <thread_id>`) instead of respawning them.
 
 ## Ledger Entry
 
-Path: `~/.linear-agent-workflow/orchestrator/<product>/ledger.md`
+Path: `~/.mono-agent-workflow/orchestrator/<product>/ledger.md`
 
 ```text
 ## <YYYY-MM-DD>

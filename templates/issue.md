@@ -50,7 +50,7 @@ Rules:
 - Include an implementation-critical context snapshot.
 - Do not copy PRD or Tech Spec wholesale into the Issue. Pull only the context needed for one PR.
 - Map the Issue scope to PRD requirement IDs and Tech Spec surfaces when available.
-- `Готовность агента` must say `AFK` or `HITL`. Bare tokens come first so `linear-check` can parse them; each must carry a Russian gloss: `AFK (агент справится без тебя)` or `HITL (нужно твоё участие: <что именно>)`. Use `AFK` only when a zero-context implementation agent can execute without new human judgment. Use `HITL` when product, design, external access, manual QA, or risk acceptance is still required, and name the exact dependency.
+- `Готовность агента` must say `AFK` or `HITL`. Bare tokens come first so `mono-check` can parse them; each must carry a Russian gloss: `AFK (агент справится без тебя)` or `HITL (нужно твоё участие: <что именно>)`. Use `AFK` only when a zero-context implementation agent can execute without new human judgment. Use `HITL` when product, design, external access, manual QA, or risk acceptance is still required, and name the exact dependency.
 - `Зависимости` should identify the parent/source package, `Blocked by`, and whether the Issue can start immediately.
 - `Ключевые контракты` should name stable behavior, types, config shapes, endpoints, invariants, or domain contracts that matter for implementation. Do not use it as a brittle file-by-file edit script.
 - `Текущее поведение`, `Желаемое поведение`, and `Шаги воспроизведения` are required for bug or performance Issues. For other work, keep them only when useful or mark them `Не относится` when a full template is being rendered. If reproduction is not possible yet, say that explicitly and describe the smallest useful feedback loop to build.
@@ -58,6 +58,6 @@ Rules:
 - Acceptance criteria should be checkable by another implementation agent without reading the whole discovery conversation.
 - Do not attach PRD or Tech Spec docs to the Issue.
 - Include validation commands or exact manual checks.
-- Include risk classification, whether `linear-review` was required/advisory/skipped, verdict, review evidence or comment link, finding disposition, owner workflow, and next step.
+- Include risk classification, whether `mono-review` was required/advisory/skipped, verdict, review evidence or comment link, finding disposition, owner workflow, and next step.
 - Split only into vertical slices with dependencies when one PR is truly too large.
 - Keep the Issue durable: avoid line numbers, stale-prone edit choreography, and instructions that assume today's internal file layout will survive. File paths belong in read-first context only when they are stable surfaces.

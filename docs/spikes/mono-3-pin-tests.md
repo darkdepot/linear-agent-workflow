@@ -11,7 +11,7 @@ pass and stayed green throughout.
 
 `validateLiveQaGateContract()` pins, all additive:
 
-- `skills/linear-deploy/SKILL.md`: gate presence (`Live QA gate`), SHA
+- `skills/mono-deploy/SKILL.md`: gate presence (`Live QA gate`), SHA
   precondition (`verify the deployed version matches the certified merged
   SHA`), functional smoke (`walk the PRD acceptance criteria of the
   shipped Issue and check the console for errors`), design acceptance
@@ -34,7 +34,7 @@ pass and stayed green throughout.
   `` `workflows.qa` (optional) ``, `` `qaAuth` (optional) ``,
   `cookie-import`, `test-account`, `owner-session`,
   `involving the owner`.
-- `skills/linear-orchestrate/SKILL.md`: `Live QA gate`,
+- `skills/mono-orchestrate/SKILL.md`: `Live QA gate`,
   `workers have no browser`, `out of queue`, `control-plane exception`,
   `explicit owner mandate`, `Feature code NEVER`.
 - `references/orchestration.md`: `control-plane exception`,
@@ -54,12 +54,12 @@ fine). These fixtures execute on every validator run.
 ## Protocol Runs
 
 1. `Live QA gate` replaced with `Live smoke gate` in
-   `skills/linear-deploy/SKILL.md`. Note: replacing only the section
+   `skills/mono-deploy/SKILL.md`. Note: replacing only the section
    heading kept the validator green because the phrase also appears in
    the workflow steps — the pin asserts presence anywhere in the file, so
    the break must remove all occurrences (as a real gate removal would).
    All occurrences replaced →
-   `- skills/linear-deploy/SKILL.md missing "Live QA gate"` (exit 1).
+   `- skills/mono-deploy/SKILL.md missing "Live QA gate"` (exit 1).
    Restored → green.
 2. `verify the deployed version matches the certified merged SHA`
    replaced with `check the deployed version` in
@@ -67,8 +67,8 @@ fine). These fixtures execute on every validator run.
    `- references/lifecycle.md missing "verify the deployed version
    matches the certified merged SHA"` (exit 1). Restored → green.
 3. `immediate hotfix Issue out of queue` replaced with `prompt follow-up
-   Issue in the queue` in `skills/linear-deploy/SKILL.md` →
-   `- skills/linear-deploy/SKILL.md missing "immediate hotfix Issue out
+   Issue in the queue` in `skills/mono-deploy/SKILL.md` →
+   `- skills/mono-deploy/SKILL.md missing "immediate hotfix Issue out
    of queue"` (exit 1). Restored → green.
 4. `"qa": null` replaced with `"quality": null` in the
    `references/install.md` example config →

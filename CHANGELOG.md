@@ -1,10 +1,76 @@
 # Changelog
 
-All notable changes to Linear Agent Workflow are documented in this file.
+All notable changes to Mono Agent Workflow are documented in this file.
 
 This project follows Semantic Versioning. Breaking workflow or adapter contract changes require a major version bump after `v1.0.0`; before `v1.0.0`, they must be called out explicitly in release notes.
 
 ## [Unreleased]
+
+## [0.20.0] - 2026-07-16
+
+Rebrands the workflow skill pack from `linear-*` to `mono-*` while keeping
+Linear as the durable product/project system of record.
+
+### Breaking
+
+- All public skill names and commands now use the `mono-*` prefix:
+  `mono-idea`, `mono-handoff`, `mono-implement`, `mono-preflight`,
+  `mono-ship`, `mono-deploy`, and the related atomic/review/check skills.
+  The old `/linear-*` commands are not installed as aliases.
+- Project policy moves from `.agents/linear-workflow.config.json` to
+  `.agents/mono-workflow.config.json`.
+- Installed-pack state moves from `.linear-agent-workflow*` to
+  `.mono-agent-workflow*`, and `LINEAR_WORKFLOW_KNOWN_ROOTS` is superseded by
+  `MONO_WORKFLOW_KNOWN_ROOTS`.
+- Durable workflow markers and certificates written after this release use
+  the `mono-*` brand, including `mono-issue-only marker`,
+  `mono-preflight certificate`, and `mono-ship green certificate`.
+
+### Added
+
+- Installer migration support discovers previous-brand lockfiles, installs the
+  complete `mono-*` pack, removes installer-owned `linear-*` skills, and
+  replaces the old lock/runtime paths. The previous environment override
+  remains readable during migration.
+- Project config migration reads previous JSON or Markdown config, writes the
+  Mono JSON config, and removes previous-brand vendored skills, generated
+  checkers, lockfiles, configs, and updater workflows with `--write --clean`.
+- The issue-only resolver continues to read an already-approved
+  `linear-issue-only marker`, so the brand migration does not revoke durable
+  Linear approvals. New and renewed marker comments use the Mono marker.
+- Functional fixtures cover installed-pack migration, previous JSON/Markdown
+  project config migration, and previous-brand durable marker compatibility.
+
+### Changed
+
+- All skill frontmatter, cross-skill routing, templates, references, examples,
+  plans, validation pins, runtime paths, user-facing status text, and docs now
+  use the Mono brand.
+- The artifact linter entry point is now
+  `scripts/lint-mono-artifacts.mjs`; `scripts/verify.mjs` invokes the renamed
+  checker.
+- The local checkout and GitHub repository slug remain
+  `darkdepot/linear-agent-workflow` for this release; lockfile upstream
+  identity continues to record the actual repository URL until that external
+  rename is performed separately.
+
+### Migration
+
+Update installed skill roots:
+
+```bash
+node scripts/install-local.mjs --remove-stale
+node scripts/install-local.mjs --check
+```
+
+Migrate each project repository:
+
+```bash
+node scripts/project-config.mjs --repo /path/to/project --write --clean --check
+```
+
+Restart the agent runtime after installation so its skill registry reloads,
+then use `/mono-*` commands.
 
 ## [0.19.1] - 2026-07-11
 

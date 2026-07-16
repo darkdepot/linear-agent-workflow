@@ -20,7 +20,7 @@ pin.
 `validateOpsLessons()` pins, all additive, over three operational
 lessons:
 
-- Install-source SHA blocker (`skills/linear-deploy/SKILL.md` and
+- Install-source SHA blocker (`skills/mono-deploy/SKILL.md` and
   `references/install.md`, both files): `the installing checkout's HEAD
   must equal the expected merge SHA`, `git rev-parse HEAD`,
   `a DEPLOY BLOCKER, not a warning`,
@@ -28,7 +28,7 @@ lessons:
   incident — a foreign commit on local main made `git pull --ff-only`
   fail with swallowed output and the pack briefly installed from the
   wrong source, caught only via a version anomaly.
-- gh-only PR state after interruption (`skills/linear-ship/SKILL.md`):
+- gh-only PR state after interruption (`skills/mono-ship/SKILL.md`):
   `exclusively via `gh` commands against the exact head SHA`,
   `never from thread memory`,
   `state assumed from memory is treated as unverified`. Precedent:
@@ -46,8 +46,8 @@ The pins anchor the contract prose. Resolving a bad checkout,
 reconciling a PR via gh after a crash, and executing the drill itself
 stay judgment and operational work — pins bind the rules, not the
 execution. No existing pin was weakened; every string pinned by
-MONO-3 on `skills/linear-deploy/SKILL.md` and `references/install.md`,
-by MONO-6 on `skills/linear-ship/SKILL.md`, and by MONO-1/2/3/7/8 on
+MONO-3 on `skills/mono-deploy/SKILL.md` and `references/install.md`,
+by MONO-6 on `skills/mono-ship/SKILL.md`, and by MONO-1/2/3/7/8 on
 `references/orchestration.md` stayed byte-intact and green throughout.
 
 ## Protocol Runs
@@ -64,15 +64,15 @@ its backup and the validator ran green.
 
 1. `the installing checkout's HEAD must equal the expected merge SHA` →
    `...should roughly match the merge SHA` in
-   `skills/linear-deploy/SKILL.md` →
-   `- skills/linear-deploy/SKILL.md missing "the installing checkout's
+   `skills/mono-deploy/SKILL.md` →
+   `- skills/mono-deploy/SKILL.md missing "the installing checkout's
    HEAD must equal the expected merge SHA"` (exit 1). Restored → green.
 2. Same replacement in `references/install.md` →
    `- references/install.md missing "the installing checkout's HEAD
    must equal the expected merge SHA"` (exit 1). Restored → green.
 3. `is a DEPLOY BLOCKER, not a warning` → `is a warning worth
-   investigating` in `skills/linear-deploy/SKILL.md` →
-   `- skills/linear-deploy/SKILL.md missing "a DEPLOY BLOCKER, not a
+   investigating` in `skills/mono-deploy/SKILL.md` →
+   `- skills/mono-deploy/SKILL.md missing "a DEPLOY BLOCKER, not a
    warning"` (exit 1). Restored → green.
 4. Same replacement in `references/install.md` →
    `- references/install.md missing "a DEPLOY BLOCKER, not a warning"`
@@ -82,22 +82,22 @@ its backup and the validator ran green.
    `- references/install.md missing "verify SHA → install → `--check`"`
    (exit 1). Restored → green.
 6. `(verify SHA → install → `--check`)` → `(install first, check
-   after)` in `skills/linear-deploy/SKILL.md` →
-   `- skills/linear-deploy/SKILL.md missing "verify SHA → install →
+   after)` in `skills/mono-deploy/SKILL.md` →
+   `- skills/mono-deploy/SKILL.md missing "verify SHA → install →
    `--check`"` (exit 1). Restored → green.
 7. `exclusively via `gh` commands against the exact head SHA` → `from
    the session transcript where convenient` in
-   `skills/linear-ship/SKILL.md` →
-   `- skills/linear-ship/SKILL.md missing "exclusively via `gh`
+   `skills/mono-ship/SKILL.md` →
+   `- skills/mono-ship/SKILL.md missing "exclusively via `gh`
    commands against the exact head SHA"` (exit 1). Restored → green.
 8. `never from thread memory` → `or from thread memory` in
-   `skills/linear-ship/SKILL.md` →
-   `- skills/linear-ship/SKILL.md missing "never from thread memory"`
+   `skills/mono-ship/SKILL.md` →
+   `- skills/mono-ship/SKILL.md missing "never from thread memory"`
    (exit 1). Restored → green.
 9. `state assumed from memory is treated as unverified` → `state
    assumed from memory may be trusted` in
-   `skills/linear-ship/SKILL.md` →
-   `- skills/linear-ship/SKILL.md missing "state assumed from memory is
+   `skills/mono-ship/SKILL.md` →
+   `- skills/mono-ship/SKILL.md missing "state assumed from memory is
    treated as unverified"` (exit 1). Restored → green.
 10. `Forced mid-wave resume drill` → `Optional resume rehearsal` in
     `references/orchestration.md` →

@@ -20,7 +20,7 @@ in the same validator pass and stayed green throughout.
   `never mid-dispatch`).
 - `templates/orchestrator-brief.md`: `Простои и отклонения:`,
   `Контекст: ~N%`, `not blocking notifications`.
-- `skills/linear-orchestrate/SKILL.md`: `«Простои и отклонения:»`,
+- `skills/mono-orchestrate/SKILL.md`: `«Простои и отклонения:»`,
   `«Контекст: ~N%»`.
 
 ## Protocol Runs
