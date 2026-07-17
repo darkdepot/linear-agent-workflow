@@ -3054,6 +3054,7 @@ function validateHeartbeatContract() {
     fail("Missing scripts/watch-workers.mjs");
   }
   assertIncludes("scripts/verify.mjs", "watch-workers.mjs", "node --check step for scripts/watch-workers.mjs");
+  assertIncludes("references/orchestration.md", "Immediately after verifying every spawn, resume, or session rotation, in the same orchestrator turn and before any other action, update that worker's `workers.json` entry with at least the current `pid`, `log`, `last_activity_at`, and `stage` (and the new `thread_id` on rotation). A live worker paired with a stale registry PID violates the registry contract; watcher events produced from that entry are untrustworthy, and investigating any such event must begin by reconciling the registry with the actual writer process.");
 
   for (const required of [
     "## Heartbeat",
