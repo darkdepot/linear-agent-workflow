@@ -420,11 +420,27 @@ of a 1M-token window with no signal to the owner.
 
 - Report current usage as «Контекст: ~N%» in every status update; a rough
   estimate is fine — the trend matters more than precision.
-- At ≥70% usage, plan a clean handoff to a fresh orchestrator session via
-  the Resume procedure at the next safe boundary — after the current
-  monitoring pass or stage advance completes, never mid-dispatch.
-- At ≥85% usage, the handoff becomes the immediate priority: finish only
-  the atomic action in flight, bring the ledger up to date, and hand off.
+- Compaction-first is the default: keep one orchestrator session and set
+  `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=75` in the product's local Claude
+  settings so automatic compaction begins at 75% context usage.
+- The safe-boundary sentinel is `<orchestrator-root>/compaction-safe`. After
+  every stage close and every ledger write, the orchestrator touches this
+  file only after the durable state is current. The sentinel is fresh for
+  300 seconds by default; an absent or stale sentinel never authorizes
+  automatic compaction. The freshness window is configurable in
+  `templates/orchestrator-compaction-hook.sh`.
+- Wire the template's `PreCompact` hook for automatic compaction. It blocks
+  outside a fresh safe boundary for at most three consecutive deferrals;
+  the fourth automatic attempt is forcibly allowed and resets the counter,
+  preventing context-window starvation. Manual compaction is always
+  allowed, and a fresh sentinel also resets the counter.
+- Use `templates/compact-instructions.md` for the compaction summary. As the
+  first post-compaction action, re-read the tail of `ledger.md`,
+  `workers.json`, and the product's memory index before monitoring,
+  dispatching, mutating Linear, or answering from the compacted summary.
+- A session handoff through the Resume procedure is an exceptional fallback
+  for a corrupted/unrecoverable session or a compaction that cannot preserve
+  safe state. It is not the default response to a context threshold.
 
 ## Cost Telemetry
 

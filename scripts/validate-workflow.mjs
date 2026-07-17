@@ -3174,9 +3174,15 @@ function validateHonestLedgerContract() {
     "marked unverified",
     "## Context Budget",
     "«Контекст: ~N%»",
-    "70%",
-    "85%",
-    "never mid-dispatch",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
+    "75",
+    "compaction-safe",
+    "300 seconds",
+    "three consecutive deferrals",
+    "fourth automatic attempt",
+    "post-compaction",
+    "session handoff",
+    "fallback",
   ]) {
     assertIncludes("references/orchestration.md", required, JSON.stringify(required));
   }
@@ -3187,6 +3193,169 @@ function validateHonestLedgerContract() {
 
   for (const required of ["«Простои и отклонения:»", "«Контекст: ~N%»"]) {
     assertIncludes("skills/mono-orchestrate/SKILL.md", required, `status update contract: ${required}`);
+  }
+}
+
+function validateCompactionContract() {
+  const hookRelativePath = "templates/orchestrator-compaction-hook.sh";
+  const instructionsRelativePath = "templates/compact-instructions.md";
+
+  if (!exists(hookRelativePath)) {
+    fail(`Missing ${hookRelativePath}`);
+  } else {
+    for (const required of [
+      "MONO_ORCHESTRATOR_ROOT",
+      "MONO_COMPACTION_FRESHNESS_SECONDS:-300",
+      "MONO_COMPACTION_MAX_DEFERRALS:-3",
+      "get_mtime()",
+      "stat -f %m",
+      "stat -c %Y",
+    ]) {
+      assertIncludes(hookRelativePath, required, JSON.stringify(required));
+    }
+
+    const hookPath = path.join(root, hookRelativePath);
+    const runHook = (fixtureRoot, trigger, env = {}) =>
+      spawnSync("bash", [hookPath, fixtureRoot], {
+        cwd: root,
+        encoding: "utf8",
+        input: `${JSON.stringify({ trigger })}\n`,
+        env: { ...process.env, ...env },
+      });
+    const parseHookOutput = (label, result) => {
+      if (result.status !== 0) {
+        fail(`${label} exited ${result.status}: ${result.stderr || result.error?.message || "unknown error"}`);
+        return null;
+      }
+      try {
+        return JSON.parse((result.stdout || "").trim());
+      } catch {
+        fail(`${label} did not emit JSON: ${JSON.stringify(result.stdout)}`);
+        return null;
+      }
+    };
+    const withFixtureRoot = (label, callback) => {
+      const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), `mono-compaction-${label}-`));
+      try {
+        callback(fixtureRoot);
+      } finally {
+        fs.rmSync(fixtureRoot, { recursive: true, force: true });
+      }
+    };
+
+    withFixtureRoot("manual", (fixtureRoot) => {
+      const output = parseHookOutput("manual compaction fixture", runHook(fixtureRoot, "manual"));
+      if (output && Object.keys(output).length !== 0) fail("manual compaction must be allowed");
+    });
+
+    withFixtureRoot("missing", (fixtureRoot) => {
+      const output = parseHookOutput("missing sentinel fixture", runHook(fixtureRoot, "auto"));
+      if (output?.decision !== "block" || typeof output.reason !== "string" || output.reason.length === 0) {
+        fail("automatic compaction without a sentinel must block with a reason");
+      }
+    });
+
+    withFixtureRoot("missing-root", (fixtureRoot) => {
+      const missingRoot = path.join(fixtureRoot, "not-created");
+      const output = parseHookOutput("missing orchestrator root fixture", runHook(missingRoot, "auto"));
+      if (output?.decision !== "block" || !output.reason?.includes("does not exist")) {
+        fail("automatic compaction with a missing orchestrator root must block with an explicit reason");
+      }
+    });
+
+    withFixtureRoot("fresh", (fixtureRoot) => {
+      fs.writeFileSync(path.join(fixtureRoot, ".compact-block-count"), "2\n");
+      fs.writeFileSync(path.join(fixtureRoot, "compaction-safe"), "");
+      const now = new Date();
+      fs.utimesSync(path.join(fixtureRoot, "compaction-safe"), now, now);
+      const output = parseHookOutput("fresh sentinel fixture", runHook(fixtureRoot, "auto"));
+      if (output && Object.keys(output).length !== 0) fail("automatic compaction at a fresh sentinel must be allowed");
+      if (fs.readFileSync(path.join(fixtureRoot, ".compact-block-count"), "utf8").trim() !== "0") {
+        fail("fresh-sentinel allow must reset the deferral counter");
+      }
+    });
+
+    withFixtureRoot("stale", (fixtureRoot) => {
+      fs.writeFileSync(path.join(fixtureRoot, "compaction-safe"), "");
+      const stale = new Date(Date.now() - 301_000);
+      fs.utimesSync(path.join(fixtureRoot, "compaction-safe"), stale, stale);
+      const output = parseHookOutput("stale sentinel fixture", runHook(fixtureRoot, "auto"));
+      if (output?.decision !== "block") fail("automatic compaction at a stale sentinel must block");
+      if (fs.readFileSync(path.join(fixtureRoot, ".compact-block-count"), "utf8").trim() !== "1") {
+        fail("stale-sentinel block must increment the deferral counter");
+      }
+    });
+
+    withFixtureRoot("forced", (fixtureRoot) => {
+      fs.writeFileSync(path.join(fixtureRoot, ".compact-block-count"), "3\n");
+      const output = parseHookOutput("forced allow fixture", runHook(fixtureRoot, "auto"));
+      if (output && Object.keys(output).length !== 0) fail("the fourth automatic attempt must be forcibly allowed");
+      if (fs.readFileSync(path.join(fixtureRoot, ".compact-block-count"), "utf8").trim() !== "0") {
+        fail("forced allow must reset the deferral counter");
+      }
+    });
+
+    for (const style of ["bsd", "gnu"]) {
+      withFixtureRoot(`mtime-${style}`, (fixtureRoot) => {
+        const binDir = path.join(fixtureRoot, "bin");
+        const statLog = path.join(fixtureRoot, "stat.log");
+        fs.mkdirSync(binDir);
+        fs.writeFileSync(
+          path.join(binDir, "stat"),
+          "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$MONO_STAT_CALL_LOG\"\nprintf '%s\\n' \"$MONO_STAT_MTIME\"\n"
+        );
+        fs.chmodSync(path.join(binDir, "stat"), 0o755);
+        fs.writeFileSync(path.join(fixtureRoot, "compaction-safe"), "");
+        const output = parseHookOutput(
+          `${style} mtime fixture`,
+          runHook(fixtureRoot, "auto", {
+            MONO_COMPACTION_STAT_STYLE: style,
+            MONO_STAT_CALL_LOG: statLog,
+            MONO_STAT_MTIME: String(Math.floor(Date.now() / 1000)),
+            PATH: `${binDir}${path.delimiter}${process.env.PATH || ""}`,
+          })
+        );
+        if (output && Object.keys(output).length !== 0) fail(`${style} mtime branch must allow a fresh sentinel`);
+        const expectedArgs = style === "bsd" ? "-f %m" : "-c %Y";
+        if (!fs.readFileSync(statLog, "utf8").includes(expectedArgs)) {
+          fail(`${style} mtime branch did not execute stat ${expectedArgs}`);
+        }
+      });
+    }
+  }
+
+  if (!exists(instructionsRelativePath)) {
+    fail(`Missing ${instructionsRelativePath}`);
+  } else {
+    for (const required of [
+      "НЕМЕДЛЕННОЕ СЛЕДУЮЩЕЕ ДЕЙСТВИЕ",
+      "ЖИВЫЕ ВОРКЕРЫ",
+      "workers.json",
+      "РЕШЕНИЯ ВЛАДЕЛЬЦА",
+      "что НЕ одобрено",
+      "РЕШИЛ САМ",
+      "ТУПИКИ",
+      "ПРОТОКОЛЬНЫЕ ГОТЧИ",
+      "ОЧЕРЕДЬ ЗАДАЧ",
+      "ПРЕДПОЧТЕНИЯ ВЛАДЕЛЬЦА",
+      "Do not include rereadable content",
+      "path pointers instead of content",
+    ]) {
+      assertIncludes(instructionsRelativePath, required, JSON.stringify(required));
+    }
+  }
+
+  for (const required of [
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE",
+    '"75"',
+    '"PreCompact"',
+    '"matcher": "auto"',
+    "templates/orchestrator-compaction-hook.sh",
+    ".claude/settings.json",
+    "local and uncommitted",
+    ".git/info/exclude",
+  ]) {
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, JSON.stringify(required));
   }
 }
 
@@ -3502,6 +3671,7 @@ validateAntiPatterns();
 validateHeartbeatContract();
 validateWatcherContaminationBehavior();
 validateHonestLedgerContract();
+validateCompactionContract();
 validateLiveQaGateContract();
 validateRealBackendContractSampling();
 validateGoalContractBinding();

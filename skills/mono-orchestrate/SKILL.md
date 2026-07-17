@@ -59,6 +59,42 @@ Inputs to gather:
   Transports (config override first, then runtime detection).
 - Live worker sessions via the runtime session list when available.
 
+### Local compaction wiring
+
+For every product orchestrator, copy the installed
+`templates/orchestrator-compaction-hook.sh` template to an operational path
+under the orchestrator root, keep its root parameter explicit, and use
+`templates/compact-instructions.md` as the compaction prompt. The expected
+product-local `.claude/settings.json` shape is:
+
+```json
+{
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "75"
+  },
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash <orchestrator-root>/hooks/defer-auto-compaction.sh <orchestrator-root>"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This `.claude/settings.json` is local and uncommitted operational state: add
+its exact path to the checkout's `.git/info/exclude`, never to a committed
+`.gitignore`, and never commit it. Copy the hook outside the product repo;
+do not vendor Mono skills, templates, hooks, or workflow runtime files into
+the product. The product repo still keeps only
+`.agents/mono-workflow.config.json` for this workflow.
+
 Workflow states:
 
 1. `resume`
