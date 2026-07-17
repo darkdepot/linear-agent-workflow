@@ -3255,6 +3255,14 @@ function validateCompactionContract() {
       }
     });
 
+    withFixtureRoot("missing-root", (fixtureRoot) => {
+      const missingRoot = path.join(fixtureRoot, "not-created");
+      const output = parseHookOutput("missing orchestrator root fixture", runHook(missingRoot, "auto"));
+      if (output?.decision !== "block" || !output.reason?.includes("does not exist")) {
+        fail("automatic compaction with a missing orchestrator root must block with an explicit reason");
+      }
+    });
+
     withFixtureRoot("fresh", (fixtureRoot) => {
       fs.writeFileSync(path.join(fixtureRoot, ".compact-block-count"), "2\n");
       fs.writeFileSync(path.join(fixtureRoot, "compaction-safe"), "");
@@ -3273,6 +3281,9 @@ function validateCompactionContract() {
       fs.utimesSync(path.join(fixtureRoot, "compaction-safe"), stale, stale);
       const output = parseHookOutput("stale sentinel fixture", runHook(fixtureRoot, "auto"));
       if (output?.decision !== "block") fail("automatic compaction at a stale sentinel must block");
+      if (fs.readFileSync(path.join(fixtureRoot, ".compact-block-count"), "utf8").trim() !== "1") {
+        fail("stale-sentinel block must increment the deferral counter");
+      }
     });
 
     withFixtureRoot("forced", (fixtureRoot) => {

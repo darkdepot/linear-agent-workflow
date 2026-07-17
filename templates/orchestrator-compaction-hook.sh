@@ -42,6 +42,10 @@ if [ -z "$ORCHESTRATOR_ROOT" ]; then
   emit_block "Auto-compaction deferred because the orchestrator root was not provided."
   exit 0
 fi
+if [ ! -d "$ORCHESTRATOR_ROOT" ]; then
+  emit_block "Auto-compaction deferred because the orchestrator root does not exist: $ORCHESTRATOR_ROOT"
+  exit 0
+fi
 
 SENTINEL="$ORCHESTRATOR_ROOT/compaction-safe"
 COUNTER="$ORCHESTRATOR_ROOT/.compact-block-count"
