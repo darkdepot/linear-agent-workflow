@@ -118,7 +118,14 @@ function expectCommandFailure(label, callback, expectedText) {
 
 function issueOnlyLaneActivationError(config) {
   const lane = config.issueOnlyLane;
-  if (lane?.enabled !== true) return null;
+  if (lane === undefined) return null;
+  if (!lane || typeof lane !== "object" || Array.isArray(lane)) {
+    return "issueOnlyLane must be an object";
+  }
+  if (typeof lane.enabled !== "boolean") {
+    return "issueOnlyLane.enabled must be a boolean";
+  }
+  if (!lane.enabled) return null;
   if (typeof lane.ownerPrincipal !== "string" || lane.ownerPrincipal.trim().length === 0) {
     return "enabled issueOnlyLane requires a non-empty ownerPrincipal";
   }
@@ -913,6 +920,16 @@ function validateIssueOnlyLaneBehavior() {
   if (!missingOwnerConfigError?.includes("ownerPrincipal")) {
     fail("enabled issueOnlyLane without a non-empty ownerPrincipal fixture must fail validation");
   }
+  for (const [label, issueOnlyLane] of [
+    ["non-object", "invalid"],
+    ["non-boolean enabled", { enabled: "true" }],
+  ]) {
+    const malformedConfig = structuredClone(activeProjectConfig);
+    malformedConfig.issueOnlyLane = issueOnlyLane;
+    if (!issueOnlyLaneActivationError(malformedConfig)) {
+      fail(`${label} issueOnlyLane fixture must fail activation validation`);
+    }
+  }
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
   try {
@@ -983,7 +1000,8 @@ function validateIssueOnlyLaneBehavior() {
     const issueOnlyArgs = ["--label", "issue-only", "--approval-verified", fingerprint];
 
     // Fixture 2 — happy: a valid marker plus both trusted signals and the real
-    // enabled upstream project config resolves the five fields correctly.
+    // enabled upstream project config resolves the five fields correctly. This
+    // live-config coupling is intentional: AC1/AC4 guard the upstream opt-in.
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
