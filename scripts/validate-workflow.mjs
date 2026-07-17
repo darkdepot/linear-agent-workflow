@@ -347,6 +347,10 @@ function validateArtifactContractParity() {
     const contractLink = `[${artifact}](contracts/${artifact}.md)`;
     if (!index.includes(contractLink)) fail(`${indexPath} missing contract link ${contractLink}`);
 
+    if (!exists(config.sourcePath)) {
+      fail(`Missing artifact contract source: ${config.sourcePath}`);
+      continue;
+    }
     const sourceLines = read(config.sourcePath).replace(/\r\n?/g, "\n").split("\n");
     const anchoredSource = [];
     for (const anchor of config.anchors) {
@@ -386,7 +390,7 @@ function validateArtifactContractParity() {
     }
   }
 
-  const ledgerPattern = /^\| `([^`]+:\d+(?:-\d+)?)` \| `((?:PC|PR|TS|IS)-\d{3})` \| ([^|]+) \|$/gm;
+  const ledgerPattern = /^\| `([^`]+:\d+(?:-\d+)?)` \| `((?:PC|PR|TS|IS)-\d{3})` \| ([^|]+) \|[ \t]*$/gm;
   for (const match of index.matchAll(ledgerPattern)) {
     const [, sourceAnchor, ruleId, consumers] = match;
     if (ledgerRows.has(sourceAnchor)) fail(`Duplicate parity ledger source anchor ${sourceAnchor}`);
