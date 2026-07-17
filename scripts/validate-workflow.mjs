@@ -42,6 +42,14 @@ function fail(message) {
   failures.push(message);
 }
 
+function artifactContractPinError(pin) {
+  if (!exists(pin.path)) return `Missing artifact contract adapter: ${pin.path}`;
+  if (!read(pin.path).includes(pin.snippet)) {
+    return `${pin.path} must apply the complete migrated contract rule range`;
+  }
+  return null;
+}
+
 function assertIncludes(relativePath, text, label = text) {
   const body = read(relativePath);
   if (!body.includes(text)) fail(`${relativePath} missing ${label}`);
@@ -310,6 +318,14 @@ function validateTemplateSections() {
 
 function validateArtifactContractParity() {
   const indexPath = "references/artifact-contracts.md";
+  const missingAdapterFixturePath = "skills/__missing-adapter-fixture__/SKILL.md";
+  const missingAdapterFixtureError = artifactContractPinError({
+    path: missingAdapterFixturePath,
+    snippet: "unused fixture snippet",
+  });
+  if (missingAdapterFixtureError !== `Missing artifact contract adapter: ${missingAdapterFixturePath}`) {
+    fail("Artifact contract adapter missing-file fixture must return a controlled validation failure");
+  }
   const artifacts = {
     project: {
       prefix: "PC",
@@ -397,9 +413,8 @@ function validateArtifactContractParity() {
           fail(`${consumerPath} must read ${config.contractPath} as its normative artifact source`);
         }
       }
-      if (!read(config.adapterContractPin.path).includes(config.adapterContractPin.snippet)) {
-        fail(`${config.adapterContractPin.path} must apply the complete migrated contract rule range`);
-      }
+      const pinError = artifactContractPinError(config.adapterContractPin);
+      if (pinError) fail(pinError);
     } else {
       if (!exists(config.sourcePath)) {
         fail(`Missing artifact contract source: ${config.sourcePath}`);
