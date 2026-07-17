@@ -57,11 +57,11 @@ for (const [file, snippets] of [
     ],
   ],
   [
-    "skills/mono-prd/SKILL.md",
+    "references/contracts/prd.md",
     [
-      "What would `mono-spec` still have to invent",
-      "Use acceptance examples for stateful or conditional behavior",
-      "actor -> capability -> benefit",
+      "## PR-026 — Invention self-review",
+      "## PR-014 — Conditional acceptance examples",
+      "## PR-013 — Actor-capability-benefit coverage",
     ],
   ],
   [

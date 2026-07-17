@@ -25,6 +25,10 @@ const EXPECTED_SKILLS = [
   "mono-ship",
   "mono-spec",
 ];
+const FROZEN_ADAPTER_DESCRIPTION_LINES = {
+  "mono-project": "description: Use when creating or updating a Linear Project as the source of truth for a coding-agent workflow.",
+  "mono-prd": "description: Use when creating or updating a Linear PRD after discovery or an explicit discovery skip.",
+};
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -160,6 +164,14 @@ function validateSkills() {
       if (frontmatter.name !== skill) fail(`${relativePath} frontmatter name must be ${skill}`);
       if (!frontmatter.description || frontmatter.description.length < 20) {
         fail(`${relativePath} needs a useful frontmatter description`);
+      }
+    }
+
+    const frozenDescriptionLine = FROZEN_ADAPTER_DESCRIPTION_LINES[skill];
+    if (frozenDescriptionLine) {
+      const actualDescriptionLine = text.split("\n").find((line) => line.startsWith("description:"));
+      if (actualDescriptionLine !== frozenDescriptionLine) {
+        fail(`${relativePath} compatibility-adapter description changed; it is frozen until Phase B`);
       }
     }
 
@@ -302,18 +314,35 @@ function validateArtifactContractParity() {
     project: {
       prefix: "PC",
       contractPath: "references/contracts/project.md",
-      sourcePath: "skills/mono-project/SKILL.md",
+      legacySourcePath: "skills/mono-project/SKILL.md",
       templatePath: "templates/project.md",
-      anchors: [3, 8, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 36, 37, 41],
-      sourceFingerprint: "eef7345d040d267e26494912b71e65352a469980b7c7589a06605c6430397d8d",
+      legacyAnchors: [3, 8, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 36, 37, 41],
+      contractFingerprint: "4154056ee7c85ccdbc1d46703e37dc15d7c0e481acfae3731651ef9b0bee58ec",
+      contractConsumers: [
+        "skills/mono-project/SKILL.md",
+        "skills/mono-idea/SKILL.md",
+        "skills/mono-handoff/SKILL.md",
+      ],
+      adapterContractPin: {
+        path: "skills/mono-project/SKILL.md",
+        snippet: "Apply `PC-001` through `PC-018` in full",
+      },
     },
     prd: {
       prefix: "PR",
       contractPath: "references/contracts/prd.md",
-      sourcePath: "skills/mono-prd/SKILL.md",
+      legacySourcePath: "skills/mono-prd/SKILL.md",
       templatePath: "templates/prd.md",
-      anchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, "35-37", 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 51, 52, 53, 54, 55, 56, 57],
-      sourceFingerprint: "d51732cbb52bdea327fa13ce29765a81916b64250e0475280768b2634a9684e7",
+      legacyAnchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, "35-37", 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 51, 52, 53, 54, 55, 56, 57],
+      contractFingerprint: "5870d21dbbc631e9e4d106a780548863ee4c4b569a8c70aa3efe855f4a2cb2e6",
+      contractConsumers: [
+        "skills/mono-prd/SKILL.md",
+        "skills/mono-handoff/SKILL.md",
+      ],
+      adapterContractPin: {
+        path: "skills/mono-prd/SKILL.md",
+        snippet: "Apply `PR-001` through `PR-032` in full",
+      },
     },
     "tech-spec": {
       prefix: "TS",
@@ -347,33 +376,52 @@ function validateArtifactContractParity() {
     const contractLink = `[${artifact}](contracts/${artifact}.md)`;
     if (!index.includes(contractLink)) fail(`${indexPath} missing contract link ${contractLink}`);
 
-    if (!exists(config.sourcePath)) {
-      fail(`Missing artifact contract source: ${config.sourcePath}`);
-      continue;
-    }
-    const sourceLines = read(config.sourcePath).replace(/\r\n?/g, "\n").split("\n");
-    const anchoredSource = [];
-    for (const anchor of config.anchors) {
-      const [startToken, endToken = startToken] = String(anchor).split("-");
-      const start = Number(startToken);
-      const end = Number(endToken);
-      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > sourceLines.length) {
-        fail(`${config.sourcePath}:${anchor} is not a valid source anchor`);
-        continue;
-      }
-      anchoredSource.push(`${anchor}\n${sourceLines.slice(start - 1, end).join("\n")}`);
-    }
-    const actualSourceFingerprint = createHash("sha256").update(anchoredSource.join("\n---\n")).digest("hex");
-    if (actualSourceFingerprint !== config.sourceFingerprint) {
-      fail(`${config.sourcePath} normative source content fingerprint changed; update its contract and parity ledger`);
-    }
-
     if (!exists(config.contractPath)) {
       fail(`Missing artifact contract: ${config.contractPath}`);
       continue;
     }
 
     const contract = read(config.contractPath);
+    if (config.contractFingerprint) {
+      const actualContractFingerprint = createHash("sha256").update(contract).digest("hex");
+      if (actualContractFingerprint !== config.contractFingerprint) {
+        fail(`${config.contractPath} normative contract fingerprint changed; update its migrated pin`);
+      }
+      for (const consumerPath of config.contractConsumers) {
+        if (!exists(consumerPath)) {
+          fail(`Missing artifact contract consumer: ${consumerPath}`);
+          continue;
+        }
+        const { paths } = extractReadFirstEntries(read(consumerPath));
+        if (!paths.includes(config.contractPath)) {
+          fail(`${consumerPath} must read ${config.contractPath} as its normative artifact source`);
+        }
+      }
+      if (!read(config.adapterContractPin.path).includes(config.adapterContractPin.snippet)) {
+        fail(`${config.adapterContractPin.path} must apply the complete migrated contract rule range`);
+      }
+    } else {
+      if (!exists(config.sourcePath)) {
+        fail(`Missing artifact contract source: ${config.sourcePath}`);
+        continue;
+      }
+      const sourceLines = read(config.sourcePath).replace(/\r\n?/g, "\n").split("\n");
+      const anchoredSource = [];
+      for (const anchor of config.anchors) {
+        const [startToken, endToken = startToken] = String(anchor).split("-");
+        const start = Number(startToken);
+        const end = Number(endToken);
+        if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > sourceLines.length) {
+          fail(`${config.sourcePath}:${anchor} is not a valid source anchor`);
+          continue;
+        }
+        anchoredSource.push(`${anchor}\n${sourceLines.slice(start - 1, end).join("\n")}`);
+      }
+      const actualSourceFingerprint = createHash("sha256").update(anchoredSource.join("\n---\n")).digest("hex");
+      if (actualSourceFingerprint !== config.sourceFingerprint) {
+        fail(`${config.sourcePath} normative source content fingerprint changed; update its contract and parity ledger`);
+      }
+    }
     const relativeTemplatePath = `../../${config.templatePath}`;
     const templateLink = `[${config.templatePath}](${relativeTemplatePath})`;
     if (!contract.includes(templateLink)) fail(`${config.contractPath} must link ${config.templatePath}`);
@@ -403,8 +451,10 @@ function validateArtifactContractParity() {
   }
 
   for (const config of Object.values(artifacts)) {
-    for (const [anchorIndex, anchor] of config.anchors.entries()) {
-      const sourceAnchor = `${config.sourcePath}:${anchor}`;
+    const sourcePath = config.legacySourcePath ?? config.sourcePath;
+    const anchors = config.legacyAnchors ?? config.anchors;
+    for (const [anchorIndex, anchor] of anchors.entries()) {
+      const sourceAnchor = `${sourcePath}:${anchor}`;
       const expectedRuleId = `${config.prefix}-${String(anchorIndex + 1).padStart(3, "0")}`;
       const row = ledgerRows.get(sourceAnchor);
       if (!row) {
@@ -424,7 +474,9 @@ function validateArtifactContractParity() {
 
   for (const sourceAnchor of ledgerRows.keys()) {
     const known = Object.values(artifacts).some((config) =>
-      config.anchors.some((anchor) => sourceAnchor === `${config.sourcePath}:${anchor}`)
+      (config.legacyAnchors ?? config.anchors).some(
+        (anchor) => sourceAnchor === `${config.legacySourcePath ?? config.sourcePath}:${anchor}`
+      )
     );
     if (!known) fail(`${indexPath} has unexpected parity ledger source anchor ${sourceAnchor}`);
   }

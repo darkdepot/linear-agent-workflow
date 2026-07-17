@@ -14,44 +14,29 @@ Use this helper only for explicit targeted PRD repair, reviewer-feedback updates
 Read first:
 
 1. `AGENTS.md`
-2. `references/artifact-rules.md`
-3. `references/artifact-quality.md`
-4. `references/execution-quality.md`
-5. `references/questioning.md`
-6. `templates/prd.md`
+2. `references/contracts/prd.md`
+3. `references/artifact-rules.md`
+4. `references/artifact-quality.md`
+5. `references/execution-quality.md`
+6. `references/questioning.md`
+7. `templates/prd.md`
 
-Rules:
+Contract application:
 
-- Write Linear PRD content in the project config language; use Russian when no project config is present.
-- PRD defines WHAT, not HOW: operator behavior, scope boundaries, requirements, acceptance, and success criteria.
-- Treat the PRD as a lightweight requirements document, not a process transcript. Include what planning needs; omit ceremony that does not help `mono-spec` or `mono-issue`.
-- Resolve product decisions here. Do not leave `mono-spec` to invent actors, user-visible behavior, MVP boundaries, or acceptance criteria.
-- Use Project context and discovery output from `/brainstorming` or `/office-hours`.
-- If the user explicitly skips `/brainstorming` and `/office-hours`, create PRD-lite from the strengthened brief and mark lower confidence.
-- Capture problem, target operator, workflow, scenarios, requirements, non-goals, and acceptance.
-- For Standard or Deep work, assign stable requirement IDs: `R1.`, `R2.`, `R3.`. Use plain bullets only for very small PRD-lite docs.
-- Use the `actor -> capability -> benefit` shape from `references/execution-quality.md` as a coverage check for scenarios and requirements. Do not add a long user-story section unless it materially clarifies the product truth.
-- Use acceptance examples for stateful or conditional behavior. In default Russian output, use: `AE1 (безопасное сохранение). Покрывает R1 (частичное сохранение), R2. Дано ..., когда ..., тогда ...`. Bare IDs remain the canonical machine key; the Russian slug in parentheses is additive for human readability. Adapt the wording to the project config language.
-- Add success criteria for both:
-  - the human/operator outcome;
-  - handoff quality, so Tech Spec and Issue slicing can proceed without inventing product behavior.
-- Add behavior-validation intent: the user-visible behaviors later Tech Spec and Issue validation must prove. Keep this product-facing; do not name test files or implementation commands in the PRD.
-- Capture actors, current workflow, target workflow, scenarios, requirements, acceptance examples, success criteria, scope boundaries, assumptions, open questions, non-goals, and links.
-- Use stable actor IDs (`A1`, `A2`, ...), flow IDs (`F1`, `F2`, ...), requirement IDs (`R1`, `R2`, ...), and acceptance example IDs (`AE1`, `AE2`, ...).
-- Keep requirements observable or structural enough to trace into the Tech Spec.
-- Use questions only for product, workflow, scope, or risk choices that cannot be inferred from Project, discovery output, or repo context.
-- Record user review acceptance as a Linear comment.
-- Do not create Issues.
-- Do not include implementation architecture that belongs in Tech Spec.
-- Do not move the Project to Delivery; PRD creation belongs to Discovery or Handoff.
-- Do not start implementation.
+- `references/contracts/prd.md` is the normative source for PRD artifact behavior. Apply `PR-001` through `PR-032` in full; do not reinterpret or selectively copy those rules into this adapter.
+- `PR-001` through `PR-004` preserve this skill's existing route, internal-helper boundary, and direct-mutation eligibility.
+- `PR-005` through `PR-025` govern PRD content, evidence, acceptance recording, and the existing mutation prohibitions.
+- `PR-026` through `PR-031` govern the unchanged self-review before finishing.
+- `PR-032` governs the unchanged discovery-readiness check.
 
-Self-review before finishing:
+Workflow:
 
-- What would `mono-spec` still have to invent if this PRD ended here? Fix those gaps.
-- Does every important requirement have an actor, capability, and benefit?
-- Does the PRD name the behavior-validation target without leaking HOW?
-- Does every Standard/Deep requirement have an observable behavior or a stated structural reason?
-- Do acceptance examples cover ambiguous conditional behavior?
-- Are all implementation details deferred to Tech Spec?
-- Run or report `mono-check discovery`.
+1. Classify the request with `PR-001` through `PR-004`. Continue directly only for an eligible targeted mutation; otherwise stop and route to `mono-handoff` exactly as before.
+2. Read the active project config, current Project and PRD, approved discovery evidence, and any reviewer feedback relevant to the requested mutation.
+3. Confirm that the requested repair or maintenance does not change execution scope. If it does, do not use this direct helper path.
+4. Render the PRD with `templates/prd.md`, applying `PR-005` through `PR-020` as the content and decision boundary.
+5. Preserve the mutation boundaries and acceptance record required by `PR-021` through `PR-025`: this helper mutates only the PRD and records review acceptance through the existing Linear-comment path.
+6. Run the self-review in `PR-026` through `PR-031` and repair any gap before finishing.
+7. Run or report the discovery check required by `PR-032`.
+
+The contract changes where the rules are read from, not this skill's eligibility, approval/check path, Linear mutation boundary, or output behavior.

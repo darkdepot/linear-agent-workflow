@@ -14,7 +14,7 @@ Issue-only front door: before treating a request as a Project idea, check its sh
 Read first:
 
 1. `AGENTS.md`
-2. `skills/mono-project/SKILL.md`
+2. `references/contracts/project.md`
 3. `skills/mono-check/SKILL.md`
 4. `references/questioning.md`
 5. `references/lifecycle.md`
