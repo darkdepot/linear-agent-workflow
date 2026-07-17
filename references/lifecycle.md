@@ -69,6 +69,36 @@ Forbidden:
 
 Gate: `mono-review handoff` when required or advisory, then `mono-check handoff`.
 
+## Artifact Repair
+
+Repair an existing Project-first package through `mono-handoff` and
+`references/repair-machine.md` without reopening ordinary package creation.
+
+Required:
+
+- Exact before/after preview grouped by stable ID and a proposed class with
+  evidence.
+- `mono-review artifact` report-only classification review.
+- Class 1 preserves approval and Issues.
+- Class 2 synchronizes affected implementation-critical Issue snapshots,
+  re-derives fingerprints, stales preflight certificates issued before the
+  repair, and stops workers whose dispatch fingerprint is stale.
+- Class 3 stops workers, supersedes approvals, invalidates dependent artifacts,
+  moves a Delivery Project back to Discovery, and requires owner re-approval.
+- `mono-check repair` reports readiness after all class effects are recorded.
+
+Forbidden:
+
+- Downgrading ambiguity or risk growth below class 3.
+- Using handoff repair for issue-only body renewal; that belongs to
+  `mono-issue-intake` and its create-then-approve transaction.
+- Using handoff repair for accepted pre-ship drift; that remains owned by
+  `mono-ship`.
+- Letting a stale-contract worker continue or shipping on a pre-repair
+  preflight certificate.
+
+Gate: `mono-review artifact`, repair transaction, then `mono-check repair`.
+
 ## Issue
 
 Create the one-PR execution contract.

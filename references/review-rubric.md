@@ -78,6 +78,22 @@ Pre-ship:
 - Documentation workflow ran before the final green certificate when configured.
 - Green certificate records the reviewed head SHA and next `mono-deploy`.
 
+Repair classification:
+
+- The proposed class is checked against the exact stable-ID diff, not the
+  repair author's label alone.
+- Class 1 evidence proves the edit is non-semantic and preserves approvals and
+  Issues.
+- Class 2 evidence proves unchanged R/AE/AC, non-goals, visible behavior, risk,
+  and Issue set, and names all three effects: snapshot-sync with fingerprint
+  re-derivation, stale-preflight-cert disposition, and stale worker stop.
+- Class 3 evidence covers requirement/acceptance/non-goal/risk/Issue-set or
+  visible-behavior change and the ordered rollback: worker stop, approval
+  supersession, dependent invalidation, Delivery to Discovery, owner
+  re-approval.
+- Ambiguity or risk growth is class 3. A mixed or unanchored diff cannot receive
+  a lower advisory classification.
+
 ## Finding Format
 
 Each finding must include:

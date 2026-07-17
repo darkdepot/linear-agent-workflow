@@ -1,6 +1,6 @@
 ---
 name: mono-issue-intake
-description: Use when a raw request is unmistakably one-PR, projectless, issue-only work and needs an atomic front door instead of the Project/PRD/Tech Spec lane.
+description: Use after excluding a raw idea when a request is unmistakably one-PR projectless issue-only work, or when its existing Issue body needs create-then-approve renewal; Project/shaped work and artifact repair route to mono-handoff, pre-ship drift to mono-ship.
 ---
 
 # Mono Issue Intake

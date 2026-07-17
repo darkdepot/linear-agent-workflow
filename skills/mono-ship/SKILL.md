@@ -1,6 +1,6 @@
 ---
 name: mono-ship
-description: Use when shipping a Linear-tracked change through PR creation, repo documentation sync, strict PR review stabilization, and a deploy-ready green certificate.
+description: Use for accepted pre-ship drift and when shipping a Linear-tracked change through PR creation, repo documentation sync, strict PR review stabilization, and a deploy-ready mono-ship green certificate; earlier artifact repair belongs to mono-handoff.
 ---
 
 # Mono Ship

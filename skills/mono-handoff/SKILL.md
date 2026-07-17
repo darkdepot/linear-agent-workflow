@@ -1,6 +1,6 @@
 ---
 name: mono-handoff
-description: Use after discovery or plan reviews to turn shaped work into Linear Project, PRD, Tech Spec, and execution Issue(s). This is the primary post-discovery route.
+description: Use for an existing Project or shaped discovery to create the Project-first package, or for targeted PRD or Tech Spec repair. Raw ideas route to mono-idea, unmistakable one-PR projectless work to mono-issue-intake, and pre-ship drift to mono-ship.
 ---
 
 # Mono Handoff
@@ -26,6 +26,7 @@ Read first:
 13. `references/questioning.md`
 14. `references/lifecycle.md`
 15. `references/human-friendly-output.md`
+16. `references/repair-machine.md`
 
 When to use:
 
@@ -33,6 +34,7 @@ When to use:
 - After `/plan-design-review` or `/plan-eng-review`.
 - When a discovery or review session produced an implementation plan and the user wants to proceed through Linear.
 - When shaped context exists but Linear Project, PRD, Tech Spec, and Issues are not yet current.
+- When an existing Project-first PRD or Tech Spec needs targeted repair before pre-ship.
 
 Inputs to gather:
 
@@ -43,6 +45,9 @@ Inputs to gather:
 - Latest `mono-review` report when one already exists.
 - Minimal repo context needed to verify scope, interfaces, and validation.
 - Artifact intake summary following `references/artifact-intake.md`.
+- For repair mode: the current and proposed artifact versions, stable-ID diff,
+  affected Issue snapshots, active worker dispatch fingerprints, and latest
+  preflight certificates.
 
 Quality bar:
 
@@ -144,6 +149,27 @@ Plan: turn discovery into a Linear-backed execution package
 No code changes happen during handoff.
 ```
 
+Repair-mode workflow:
+
+1. Apply routing precedence from `references/repair-machine.md`. Do not use repair mode for accepted pre-ship drift or an issue-only body edit; those
+   belong to `mono-ship` and `mono-issue-intake` renewal respectively.
+2. Fetch the fresh Project-first package, approvals, affected Issue snapshots,
+   active worker dispatches, and latest preflight certificates.
+3. Produce the exact stable-ID before/after preview and proposed class with
+   evidence. The highest matching class wins; ambiguity and risk growth are
+   class 3.
+4. Run `mono-review artifact` report-only on the proposed repair class. Apply no
+   mutation while a blocking classification finding remains.
+5. Apply the class transaction exactly as defined in
+   `references/repair-machine.md`: class 1 preserves approvals and Issues;
+   class 2 synchronizes snapshots and fingerprints, stales earlier preflight
+   certificates, and stops stale-contract workers; class 3 stops workers,
+   supersedes approvals, invalidates dependants, and rolls Delivery back to
+   Discovery for owner re-approval.
+6. Run or report `mono-check repair` against every required effect and leave a
+   durable repair record with the diff, class, evidence, old/new fingerprints,
+   certificate disposition, worker disposition, and lifecycle result.
+
 Execution-mode workflow:
 
 1. Fetch fresh Linear Project, PRD, Tech Spec, and Issue state.
@@ -211,6 +237,9 @@ Rules:
 - Required `mono-review handoff` findings must be resolved, accepted, or explicitly deferred before creating Issues.
 - Advisory tiny-scope review may be skipped only when the reason is recorded in the Project and Issue review-gate fields.
 - Apply accepted review fixes in `mono-handoff`; then run `mono-check` to report readiness.
+- Follow `references/repair-machine.md` for Project-first artifact repair. Never
+  downgrade an ambiguous diff, skip a class 2 effect, or keep Delivery active
+  during a class 3 rollback.
 
 Final response after an approved package must include:
 
