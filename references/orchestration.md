@@ -222,13 +222,13 @@ Desktop, then `fallback`. Per-runtime bindings:
     defaults drift between versions (the wave-1 `model_switch` precedent),
     and a silently switched model voids the dispatch contract.
 
+  Immediately after verifying every spawn, resume, or session rotation, in the same orchestrator turn and before any other action, update that worker's `workers.json` entry with at least the current `pid`, `log`, `last_activity_at`, and `stage` (and the new `thread_id` on rotation). A live worker paired with a stale registry PID violates the registry contract; watcher events produced from that entry are untrustworthy, and investigating any such event must begin by reconciling the registry with the actual writer process.
+
   Parse the `thread.started` event from the log for the thread id and record
   it in the worker registry, together with the background process pid (`$!`)
   so the heartbeat watcher can probe writer liveness. Continue or steer the
   same thread with the same attempt-numbered stdout/stderr pair (resume appends
   because each attempt log is cumulative):
-
-  Immediately after verifying every spawn, resume, or session rotation, in the same orchestrator turn and before any other action, update that worker's `workers.json` entry with at least the current `pid`, `log`, `last_activity_at`, and `stage` (and the new `thread_id` on rotation). A live worker paired with a stale registry PID violates the registry contract; watcher events produced from that entry are untrustworthy, and investigating any such event must begin by reconciling the registry with the actual writer process.
 
   ```bash
   codex exec --json \
@@ -292,7 +292,7 @@ transport feature the runtime lacks.
 - Worker registry: `workers.json` beside the ledger — orchestrator-owned
   runtime metadata, one entry per Issue: `transport`, `thread_id`,
   `worktree`, `branch`, `stage`, `spawned_at`, `last_activity_at`, `log`
-  (shape in `templates/orchestrator-report.md`). Updated on every verified
+  and `pid` (shape in `templates/orchestrator-report.md`). Updated on every verified
   spawn, resume, session rotation, stage advance, and respawn under the
   immediate-update rule in Worker Transports; workers never touch it.
 - Report delivery under a write sandbox: the mailbox root is writable for
