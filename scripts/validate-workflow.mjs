@@ -3066,6 +3066,7 @@ function validateHeartbeatContract() {
     "retired Issues' logs are outside its scope",
     "nudge",
     "session rotation",
+    "Forced worker termination is a process-tree operation: starting from the worker PID recorded in the registry, enumerate descendants recursively with `pgrep -P`, terminate the captured tree leaf-to-root and the wrapper last (never kill only the wrapper PID), then prove from the captured PID set plus an exact transport-thread-id process search that no survivor remains before resume, respawn, or session rotation. A survivor can retain the transport thread and hang every later resume.",
     "model_reasoning_effort",
   ]) {
     assertIncludes("references/orchestration.md", required);
