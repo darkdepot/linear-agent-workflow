@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -304,6 +305,7 @@ function validateArtifactContractParity() {
       sourcePath: "skills/mono-project/SKILL.md",
       templatePath: "templates/project.md",
       anchors: [3, 8, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 36, 37, 41],
+      sourceFingerprint: "eef7345d040d267e26494912b71e65352a469980b7c7589a06605c6430397d8d",
     },
     prd: {
       prefix: "PR",
@@ -311,6 +313,7 @@ function validateArtifactContractParity() {
       sourcePath: "skills/mono-prd/SKILL.md",
       templatePath: "templates/prd.md",
       anchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, "35-37", 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 51, 52, 53, 54, 55, 56, 57],
+      sourceFingerprint: "d51732cbb52bdea327fa13ce29765a81916b64250e0475280768b2634a9684e7",
     },
     "tech-spec": {
       prefix: "TS",
@@ -318,6 +321,7 @@ function validateArtifactContractParity() {
       sourcePath: "skills/mono-spec/SKILL.md",
       templatePath: "templates/tech-spec.md",
       anchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 52, 53, 54, 55, 56, 57, 58],
+      sourceFingerprint: "1ab9264f69081516c37daa225a6abae07dd06312920a801c0f285a9cdc4f8487",
     },
     issue: {
       prefix: "IS",
@@ -325,6 +329,7 @@ function validateArtifactContractParity() {
       sourcePath: "skills/mono-issue/SKILL.md",
       templatePath: "templates/issue.md",
       anchors: [3, 8, 10, 12, 14, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 53, 54, 55, 56, 57, 58],
+      sourceFingerprint: "49290e33431549c27d4bfcf2a08fb1ab9afaa694e14223243a5125ec998e572a",
     },
   };
 
@@ -335,11 +340,29 @@ function validateArtifactContractParity() {
 
   const index = read(indexPath);
   const ledgerRows = new Map();
+  const ledgerRuleOwners = new Map();
   const definedIds = new Map();
 
   for (const [artifact, config] of Object.entries(artifacts)) {
     const contractLink = `[${artifact}](contracts/${artifact}.md)`;
     if (!index.includes(contractLink)) fail(`${indexPath} missing contract link ${contractLink}`);
+
+    const sourceLines = read(config.sourcePath).replace(/\r\n?/g, "\n").split("\n");
+    const anchoredSource = [];
+    for (const anchor of config.anchors) {
+      const [startToken, endToken = startToken] = String(anchor).split("-");
+      const start = Number(startToken);
+      const end = Number(endToken);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > sourceLines.length) {
+        fail(`${config.sourcePath}:${anchor} is not a valid source anchor`);
+        continue;
+      }
+      anchoredSource.push(`${anchor}\n${sourceLines.slice(start - 1, end).join("\n")}`);
+    }
+    const actualSourceFingerprint = createHash("sha256").update(anchoredSource.join("\n---\n")).digest("hex");
+    if (actualSourceFingerprint !== config.sourceFingerprint) {
+      fail(`${config.sourcePath} normative source content fingerprint changed; update its contract and parity ledger`);
+    }
 
     if (!exists(config.contractPath)) {
       fail(`Missing artifact contract: ${config.contractPath}`);
@@ -367,18 +390,27 @@ function validateArtifactContractParity() {
   for (const match of index.matchAll(ledgerPattern)) {
     const [, sourceAnchor, ruleId, consumers] = match;
     if (ledgerRows.has(sourceAnchor)) fail(`Duplicate parity ledger source anchor ${sourceAnchor}`);
+    if (ledgerRuleOwners.has(ruleId)) {
+      fail(`Duplicate parity ledger rule ID ${ruleId} for ${ledgerRuleOwners.get(ruleId)} and ${sourceAnchor}`);
+    } else {
+      ledgerRuleOwners.set(ruleId, sourceAnchor);
+    }
     ledgerRows.set(sourceAnchor, { ruleId, consumers: consumers.trim() });
   }
 
   for (const config of Object.values(artifacts)) {
-    for (const anchor of config.anchors) {
+    for (const [anchorIndex, anchor] of config.anchors.entries()) {
       const sourceAnchor = `${config.sourcePath}:${anchor}`;
+      const expectedRuleId = `${config.prefix}-${String(anchorIndex + 1).padStart(3, "0")}`;
       const row = ledgerRows.get(sourceAnchor);
       if (!row) {
         fail(`${indexPath} missing parity ledger row for ${sourceAnchor}`);
         continue;
       }
       if (!definedIds.has(row.ruleId)) fail(`${sourceAnchor} maps to undefined rule ID ${row.ruleId}`);
+      if (row.ruleId !== expectedRuleId) {
+        fail(`${sourceAnchor} maps to ${row.ruleId}; expected rule ID ${expectedRuleId}`);
+      }
       if (!row.ruleId.startsWith(`${config.prefix}-`)) {
         fail(`${sourceAnchor} must map to a ${config.prefix}-* rule ID, got ${row.ruleId}`);
       }
