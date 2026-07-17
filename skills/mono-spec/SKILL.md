@@ -14,45 +14,30 @@ Use this helper only for explicit targeted Tech Spec repair, reviewer-feedback u
 Read first:
 
 1. `AGENTS.md`
-2. `references/artifact-rules.md`
-3. `references/artifact-quality.md`
-4. `references/readiness-gates.md`
-5. `references/execution-quality.md`
-6. `templates/tech-spec.md`
+2. `references/contracts/tech-spec.md`
+3. `references/artifact-rules.md`
+4. `references/artifact-quality.md`
+5. `references/readiness-gates.md`
+6. `references/execution-quality.md`
+7. `templates/tech-spec.md`
 
-Rules:
+Contract application:
 
-- Write Linear Tech Spec content and section headings in the project config language; use Russian when no project config is present. Keep code identifiers, file paths, commands, product labels, and UI copy in their native language.
-- Tech Spec defines HOW, not product discovery.
-- Use Project and PRD as the source documents.
-- When PRD requirement IDs exist, trace important HOW decisions back to `R` or `AE` IDs. If a decision is cross-cutting technical support, say so explicitly.
-- Do not rewrite PRD behavior in different words. Link HOW back to WHAT; if WHAT is missing, return to PRD or mark the gap before continuing.
-- If engineering review exists, convert it into a durable Tech Spec.
-- If engineering review does not exist, run a lightweight engineering pass and create a lightweight spec.
-- Trace implementation decisions back to PRD requirement IDs.
-- Use stable implementation unit IDs (`U1`, `U2`, ...).
-- Include system-wide impact, contracts, failure modes, validation, rollout, and rollback.
-- For features integrating with an existing API or backend, the Tech Spec MUST include a sample of real responses from the deployed instance — enum value domains, object shapes, edge records — not just an endpoint list. Discovery that only proves an endpoint exists has not verified the contract. A spec-vs-reality mismatch is a spec blocker, not an implementation surprise. When unsure whether a feature qualifies, sample.
-- If the deployed instance is unreachable during discovery, do not guess the contract: a contract-verification spike Issue goes first in the wave, and Issues that consume the contract depend on it.
-- For standard, deep, risky, or review-sensitive packages, make requirement trace, validation, rollback, and failure modes concrete enough for `mono-review artifact` to inspect. Do not add review workflow sections to the Tech Spec body.
-- Use explicit no-spec exception only for truly simple, low-risk work.
-- Do not use no-spec exception for risky, cross-cutting, data, auth, release, or multi-surface work.
-- Keep plan-time and implementation-time unknowns separate. Do not pretend exact helper names, SQL, branch sequencing, or runtime failure details are settled before implementation has touched the code.
-- Include architecture, contracts, boundaries, risks, files/surfaces, validation, rollout, and rollback when relevant. Omit sections only when they truly add no value.
-- For deep or risky work, use the architecture lens from `references/execution-quality.md`: interface as test surface, deletion test, real seams only, and no shallow pass-through modules.
-- Directional pseudo-code and diagrams are allowed when they clarify architecture. Do not include copy-paste implementation code or shell choreography.
-- Do not write historical repair language.
-- Keep workflow mechanics internal. Do not embed `mono-check`, lifecycle, readiness criteria, or agent-contract instructions into the Linear Tech Spec body.
-- Do not move the Project to Delivery; Tech Spec creation belongs to Discovery or Handoff. Delivery Start belongs to `mono-implement`.
-- Do not create PRs.
-- Do not start implementation.
+- `references/contracts/tech-spec.md` is the normative source for Tech Spec artifact behavior. Apply `TS-001` through `TS-035` in full; do not reinterpret or selectively copy those rules into this adapter.
+- `TS-001` through `TS-004` preserve this skill's existing route, internal-helper boundary, and direct-mutation eligibility.
+- `TS-005` through `TS-025` govern Tech Spec content, evidence, traceability, architecture quality, and body purity.
+- `TS-026` through `TS-028` preserve the existing Delivery, PR-creation, and implementation-start prohibitions.
+- `TS-029` through `TS-034` govern the unchanged self-review before finishing.
+- `TS-035` governs the unchanged discovery or handoff transition check.
 
-Self-review before finishing:
+Workflow:
 
-- Does every important HOW decision trace back to PRD requirements or a cross-cutting technical need?
-- Did the spec introduce product behavior that belongs in PRD? If yes, stop and update PRD first.
-- Are deferred implementation details clearly marked instead of guessed?
-- For backend-integrating work, does the spec carry sampled real responses from the deployed instance, or name the contract-verification spike that opens the wave?
-- For deep/risky work, does the spec explain the stable interface or seam that implementation and tests should exercise?
-- Is the body free of workflow mechanics and lifecycle/readiness instructions?
-- Run or report `mono-check discovery` for standalone use, or `mono-check handoff` when this skill is being used inside `mono-handoff`.
+1. Classify the request with `TS-001` through `TS-004`. Continue directly only for an eligible targeted mutation; otherwise stop and route to `mono-handoff` exactly as before.
+2. Read the active project config, current Project and approved PRD, relevant engineering-review evidence, and any reviewer feedback for the requested mutation.
+3. Confirm that the requested repair or maintenance does not change execution scope or invent product behavior. If it does, do not use this direct helper path.
+4. Render the Tech Spec with `templates/tech-spec.md`, applying `TS-005` through `TS-025` as the content, evidence, traceability, and architecture boundary.
+5. Preserve the mutation boundaries in `TS-026` through `TS-028`: this helper mutates only the Tech Spec and does not start Delivery, create a PR, or start implementation.
+6. Run the self-review in `TS-029` through `TS-034` and repair any gap before finishing.
+7. Run or report the transition check required by `TS-035`.
+
+The contract changes where the rules are read from, not this skill's eligibility, approval/check path, Linear mutation boundary, or output behavior.

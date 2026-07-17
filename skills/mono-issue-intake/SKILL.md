@@ -17,7 +17,7 @@ Read first:
 4. `references/readiness-gates.md`
 5. `references/human-friendly-output.md`
 6. `skills/mono-idea/SKILL.md`
-7. `skills/mono-issue/SKILL.md`
+7. `references/contracts/issue.md`
 8. `templates/issue.md`
 
 ## When issue-only is granted — the nine eligibility conditions (R1)

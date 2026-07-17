@@ -26,8 +26,10 @@ const EXPECTED_SKILLS = [
   "mono-spec",
 ];
 const FROZEN_ADAPTER_DESCRIPTION_LINES = {
+  "mono-issue": "description: Use when creating or updating a one-PR Linear Issue from Project, PRD, and Tech Spec context.",
   "mono-project": "description: Use when creating or updating a Linear Project as the source of truth for a coding-agent workflow.",
   "mono-prd": "description: Use when creating or updating a Linear PRD after discovery or an explicit discovery skip.",
+  "mono-spec": "description: Use when creating or updating a Linear Tech Spec before delivery or issue creation.",
 };
 
 function read(relativePath) {
@@ -363,18 +365,31 @@ function validateArtifactContractParity() {
     "tech-spec": {
       prefix: "TS",
       contractPath: "references/contracts/tech-spec.md",
-      sourcePath: "skills/mono-spec/SKILL.md",
+      legacySourcePath: "skills/mono-spec/SKILL.md",
       templatePath: "templates/tech-spec.md",
-      anchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 52, 53, 54, 55, 56, 57, 58],
-      sourceFingerprint: "1ab9264f69081516c37daa225a6abae07dd06312920a801c0f285a9cdc4f8487",
+      legacyAnchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 52, 53, 54, 55, 56, 57, 58],
+      contractFingerprint: "f0ac90a4ebe223b96354d2f7636203503090abc90284c16ff9a75d1a0c8552c4",
+      contractConsumers: ["skills/mono-spec/SKILL.md"],
+      adapterContractPin: {
+        path: "skills/mono-spec/SKILL.md",
+        snippet: "Apply `TS-001` through `TS-035` in full",
+      },
     },
     issue: {
       prefix: "IS",
       contractPath: "references/contracts/issue.md",
-      sourcePath: "skills/mono-issue/SKILL.md",
+      legacySourcePath: "skills/mono-issue/SKILL.md",
       templatePath: "templates/issue.md",
-      anchors: [3, 8, 10, 12, 14, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 53, 54, 55, 56, 57, 58],
-      sourceFingerprint: "49290e33431549c27d4bfcf2a08fb1ab9afaa694e14223243a5125ec998e572a",
+      legacyAnchors: [3, 8, 10, 12, 14, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 53, 54, 55, 56, 57, 58],
+      contractFingerprint: "731cf9f21cc615dd8985d6ba4d5640547cea2a2cd56eab10df524c46d3e18f76",
+      contractConsumers: [
+        "skills/mono-issue/SKILL.md",
+        "skills/mono-issue-intake/SKILL.md",
+      ],
+      adapterContractPin: {
+        path: "skills/mono-issue/SKILL.md",
+        snippet: "Apply `IS-001` through `IS-034` in full",
+      },
     },
   };
 
@@ -2768,6 +2783,10 @@ function validateIssueIntakeContract() {
     "Phase-1 go-live boundary",
     "prepared, approved, non-startable package",
     "`mono-implement` owns activation",
+    "label first, marker last",
+    "On any error, roll back the partial state",
+    "Renewal recovery differs from first-time rollback",
+    "failed renewal must remove or supersede that previous marker",
     ".mono-agent-workflow/scripts/resolve-issue-context.mjs",
     "owner principal's stable Linear user ID",
     "issueOnlyLane.ownerPrincipal",
@@ -2794,19 +2813,22 @@ function validateIssueIntakeContract() {
     assertIncludes("skills/mono-idea/SKILL.md", required, JSON.stringify(required));
   }
 
-  // mono-issue guard: issue-only create mode does not redirect to handoff and
-  // emits no Project/PRD/Tech Spec chips; project-first behavior stays unchanged.
+  // Issue-contract guard: issue-only authoring stays delegated to the bounded
+  // lane contract while the project-first source and chip rules remain explicit.
   for (const required of [
-    "Issue-only mode",
-    "package_kind=issue-only",
-    "Intake-authorized draft",
-    "make only non-body updates",
-    "must not redirect into `mono-handoff`",
-    "must not emit or attach Project, PRD, or Tech Spec chips",
-    "the default project-first behavior and is unchanged",
+    "## IS-005 — Issue-only branch",
+    "Apply the [issue-only lane contract](../issue-only-lane.md) in full",
+    "## IS-008 — Project-first sources",
+    "Build a project-first Issue from Project, PRD, and Tech Spec",
+    "## IS-019 — Project-first chips",
   ]) {
-    assertIncludes("skills/mono-issue/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("references/contracts/issue.md", required, JSON.stringify(required));
   }
+  assertIncludes(
+    "skills/mono-issue/SKILL.md",
+    "require current Project, PRD, and Tech Spec context",
+    "project-first adapter context requirement"
+  );
 
   // mono-check guard: idea/issue modes are issue-only-aware so the two intake
   // entry paths (projectless idea route, self-contained issue-only Issue) do not
@@ -3637,13 +3659,15 @@ function validateLiveQaGateContract() {
 
 function validateRealBackendContractSampling() {
   for (const required of [
-    "sample of real responses from the deployed instance",
-    "not just an endpoint list",
-    "spec blocker, not an implementation surprise",
-    "contract-verification spike Issue goes first in the wave",
-    "When unsure whether a feature qualifies, sample",
+    "## TS-015 — Observed backend contracts",
+    "response samples covering enum domains, object shapes, and edge records",
+    "only endpoint existence",
+    "spec/reality mismatch as a spec blocker",
+    "when qualification is uncertain, sample",
+    "## TS-016 — Unreachable backend fallback",
+    "contract-verification spike first in the wave",
   ]) {
-    assertIncludes("skills/mono-spec/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("references/contracts/tech-spec.md", required, JSON.stringify(required));
   }
   assertIncludes(
     "templates/tech-spec.md",

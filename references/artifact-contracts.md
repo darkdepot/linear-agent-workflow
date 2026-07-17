@@ -18,10 +18,10 @@ metadata, not artifact rules, and are intentionally outside the ledger.
 
 The consumers column names the stage skills and guards that own adoption.
 Project and PRD moved to contract-backed compatibility adapters in A2; their
-legacy anchors below remain immutable migration evidence while validator pins
-now cover the bounded contracts and their direct consumers. Tech Spec and Issue
-remain pinned to their source-skill anchors until their A3 migration. Runtime
-behavior remains unchanged throughout these adapter slices.
+Tech Spec and Issue counterparts moved in A3. All legacy anchors below remain
+immutable migration evidence while validator pins cover the bounded contracts
+and their direct consumers. Runtime behavior remains unchanged throughout these
+adapter slices.
 
 ## Project parity
 
