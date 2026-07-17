@@ -107,11 +107,13 @@ reintroduce project-first ceremony.
 
 ## Trust boundary
 
-The plumbing is live, but intake remains non-activating: it leaves a prepared
-Issue in a pre-start state, and `mono-implement` owns the later delivery check
-and Issue lifecycle move. Per-repo use is still allowlisted only by explicit
+Intake remains non-activating: it leaves a prepared Issue in a pre-start state,
+and `mono-implement` owns the later delivery check and Issue lifecycle move.
+Activation is config-gated per repository by explicit
 `issueOnlyLane.enabled: true` plus a non-empty `ownerPrincipal`; no workflow may
-write or infer that opt-in.
+write or infer that opt-in. The owner decision on 2026-07-17 enables the lane for
+this upstream repository so it can be exercised here; every other repository
+remains disabled until its own explicit config opt-in.
 
 The resolver is a deterministic, pure function over its inputs. It enforces
 **structure, freshness, eligibility, and provenance-agreement** — it is not, and

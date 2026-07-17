@@ -21,5 +21,9 @@
   "orchestration": {
     "transport": "codex-cli",
     "maxParallelWorkers": 3
+  },
+  "issueOnlyLane": {
+    "enabled": true,
+    "ownerPrincipal": "c7fe3bbe-1fbc-4f33-8758-6743528076f3"
   }
 }
