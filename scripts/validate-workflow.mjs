@@ -116,6 +116,15 @@ function expectCommandFailure(label, callback, expectedText) {
   }
 }
 
+function issueOnlyLaneActivationError(config) {
+  const lane = config.issueOnlyLane;
+  if (lane?.enabled !== true) return null;
+  if (typeof lane.ownerPrincipal !== "string" || lane.ownerPrincipal.trim().length === 0) {
+    return "enabled issueOnlyLane requires a non-empty ownerPrincipal";
+  }
+  return null;
+}
+
 function validateSkills() {
   const skills = listSkillNames();
   const skillSet = new Set(skills);
@@ -753,6 +762,8 @@ function validateIssueOnlyLaneBehavior() {
     "opt-in gate",
     "issueOnlyLane.enabled: true",
     "ownerPrincipal",
+    "config-gated per repository",
+    "owner decision on 2026-07-17",
     ".mono-agent-workflow/scripts/resolve-issue-context.mjs",
   ]) {
     assertIncludes("references/issue-only-lane.md", pin);
@@ -875,20 +886,32 @@ function validateIssueOnlyLaneBehavior() {
     assertIncludes("references/orchestration.md", required, JSON.stringify(required));
   }
 
-  // Slice 5 is the plumbing go-live, not implicit activation. Intake still
-  // leaves a package non-startable; mono-implement alone moves the Issue after
-  // the delivery check, and each consuming repo remains config-opt-in.
+  // MONO-25 activates the config-gated lane for this upstream repository.
+  // Intake still leaves a package non-startable; mono-implement alone moves the
+  // Issue after the delivery check, and every repository remains config-opt-in.
   for (const [relativePath, required] of [
     ["skills/mono-issue-intake/SKILL.md", "Intake never moves the Issue to started; `mono-implement` owns activation"],
     ["skills/mono-idea/SKILL.md", "live only when `issueOnlyLane.enabled: true` and `ownerPrincipal` are configured"],
     ["references/artifact-rules.md", "intake remains non-activating; `mono-implement` owns the later Issue lifecycle move"],
-    ["references/issue-only-lane.md", "The plumbing is live, but intake remains non-activating"],
+    ["references/issue-only-lane.md", "Intake remains non-activating"],
+    ["references/issue-only-lane.md", "config-gated per repository"],
+    ["references/issue-only-lane.md", "owner decision on 2026-07-17"],
   ]) {
     assertIncludes(relativePath, required, JSON.stringify(required));
   }
   const activeProjectConfig = JSON.parse(read(".agents/mono-workflow.config.json"));
-  if (activeProjectConfig.issueOnlyLane?.enabled === true) {
-    fail("Slice 5 must not enable issueOnlyLane in the upstream repo's real project config");
+  const activeProjectConfigError = issueOnlyLaneActivationError(activeProjectConfig);
+  if (activeProjectConfigError) {
+    fail(`Upstream project config is invalid: ${activeProjectConfigError}`);
+  }
+
+  // MONO-25 negative fixture: activation without an owner principal is invalid,
+  // even though a disabled or absent lane remains a valid project-first config.
+  const missingOwnerConfig = structuredClone(activeProjectConfig);
+  missingOwnerConfig.issueOnlyLane = { enabled: true };
+  const missingOwnerConfigError = issueOnlyLaneActivationError(missingOwnerConfig);
+  if (!missingOwnerConfigError?.includes("ownerPrincipal")) {
+    fail("enabled issueOnlyLane without a non-empty ownerPrincipal fixture must fail validation");
   }
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-issue-only-"));
@@ -959,8 +982,8 @@ function validateIssueOnlyLaneBehavior() {
     // approval fingerprint the caller confirmed against the authenticated comment.
     const issueOnlyArgs = ["--label", "issue-only", "--approval-verified", fingerprint];
 
-    // Fixture 2 — happy: a valid marker plus both trusted signals resolves the
-    // five fields correctly.
+    // Fixture 2 — happy: a valid marker plus both trusted signals and the real
+    // enabled upstream project config resolves the five fields correctly.
     writeMarker([
       "Marker version: 1",
       `Scope fingerprint: ${fingerprint}`,
@@ -969,7 +992,7 @@ function validateIssueOnlyLaneBehavior() {
       `Approval: ${fingerprint} (approved by owner)`,
     ]);
     const happy = JSON.parse(
-      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", enableConfigPath, ...issueOnlyArgs])
+      runNode(["scripts/resolve-issue-context.mjs", "--issue", issuePath, "--marker", markerPath, "--config", ".agents/mono-workflow.config.json", ...issueOnlyArgs])
     );
     if (happy.package_kind !== "issue-only") fail("resolve-issue-context valid marker must be issue-only");
     if (happy.lifecycle_state_entity !== "issue") fail("resolve-issue-context issue-only must read the Issue lifecycle entity");
