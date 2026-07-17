@@ -365,6 +365,7 @@ directory's history; retired Issues' logs are outside its scope.
   session rotation (fresh thread and fresh attempt-numbered log). Alert the
   owner only when the ladder is exhausted (owner decision Q3); never page
   on the first stall.
+- Forced worker termination is a process-tree operation: starting from the worker PID recorded in the registry, enumerate descendants recursively with `pgrep -P`, terminate the captured tree leaf-to-root and the wrapper last (never kill only the wrapper PID), then prove from the captured PID set plus an exact transport-thread-id process search that no survivor remains before resume, respawn, or session rotation. A survivor can retain the transport thread and hang every later resume.
 - Every healing step and its result are mandatory ledger entries — a
   watcher event that triggered intervention is never routine polling.
 
