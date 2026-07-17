@@ -16,9 +16,12 @@ purpose, routing, rule, lifecycle/status, and finish-check statement in the four
 source skills to exactly one contract rule. `Read first` lists are dependency
 metadata, not artifact rules, and are intentionally outside the ledger.
 
-The consumers column names the stage skills and guards that own later adoption.
-In A1 these are declared consumers only: no skill is rewired and runtime
-behavior remains unchanged.
+The consumers column names the stage skills and guards that own adoption.
+Project and PRD moved to contract-backed compatibility adapters in A2; their
+legacy anchors below remain immutable migration evidence while validator pins
+now cover the bounded contracts and their direct consumers. Tech Spec and Issue
+remain pinned to their source-skill anchors until their A3 migration. Runtime
+behavior remains unchanged throughout these adapter slices.
 
 ## Project parity
 

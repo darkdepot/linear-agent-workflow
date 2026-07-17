@@ -12,8 +12,8 @@ Use this skill after discovery and reviews to turn shaped work into a Linear-bac
 Read first:
 
 1. `AGENTS.md`
-2. `skills/mono-project/SKILL.md`
-3. `skills/mono-prd/SKILL.md`
+2. `references/contracts/project.md`
+3. `references/contracts/prd.md`
 4. `skills/mono-spec/SKILL.md`
 5. `skills/mono-issue/SKILL.md`
 6. `skills/mono-review/SKILL.md`
