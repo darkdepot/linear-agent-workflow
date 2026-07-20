@@ -571,6 +571,18 @@ function validateRepairAndRoutingContract() {
       fail(`Repair classification fixture ${fixture} must resolve to class ${expectedClass}`);
     }
   }
+  for (const [fixture, expectedClass] of classificationFixtures.filter(([, value]) => value === "3")) {
+    const rowPattern = new RegExp(
+      "^\\| `" + fixture + "` \\| [^|]+ \\| `" + expectedClass + "` \\| ([^|]+) \\|$",
+      "m"
+    );
+    const requiredResult = repairContract.match(rowPattern)?.[1]?.toLowerCase() ?? "";
+    for (const required of ["supersede approval", "invalidate dependants", "require owner re-approval", "roll back delivery"]) {
+      if (!requiredResult.includes(required)) {
+        fail(`Repair class 3 fixture ${fixture} required result missing ${JSON.stringify(required)}`);
+      }
+    }
+  }
 
   const classTwoEffectFixtures = [
     {

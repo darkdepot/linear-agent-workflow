@@ -54,8 +54,8 @@ The highest matching class wins. Risk growth always selects class 3. Ambiguity i
 | `non-goal` | A non-goal or scope boundary changes. | `3` | Supersede approval, invalidate dependants, require owner re-approval, and roll back Delivery. |
 | `risk` | The recorded risk changes or evidence indicates risk growth. | `3` | Supersede approval, invalidate dependants, require owner re-approval, and roll back Delivery. |
 | `issue-set` | Issue count, slicing, dependency topology, or approved Issue membership changes. | `3` | Supersede approval, invalidate dependants, require owner re-approval, and roll back Delivery. |
-| `visible-behavior` | Externally visible behavior changes even when the written requirement or acceptance IDs were not updated. | `3` | Fail closed on unrecorded product drift; supersede approval, require owner re-approval, and roll back Delivery. |
-| `ambiguous` | A changed hunk lacks a stable anchor or evidence cannot prove the class 1/2 guard set unchanged. | `3` | Fail closed; do not infer a lower class. |
+| `visible-behavior` | Externally visible behavior changes even when the written requirement or acceptance IDs were not updated. | `3` | Fail closed on unrecorded product drift; supersede approval, invalidate dependants, require owner re-approval, and roll back Delivery. |
+| `ambiguous` | A changed hunk lacks a stable anchor or evidence cannot prove the class 1/2 guard set unchanged. | `3` | Fail closed; do not infer a lower class; supersede approval, invalidate dependants, require owner re-approval, and roll back Delivery. |
 
 ## Class 1 execution
 
