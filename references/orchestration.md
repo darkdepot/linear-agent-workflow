@@ -189,6 +189,19 @@ snapshot and the new `workers.json` entry. At the first start and every stage
 resume the worker runs `verify-pack-state.mjs identity`; any identity mismatch
 is a `blocked` report and the stage does not continue.
 
+### Sandbox ladder
+
+Sandbox grants follow a stage ladder: `mono-implement` uses `workspace-write` without network; `mono-preflight` adds network and writable main-checkout `.git` while retaining the writable orchestrator root for mailbox delivery; `mono-ship` keeps those grants and permits push.
+
+| Stage | Sandbox mode and grants | Why |
+| --- | --- | --- |
+| `mono-implement` | `workspace-write`, no network, plus the writable orchestrator root | Edit only the linked worktree and deliver the mailbox report. |
+| `mono-preflight` | `workspace-write`, network, writable main-checkout `.git`, plus the writable orchestrator root | Run the review helper, commit from the linked worktree, and deliver the mailbox report. |
+| `mono-ship` | The `mono-preflight` grants, with push permitted | Push the branch, create and stabilize the PR, and keep mailbox delivery available. |
+| Any stage that edits a protected hidden directory such as `.agents` | An explicit writable grant for that exact directory | Codex protects dot-directories even when their worktree is writable. |
+
+Escalating to a fully disabled sandbox is not normal operation; record it in `ledger.md` as a deviation with the reason.
+
 - `codex-cli`: the orchestrator — in any runtime with shell access — creates
   and steers headless Codex worker threads; this subsumes the older `codex`
   binding. Spawn as a background process, one per Issue:
