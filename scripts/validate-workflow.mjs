@@ -3943,6 +3943,8 @@ function validateIssueIntakeContract() {
     "create-then-approve",
     "scripts/resolve-issue-context.mjs",
     "--emit-fingerprint",
+    "--issue <issue-body> --emit-fingerprint",
+    "--issue <live-issue-body> --emit-fingerprint",
     "--approval-verified",
     "whole-body",
     "non-startable Issue",
