@@ -1,7 +1,8 @@
 # Tech Spec artifact contract
 
-This bounded contract preserves the normative Tech Spec rules formerly owned
-by `skills/mono-spec/SKILL.md`. Use the shared
+This bounded contract is the normative source for Tech Spec artifact behavior.
+`mono-handoff` consumes it for Project-first package creation and repair;
+`mono-ship` consumes it for accepted pre-ship drift. Use the shared
 [artifact rules](../artifact-rules.md), [artifact quality](../artifact-quality.md),
 [readiness gates](../readiness-gates.md), and
 [execution quality](../execution-quality.md) for cross-artifact policy. Render
@@ -10,8 +11,8 @@ duplicate the template here.
 
 ## TS-001 — Tech Spec routing
 
-Use this contract to create or update a Linear Tech Spec before Delivery or
-Issue creation.
+Use this contract inside the lifecycle owner that creates or updates a Linear
+Tech Spec before Delivery, Issue creation, or an approved repair.
 
 ## TS-002 — Implementation truth
 
@@ -19,14 +20,15 @@ The Tech Spec records HOW the approved PRD will be built.
 
 ## TS-003 — Internal helper boundary
 
-Tech Spec writing is an internal, advanced artifact operation. The normal
-post-discovery user-facing workflow is `mono-handoff`.
+Tech Spec writing is owned by lifecycle stages rather than exposed as a direct
+artifact door. The normal post-discovery and repair workflow is `mono-handoff`;
+accepted pre-ship drift belongs to `mono-ship`.
 
 ## TS-004 — Targeted-use eligibility
 
-Use direct Tech Spec mutation only for targeted repair, reviewer-feedback
-updates, drift sync, or maintenance that does not change execution scope. A
-normal post-discovery request must stop and route to `mono-handoff`.
+A direct request to write or repair a Tech Spec must route to `mono-handoff`
+repair. Accepted pre-ship drift routes to `mono-ship`; no other workflow mutates
+the Tech Spec directly.
 
 ## TS-005 — Linear-facing language
 

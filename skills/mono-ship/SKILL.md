@@ -15,14 +15,16 @@ Read first:
 2. `skills/mono-preflight/SKILL.md`
 3. `skills/mono-review/SKILL.md`
 4. `skills/mono-check/SKILL.md`
-5. `references/artifact-rules.md`
-6. `references/readiness-gates.md`
-7. `references/execution-quality.md`
-8. `references/install.md`
-9. `references/ship-feedback-loop.md`
-10. `references/human-friendly-output.md`
-11. `references/issue-only-lane.md`
-12. `templates/ship-output.md`
+5. `references/contracts/prd.md`
+6. `references/contracts/tech-spec.md`
+7. `references/artifact-rules.md`
+8. `references/readiness-gates.md`
+9. `references/execution-quality.md`
+10. `references/install.md`
+11. `references/ship-feedback-loop.md`
+12. `references/human-friendly-output.md`
+13. `references/issue-only-lane.md`
+14. `templates/ship-output.md`
 
 Workflow:
 

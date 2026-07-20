@@ -25,17 +25,11 @@ const EXPECTED_SKILLS = [
   "mono-issue-intake",
   "mono-orchestrate",
   "mono-preflight",
-  "mono-prd",
-  "mono-project",
   "mono-review",
   "mono-ship",
-  "mono-spec",
 ];
 const FROZEN_ADAPTER_DESCRIPTION_LINES = {
   "mono-issue": "description: Use when creating or updating a one-PR Linear Issue from Project, PRD, and Tech Spec context.",
-  "mono-project": "description: Use when creating or updating a Linear Project as the source of truth for a coding-agent workflow.",
-  "mono-prd": "description: Use when creating or updating a Linear PRD after discovery or an explicit discovery skip.",
-  "mono-spec": "description: Use when creating or updating a Linear Tech Spec before delivery or issue creation.",
 };
 
 function read(relativePath) {
@@ -217,6 +211,42 @@ function validateSkills() {
   }
 }
 
+function retiredAdapterReferenceAllowed(relativePath) {
+  return (
+    relativePath === "CHANGELOG.md" ||
+    relativePath === "scripts/validate-workflow.mjs" ||
+    relativePath.startsWith("plans/") ||
+    relativePath.startsWith("docs/spikes/")
+  );
+}
+
+function validateRetiredAdapterReferenceAllowlist() {
+  if (retiredAdapterReferenceAllowed("README.md")) {
+    fail("Retired adapter reference allowlist must reject active documentation");
+  }
+  if (!retiredAdapterReferenceAllowed("plans/migration-fixture.md")) {
+    fail("Retired adapter reference allowlist must preserve historical migration documents");
+  }
+
+  const files = execFileSync("git", ["ls-files", "-co", "--exclude-standard"], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .split("\n")
+    .filter(Boolean);
+  const retiredReference = /mono-(?:project|prd|spec)(?:\/SKILL\.md)?/;
+
+  for (const relativePath of files) {
+    if (!exists(relativePath) || retiredAdapterReferenceAllowed(relativePath)) continue;
+    const body = read(relativePath);
+    if (retiredReference.test(body)) {
+      fail(
+        `${relativePath} references a retired Project/PRD/Tech Spec adapter outside the historical migration allowlist`
+      );
+    }
+  }
+}
+
 function validateTemplateSections() {
   const requiredSections = {
     "templates/prd.md": [
@@ -344,48 +374,35 @@ function validateArtifactContractParity() {
     project: {
       prefix: "PC",
       contractPath: "references/contracts/project.md",
-      legacySourcePath: "skills/mono-project/SKILL.md",
+      ledgerSourcePath: "references/contracts/project.md",
       templatePath: "templates/project.md",
-      legacyAnchors: [3, 8, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 33, 34, 35, 36, 37, 41],
-      contractFingerprint: "4154056ee7c85ccdbc1d46703e37dc15d7c0e481acfae3731651ef9b0bee58ec",
+      contractFingerprint: "2f7764d7b156d77daa51358db7be4dc77963f5522033237a889fb6b91785fa24",
       contractConsumers: [
-        "skills/mono-project/SKILL.md",
         "skills/mono-idea/SKILL.md",
         "skills/mono-handoff/SKILL.md",
       ],
-      adapterContractPin: {
-        path: "skills/mono-project/SKILL.md",
-        snippet: "Apply `PC-001` through `PC-018` in full",
-      },
     },
     prd: {
       prefix: "PR",
       contractPath: "references/contracts/prd.md",
-      legacySourcePath: "skills/mono-prd/SKILL.md",
+      ledgerSourcePath: "references/contracts/prd.md",
       templatePath: "templates/prd.md",
-      legacyAnchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, "35-37", 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 51, 52, 53, 54, 55, 56, 57],
-      contractFingerprint: "5870d21dbbc631e9e4d106a780548863ee4c4b569a8c70aa3efe855f4a2cb2e6",
+      contractFingerprint: "26b9abe56f353541ff3f39af271b394b3292fd63056efcca689d98e07b8ba234",
       contractConsumers: [
-        "skills/mono-prd/SKILL.md",
         "skills/mono-handoff/SKILL.md",
+        "skills/mono-ship/SKILL.md",
       ],
-      adapterContractPin: {
-        path: "skills/mono-prd/SKILL.md",
-        snippet: "Apply `PR-001` through `PR-032` in full",
-      },
     },
     "tech-spec": {
       prefix: "TS",
       contractPath: "references/contracts/tech-spec.md",
-      legacySourcePath: "skills/mono-spec/SKILL.md",
+      ledgerSourcePath: "references/contracts/tech-spec.md",
       templatePath: "templates/tech-spec.md",
-      legacyAnchors: [3, 8, 10, 12, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 52, 53, 54, 55, 56, 57, 58],
-      contractFingerprint: "f0ac90a4ebe223b96354d2f7636203503090abc90284c16ff9a75d1a0c8552c4",
-      contractConsumers: ["skills/mono-spec/SKILL.md"],
-      adapterContractPin: {
-        path: "skills/mono-spec/SKILL.md",
-        snippet: "Apply `TS-001` through `TS-035` in full",
-      },
+      contractFingerprint: "80eeaac564a09e28de1c92996115fd09fc2463ebc2073cb4c73597bc3135522f",
+      contractConsumers: [
+        "skills/mono-handoff/SKILL.md",
+        "skills/mono-ship/SKILL.md",
+      ],
     },
     issue: {
       prefix: "IS",
@@ -440,8 +457,10 @@ function validateArtifactContractParity() {
           fail(`${consumerPath} must read ${config.contractPath} as its normative artifact source`);
         }
       }
-      const pinError = artifactContractPinError(config.adapterContractPin);
-      if (pinError) fail(pinError);
+      if (config.adapterContractPin) {
+        const pinError = artifactContractPinError(config.adapterContractPin);
+        if (pinError) fail(pinError);
+      }
     } else {
       if (!exists(config.sourcePath)) {
         fail(`Missing artifact contract source: ${config.sourcePath}`);
@@ -480,7 +499,7 @@ function validateArtifactContractParity() {
     }
   }
 
-  const ledgerPattern = /^\| `([^`]+:\d+(?:-\d+)?)` \| `((?:PC|PR|TS|IS)-\d{3})` \| ([^|]+) \|[ \t]*$/gm;
+  const ledgerPattern = /^\| `([^`]+)` \| `((?:PC|PR|TS|IS)-\d{3})` \| ([^|]+) \|[ \t]*$/gm;
   for (const match of index.matchAll(ledgerPattern)) {
     const [, sourceAnchor, ruleId, consumers] = match;
     if (ledgerRows.has(sourceAnchor)) fail(`Duplicate parity ledger source anchor ${sourceAnchor}`);
@@ -493,10 +512,14 @@ function validateArtifactContractParity() {
   }
 
   for (const config of Object.values(artifacts)) {
-    const sourcePath = config.legacySourcePath ?? config.sourcePath;
-    const anchors = config.legacyAnchors ?? config.anchors;
-    for (const [anchorIndex, anchor] of anchors.entries()) {
-      const sourceAnchor = `${sourcePath}:${anchor}`;
+    const ruleIds = [...definedIds.entries()]
+      .filter(([ruleId, contractPath]) => contractPath === config.contractPath && ruleId.startsWith(`${config.prefix}-`))
+      .map(([ruleId]) => ruleId)
+      .sort();
+    const sourceAnchors = config.ledgerSourcePath
+      ? ruleIds.map((ruleId) => `${config.ledgerSourcePath}#${ruleId}`)
+      : config.legacyAnchors.map((anchor) => `${config.legacySourcePath}:${anchor}`);
+    for (const [anchorIndex, sourceAnchor] of sourceAnchors.entries()) {
       const expectedRuleId = `${config.prefix}-${String(anchorIndex + 1).padStart(3, "0")}`;
       const row = ledgerRows.get(sourceAnchor);
       if (!row) {
@@ -515,11 +538,14 @@ function validateArtifactContractParity() {
   }
 
   for (const sourceAnchor of ledgerRows.keys()) {
-    const known = Object.values(artifacts).some((config) =>
-      (config.legacyAnchors ?? config.anchors).some(
-        (anchor) => sourceAnchor === `${config.legacySourcePath ?? config.sourcePath}:${anchor}`
-      )
-    );
+    const known = Object.values(artifacts).some((config) => {
+      if (config.ledgerSourcePath) {
+        return sourceAnchor.startsWith(`${config.ledgerSourcePath}#${config.prefix}-`);
+      }
+      return config.legacyAnchors.some(
+        (anchor) => sourceAnchor === `${config.legacySourcePath}:${anchor}`
+      );
+    });
     if (!known) fail(`${indexPath} has unexpected parity ledger source anchor ${sourceAnchor}`);
   }
 
@@ -775,8 +801,16 @@ function validateLocalInstallBehavior() {
     if (installedIdentity.sourceCommit !== expectedCommit) {
       fail("Local install lockfile sourceCommit must equal the immutable source HEAD");
     }
-    if (installedIdentity.surfaceRevision !== 1) {
+    if (installedIdentity.surfaceRevision !== 2) {
       fail("Local install lockfile surfaceRevision must equal the current surface revision");
+    }
+    if (installedIdentity.installedSkills?.length !== EXPECTED_SKILLS.length) {
+      fail(`Fresh local install must contain exactly ${EXPECTED_SKILLS.length} skills`);
+    }
+    for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
+      if (fs.existsSync(path.join(skillsRoot, retired))) {
+        fail(`Fresh 11-skill install unexpectedly contains retired adapter ${retired}`);
+      }
     }
     if (!fs.existsSync(installedPackVerifier)) {
       fail("Local install missing the canonical pack-state verifier");
@@ -1299,6 +1333,24 @@ function validateBreakingInstallBehavior() {
     return fs.readdirSync(installLockPath).filter((name) => /^claim-.+\.json$/.test(name));
   }
 
+  function seedFourteenSkillSurface(skillsRoot) {
+    const lockPath = path.join(skillsRoot, lockName);
+    const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    lock.surfaceRevision = 1;
+    for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
+      const retiredDir = path.join(skillsRoot, retired);
+      fs.mkdirSync(retiredDir, { recursive: true });
+      const body = "<!-- Installed by Mono Agent Workflow @ previous-surface. Do not edit manually. -->\n";
+      fs.writeFileSync(path.join(retiredDir, "SKILL.md"), body);
+      lock.installedSkills.push({
+        name: retired,
+        path: `${retired}/SKILL.md`,
+        sha256: createHash("sha256").update(body).digest("hex"),
+      });
+    }
+    fs.writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+  }
+
   function snapshotTree(treeRoot) {
     const entries = [];
     function walk(current) {
@@ -1353,6 +1405,20 @@ function validateBreakingInstallBehavior() {
     runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], { env });
     runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
 
+    // AC1 fresh 11 + 14→11: first prove a clean current install, then model the
+    // previous surface by restoring only the three generated adapters and their
+    // lock entries. The breaking transaction must retire those entries on both
+    // roots while preserving user-owned lookalikes.
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      const freshLock = JSON.parse(
+        fs.readFileSync(path.join(skillsRoot, lockName), "utf8")
+      );
+      if (freshLock.installedSkills?.length !== 11) {
+        fail(`Fresh breaking-install fixture must start with 11 skills at ${skillsRoot}`);
+      }
+      seedFourteenSkillSurface(skillsRoot);
+    }
+
     // AC3 + strengthened --check: generated stale directories and surplus
     // installedSkills entries are failures, while a user-owned mono-* lookalike
     // is neither removed nor reported as generated drift.
@@ -1370,8 +1436,41 @@ function validateBreakingInstallBehavior() {
       () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot, "--check"], { env }),
       "Unexpected generated workflow skill directory: mono-retired"
     );
+    expectCommandFailure(
+      "install-local --breaking unowned generated directory fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "not owned by the previous lock: mono-retired"
+    );
+    fs.rmSync(staleDir, { recursive: true, force: true });
 
     const codexLockPath = path.join(codexRoot, lockName);
+    const escapeTarget = path.join(baseDir, "escape-target", "mono-prd");
+    fs.mkdirSync(escapeTarget, { recursive: true });
+    fs.writeFileSync(
+      path.join(escapeTarget, "SKILL.md"),
+      "<!-- Installed by Mono Agent Workflow @ external. Do not edit manually. -->\n"
+    );
+    const pathEscapeLock = JSON.parse(fs.readFileSync(codexLockPath, "utf8"));
+    pathEscapeLock.installedSkills.push({
+      name: "../../escape-target/mono-prd",
+      path: "../../escape-target/mono-prd/SKILL.md",
+      sha256: "0".repeat(64),
+    });
+    fs.writeFileSync(codexLockPath, `${JSON.stringify(pathEscapeLock, null, 2)}\n`);
+    expectCommandFailure(
+      "install-local --breaking previous-lock path escape fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "installed skill name must be a safe direct child"
+    );
+    if (!fs.existsSync(path.join(escapeTarget, "SKILL.md"))) {
+      fail("install-local --breaking path escape fixture mutated an external generated directory");
+    }
+    pathEscapeLock.installedSkills = pathEscapeLock.installedSkills.filter(
+      (entry) => entry.name !== "../../escape-target/mono-prd"
+    );
+    fs.writeFileSync(codexLockPath, `${JSON.stringify(pathEscapeLock, null, 2)}\n`);
+    fs.rmSync(path.join(baseDir, "escape-target"), { recursive: true, force: true });
+
     const surplusLock = JSON.parse(fs.readFileSync(codexLockPath, "utf8"));
     surplusLock.installedSkills.push({
       name: "mono-ghost",
@@ -1384,6 +1483,10 @@ function validateBreakingInstallBehavior() {
       () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot, "--check"], { env }),
       "Lockfile has unexpected skill entry: mono-ghost"
     );
+    surplusLock.installedSkills = surplusLock.installedSkills.filter(
+      (entry) => entry.name !== "mono-ghost"
+    );
+    fs.writeFileSync(codexLockPath, `${JSON.stringify(surplusLock, null, 2)}\n`);
 
     // AC1 multi-root success: one breaking transaction repairs both roots,
     // removes generated stale state, preserves the non-generated lookalike,
@@ -1399,7 +1502,19 @@ function validateBreakingInstallBehavior() {
     if (!successOutput.includes("Quiescence claim probe passed")) {
       fail("install-local --breaking did not prove that control.json writers were excluded during cut-over");
     }
-    if (fs.existsSync(staleDir)) fail("install-local --breaking kept a generated stale directory");
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      const migratedLock = JSON.parse(
+        fs.readFileSync(path.join(skillsRoot, lockName), "utf8")
+      );
+      if (migratedLock.surfaceRevision !== 2 || migratedLock.installedSkills?.length !== 11) {
+        fail(`Breaking install did not migrate 14→11 with surfaceRevision 2 at ${skillsRoot}`);
+      }
+      for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
+        if (fs.existsSync(path.join(skillsRoot, retired))) {
+          fail(`Breaking install kept retired generated adapter ${retired} at ${skillsRoot}`);
+        }
+      }
+    }
     if (!fs.existsSync(path.join(lookalikeDir, "SKILL.md"))) {
       fail("install-local --breaking removed a non-generated mono-* lookalike");
     }
@@ -4212,8 +4327,10 @@ function validateAntiPatterns() {
     if (dogfood.includes(banned)) fail(`Zeni dogfood example preserves removed install contract: ${banned}`);
   }
 
-  const spec = read("skills/mono-spec/SKILL.md");
-  if (spec.includes("mono-review design")) fail("mono-spec must not reference unsupported mono-review design mode");
+  const techSpecContract = read("references/contracts/tech-spec.md");
+  if (techSpecContract.includes("mono-review design")) {
+    fail("Tech Spec contract must not reference unsupported mono-review design mode");
+  }
 
   const projectTemplate = read("templates/project.md");
   for (const banned of ["# Lifecycle", "# Документы", "# План задач", "# Ревью-гейт", "# Текущий статус"]) {
@@ -5227,6 +5344,7 @@ function validateOpsLessons() {
 }
 
 validateSkills();
+validateRetiredAdapterReferenceAllowlist();
 validateTemplateSections();
 validateArtifactContractParity();
 validateReviewCheckBoundary();

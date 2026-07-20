@@ -14,7 +14,7 @@ Read first:
 1. `AGENTS.md`
 2. `references/contracts/project.md`
 3. `references/contracts/prd.md`
-4. `skills/mono-spec/SKILL.md`
+4. `references/contracts/tech-spec.md`
 5. `skills/mono-issue/SKILL.md`
 6. `skills/mono-review/SKILL.md`
 7. `skills/mono-check/SKILL.md`

@@ -13,7 +13,7 @@ const LOCKFILE_NAME = ".mono-agent-workflow.lock.json";
 const LEGACY_LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
 const GENERATED_MARKER = "Installed by Mono Agent Workflow";
 const LEGACY_GENERATED_MARKER = "Installed from darkdepot/linear-agent-workflow";
-const SURFACE_REVISION = 1;
+const SURFACE_REVISION = 2;
 
 // Pack-private shared directory at the skills root (a sibling of LOCKFILE_NAME).
 // It holds workflow runtime scripts the installed skills invoke at delivery time
@@ -988,17 +988,47 @@ function preflightBreakingRoot(root, skillsRoot, commit, dirty) {
   fs.accessSync(writableAncestor(skillsRoot), fs.constants.W_OK);
 
   const plan = plannedInstall(root, skillsRoot, commit, dirty);
-  readLockStrict(plan.lockPath);
-  readLockStrict(path.join(skillsRoot, LEGACY_LOCKFILE_NAME));
+  const currentLock = readLockStrict(plan.lockPath);
+  const legacyLock = readLockStrict(path.join(skillsRoot, LEGACY_LOCKFILE_NAME));
+  const previousLock = currentLock ?? legacyLock;
 
   const expectedSkills = new Set(plan.skills);
+  const previousEntries = previousLock?.installedSkills;
+  if (previousEntries !== undefined && !Array.isArray(previousEntries)) {
+    throw new Error("Previous lockfile installedSkills must be an array");
+  }
+  const previousSkillNames = new Set();
+  for (const entry of previousEntries || []) {
+    const name = entry?.name;
+    if (
+      typeof name !== "string" ||
+      !/^(?:mono|linear)-[a-z0-9][a-z0-9-]*$/.test(name)
+    ) {
+      throw new Error(
+        `Previous lockfile installed skill name must be a safe direct child: ${JSON.stringify(name)}`
+      );
+    }
+    previousSkillNames.add(name);
+  }
+  const generatedStale = generatedStaleWorkflowDirs(skillsRoot, expectedSkills);
+  const retiredFromPreviousLock = new Set(
+    generatedStale.filter((name) => previousSkillNames.has(name))
+  );
+  const unexpectedGenerated = generatedStale.filter(
+    (name) => !retiredFromPreviousLock.has(name)
+  );
+  if (unexpectedGenerated.length > 0) {
+    throw new Error(
+      `Unexpected generated workflow skill directories are not owned by the previous lock: ${unexpectedGenerated.join(", ")}`
+    );
+  }
   const managedEntries = new Set([
     ...plan.skills,
     RUNTIME_DIR,
     LOCKFILE_NAME,
     LEGACY_RUNTIME_DIR,
     LEGACY_LOCKFILE_NAME,
-    ...generatedStaleWorkflowDirs(skillsRoot, expectedSkills),
+    ...retiredFromPreviousLock,
   ]);
   return {
     skillsRoot,

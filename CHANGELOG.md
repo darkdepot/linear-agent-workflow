@@ -6,6 +6,17 @@ This project follows Semantic Versioning. Breaking workflow or adapter contract 
 
 ## [Unreleased]
 
+### Breaking
+
+- The installed surface narrows from 14 to 11 skills: `mono-project`,
+  `mono-prd`, and `mono-spec` are retired. Their normative rules remain in
+  `references/contracts/`; raw Project intent routes to `mono-idea`, while PRD
+  and Tech Spec creation or repair routes to `mono-handoff` (accepted pre-ship
+  drift remains owned by `mono-ship`).
+- `surfaceRevision` advances from 1 to 2. Upgrade with the transactional
+  `node scripts/install-local.mjs --breaking` flow only after orchestrators are
+  idle and worker registries are empty, then restart open agent sessions.
+
 ## [0.20.1] - 2026-07-16
 
 Completes the public brand migration by renaming the canonical GitHub

@@ -103,7 +103,7 @@ Each finding must include:
 - Evidence: short quote or artifact section reference.
 - Impact: what goes wrong if ignored.
 - Recommendation: concrete next action.
-- Owner workflow: `mono-handoff`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-deploy`, `mono-issue`, `mono-prd`, `mono-spec`, or human decision.
+- Owner workflow: `mono-handoff`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-deploy`, `mono-issue`, or human decision.
 
 ## Report Shape
 

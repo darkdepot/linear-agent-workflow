@@ -17,9 +17,6 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 - `mono-idea`: raw idea intake, AskQuestion mini-grill, Project in Idea.
 - `mono-issue-intake`: atomic front door for genuinely one-PR, projectless issue-only work; owns the create-then-approve fingerprint transaction and fails closed to Project-first.
 - `mono-handoff`: primary post-discovery bridge into Project, PRD, Tech Spec, package approval, and Issue(s).
-- `mono-project`: concise Project product brief helper.
-- `mono-prd`: internal/advanced atomic PRD create/update helper.
-- `mono-spec`: internal/advanced atomic Tech Spec create/update helper.
 - `mono-issue`: internal/advanced one-PR Issue create/update helper.
 - `mono-review`: report-only artifact quality and risk review.
 - `mono-check`: report-only transition readiness checks.
@@ -108,9 +105,7 @@ orchestrator detect the runtime; see `references/orchestration.md`.
 
 Discovery artifacts from `/office-hours`, `/brainstorming`, and reviews are inputs, not durable Linear truth. Linear becomes current when `mono-handoff` persists the package.
 
-Do not use the direct user-facing chain `mono-prd -> mono-spec -> mono-issue` after discovery. Those atomic skills remain installed for repair and advanced maintenance, but the normal route is `mono-handoff`.
-
-Use `mono-handoff` for post-discovery packaging, scope changes, or any state where Project, PRD, Tech Spec, and execution Issues are not current together. Use atomic helpers only for explicit targeted repair, reviewer-feedback updates, drift sync, or maintaining an already-approved package without changing execution scope. If an atomic helper is invoked as the normal post-discovery route, stop and route to `mono-handoff`.
+Use `mono-handoff` for post-discovery packaging, direct requests to write or repair a PRD or Tech Spec, scope changes, or any state where Project, PRD, Tech Spec, and execution Issues are not current together. Raw requests to create a new Project start at `mono-idea`; accepted pre-ship drift belongs to `mono-ship`.
 
 PRD and Tech Spec creation does not mean Delivery. A Project should move to Delivery only through `mono-implement` after approved execution Issue(s) exist and implementation-start approval is explicit.
 
@@ -121,6 +116,17 @@ Install or update the workflow as a local skill pack from this upstream checkout
 ```bash
 node scripts/install-local.mjs --remove-stale
 ```
+
+For a breaking skill-surface revision, use the transactional mode instead:
+
+```bash
+node scripts/install-local.mjs --breaking
+```
+
+Breaking installation requires every orchestrator product root to be idle with
+an empty worker registry, updates all discovered roots atomically, and performs
+its own post-check. Restart open agent sessions after the cut-over so they reload
+the installed skill registry.
 
 The default mode is `--all-roots`: the installer discovers every previously-installed skills root by checking for `.mono-agent-workflow.lock.json` in the known roots (`~/.codex/skills`, `~/.claude/skills`, and any root recorded in a discovered lockfile) and syncs each of them in one run, reporting the per-root installed version. During the brand migration it also recognizes the previous `.linear-agent-workflow.lock.json`, removes generated `linear-*` skills, and replaces the old lock/runtime paths with Mono equivalents. On a fresh machine with no lockfiles it falls back to `~/.codex/skills`.
 
