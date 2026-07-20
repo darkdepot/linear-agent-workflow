@@ -1048,6 +1048,21 @@ function validatePackIdentityAndQuiescenceBehavior() {
     ]) {
       for (const field of required) assertIncludes(relativePath, field, JSON.stringify(field));
     }
+
+    const surfaceRevisionMatch = read("scripts/install-local.mjs").match(
+      /const SURFACE_REVISION = (\d+);/
+    );
+    if (!surfaceRevisionMatch) {
+      fail("install-local must declare the canonical numeric SURFACE_REVISION");
+    } else {
+      const reportSurfacePin = `"surfaceRevision": ${surfaceRevisionMatch[1]},`;
+      const reportSurfacePins = read("templates/orchestrator-report.md").split(reportSurfacePin).length - 1;
+      if (reportSurfacePins !== 2) {
+        fail(
+          `orchestrator report template must pin ${reportSurfacePin} in both report and registry shapes`
+        );
+      }
+    }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
