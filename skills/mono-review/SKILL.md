@@ -80,8 +80,7 @@ Owner workflows:
   reviewed repair transaction before creating or resuming execution Issues.
 - `mono-implement`: owns Delivery Start and implementation-start approval, then executes from approved Issue(s).
 - `mono-preflight`: owns local branch readiness, targeted verification, the mandatory `autoreview` clean gate, commit state, and preflight certificate.
-- `mono-prd`: applies accepted PRD-only fixes when explicitly invoked.
-- `mono-spec`: applies accepted Tech Spec-only fixes when explicitly invoked.
+- `mono-handoff`: applies accepted Project-first PRD or Tech Spec fixes, including targeted repair before pre-ship.
 - `mono-issue`: applies accepted Issue-only fixes when explicitly invoked.
 - `mono-ship`: handles formal pre-ship review/check, accepted pre-ship drift sync, PR/review state, documentation-before-green, and green certificate.
 - `mono-deploy`: handles deploy workflow delegation, post-ship check, Linear closeout, and learning capture.

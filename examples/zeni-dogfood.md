@@ -59,7 +59,7 @@ Expected behavior:
 
 1. User runs `/office-hours` or `/brainstorming` in Plan Mode.
 2. User optionally runs `/plan-design-review` and `/plan-eng-review`.
-3. When a discovery/review implementation plan appears, user runs `/mono-handoff` instead of `mono-prd -> mono-spec -> mono-issue` or direct implementation.
+3. When a discovery/review implementation plan appears, user runs `/mono-handoff` instead of direct artifact authoring or direct implementation.
 4. `mono-handoff` produces a handoff exit-plan if still in Plan Mode.
 5. `mono-handoff` performs artifact intake, previews the package for approval before durable writes, and after approval updates Project, PRD, and Tech Spec in Linear and creates Issue(s).
 6. `mono-handoff` runs or reports the required/advisory `mono-review handoff` gate before Issue creation.

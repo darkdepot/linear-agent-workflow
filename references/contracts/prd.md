@@ -1,7 +1,8 @@
 # PRD artifact contract
 
-This bounded contract preserves the normative PRD rules formerly owned by
-`skills/mono-prd/SKILL.md`. Use the shared
+This bounded contract is the normative source for PRD artifact behavior.
+`mono-handoff` consumes it for Project-first package creation and repair;
+`mono-ship` consumes it for accepted pre-ship drift. Use the shared
 [artifact rules](../artifact-rules.md), [artifact quality](../artifact-quality.md),
 [execution quality](../execution-quality.md), and
 [questioning policy](../questioning.md) for cross-artifact policy. Render the
@@ -10,8 +11,8 @@ template here.
 
 ## PR-001 — PRD routing
 
-Use this contract to create or update a Linear PRD after discovery or an
-explicit discovery skip.
+Use this contract inside the lifecycle owner that creates or updates a Linear
+PRD after discovery, an explicit discovery skip, or an approved repair.
 
 ## PR-002 — Product truth
 
@@ -19,14 +20,15 @@ The PRD records WHAT the workflow achieves and how the user experiences it.
 
 ## PR-003 — Internal helper boundary
 
-PRD writing is an internal, advanced artifact operation. The normal
-post-discovery user-facing workflow is `mono-handoff`.
+PRD writing is owned by lifecycle stages rather than exposed as a direct
+artifact door. The normal post-discovery and repair workflow is `mono-handoff`;
+accepted pre-ship drift belongs to `mono-ship`.
 
 ## PR-004 — Targeted-use eligibility
 
-Use direct PRD mutation only for targeted repair, reviewer-feedback updates,
-drift sync, or maintenance that does not change execution scope. A normal
-post-discovery request must stop and route to `mono-handoff`.
+A direct request to write or repair a PRD must route to `mono-handoff` repair.
+Accepted pre-ship drift routes to `mono-ship`; no other workflow mutates the
+PRD directly.
 
 ## PR-005 — Linear-facing language
 
@@ -41,13 +43,13 @@ success criteria. Do not define HOW.
 ## PR-007 — Lightweight requirements shape
 
 Keep the PRD as a lightweight requirements document rather than a process
-transcript. Include material needed by `mono-spec` and `mono-issue`; omit
+transcript. Include material needed by Tech Spec and Issue consumers; omit
 ceremony that does not help them.
 
 ## PR-008 — Product decisions stay in PRD
 
 Resolve actors, user-visible behavior, MVP boundaries, and acceptance in the
-PRD so `mono-spec` does not invent product decisions.
+PRD so the Tech Spec does not invent product decisions.
 
 ## PR-009 — Approved inputs
 
@@ -134,8 +136,8 @@ Do not start implementation while authoring or repairing the PRD.
 
 ## PR-026 — Invention self-review
 
-Before finishing, identify and fix any product behavior that `mono-spec` would
-otherwise have to invent.
+Before finishing, identify and fix any product behavior that the Tech Spec
+would otherwise have to invent.
 
 ## PR-027 — Coverage self-review
 

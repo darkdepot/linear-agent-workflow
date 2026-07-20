@@ -145,9 +145,10 @@ guards as one transaction across every discovered skills root:
    payload, and run the same full post-check on every root. Any staging,
    mutation, injected failure, or post-check error restores every root already
    touched by the transaction.
-5. Remove only stale `mono-*` / previous-brand generated directories carrying
-   an installer marker. A user-owned lookalike without that marker is
-   preserved.
+5. Remove only retired `mono-*` / previous-brand generated directories that
+   are named by the previous lock and carry an installer marker. An unexpected
+   generated directory outside that lock blocks the transaction for inspection;
+   a user-owned lookalike without the marker is preserved.
 
 `--check` also fails on unexpected generated workflow directories and surplus
 or duplicate `installedSkills` lockfile entries. These checks make a partially
@@ -196,6 +197,12 @@ EXPECTED=$(gh pr view <N> --json mergeCommit -q .mergeCommit.oid); [ "$(git rev-
 If the guard fails, do not install: fetch, inspect the divergence (a
 silently failed pull or a foreign local commit are the precedent causes),
 bring the checkout to the merge SHA, and rerun the guard.
+
+When the merged release advances `surfaceRevision`, do not use the ordinary
+sync in the guarded pattern. After verifying the merge SHA, require orchestrator
+quiescence and run `node scripts/install-local.mjs --breaking`; that transaction
+performs its own all-root post-check. Restart open agent sessions after the
+cut-over.
 
 ## Project Config
 

@@ -1,8 +1,9 @@
 # Project artifact contract
 
-This bounded contract preserves the normative Project rules formerly owned by
-`skills/mono-project/SKILL.md`. It defines artifact behavior, not lifecycle
-orchestration. Use the shared [artifact rules](../artifact-rules.md),
+This bounded contract is the normative source for Project artifact behavior.
+Lifecycle owners consume it directly: `mono-idea` creates or strengthens an
+Idea Project, while `mono-handoff` creates or repairs the Project-first package.
+It defines artifact behavior, not lifecycle orchestration. Use the shared [artifact rules](../artifact-rules.md),
 [readiness gates](../readiness-gates.md), and [lifecycle](../lifecycle.md) for
 cross-artifact policy. Render the body with
 [templates/project.md](../../templates/project.md); the template remains the
@@ -11,7 +12,9 @@ single source for presentation shape.
 ## PC-001 — Project routing
 
 Use this contract when creating or updating the Linear Project that serves as
-the workflow source of truth.
+the workflow source of truth. A raw request to write a Project routes to
+`mono-idea`; an existing Project or shaped-discovery repair routes to
+`mono-handoff`.
 
 ## PC-002 — Concise product brief
 

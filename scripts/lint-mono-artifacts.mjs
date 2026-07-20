@@ -127,7 +127,7 @@ for (const [file, snippets] of [
 for (const [file, snippets] of [
   ["templates/project.md", ["# Lifecycle", "# Документы", "# План задач", "# Текущий статус"]],
   ["templates/tech-spec.md", ["## Skill contracts", "## mono-check design"]],
-  ["skills/mono-spec/SKILL.md", ["mono-check delivery"]],
+  ["references/contracts/tech-spec.md", ["mono-check delivery"]],
 ]) {
   for (const snippet of snippets) {
     mustExclude(file, snippet);

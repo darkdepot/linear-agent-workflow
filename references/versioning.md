@@ -34,8 +34,8 @@ The install writes local runtime files into each installed skills root:
 - `.mono-agent-workflow.lock.json` with upstream identity, version, commit, dirty flag, installed skill paths/hashes, and copied asset hashes.
 
 The lockfile also exposes the canonical dispatch identity: `packVersion`,
-`sourceCommit`, and positive integer `surfaceRevision`. Surface revision `1`
-identifies the current 14-skill surface; later breaking surface migrations must
+`sourceCommit`, and positive integer `surfaceRevision`. Surface revision `2`
+identifies the current 11-skill surface; later breaking surface migrations must
 advance it explicitly rather than deriving it from directory count.
 
 Opening `<skills-root>/<name>/SKILL.md` must be enough for the agent runtime
@@ -62,7 +62,7 @@ Example shape:
   "schemaVersion": 3,
   "packVersion": "0.20.1",
   "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
-  "surfaceRevision": 1,
+  "surfaceRevision": 2,
   "upstreamRepo": "darkdepot/mono",
   "upstreamVersion": "0.20.1",
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
