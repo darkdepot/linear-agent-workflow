@@ -50,6 +50,14 @@ Inputs to gather:
 
 Workflow states:
 
+Pack identity gate: before any work in this stage, both on its first start and
+after every resume, read `packVersion`, `sourceCommit`, and `surfaceRevision`
+from the dispatch snapshot and run the installed
+`../.mono-agent-workflow/scripts/verify-pack-state.mjs identity` helper against
+the installed lockfile. Any mismatch exits `blocked` before code or lifecycle
+work; record the mismatch and the same three dispatch identity fields in the
+worker report. Never continue on a different installed pack.
+
 1. `start-checkpoint`
    - Fetch fresh Linear context.
    - Verify approved execution Issue(s) exist.

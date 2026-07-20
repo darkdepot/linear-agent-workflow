@@ -9,6 +9,8 @@ Use this skill after `mono-ship` has created a deploy-ready PR and recorded a `m
 
 `mono-deploy` owns merge/deploy delegation, deploy evidence, post-ship Linear closeout, and durable operational learning capture. It must not create the PR, run local branch preflight, or perform initial implementation.
 
+`mono-deploy` is an orchestrator-owned stage, not a worker stage. The worker pack-identity gate applies to `mono-implement`, `mono-preflight`, and `mono-ship`; deploy consumes the accepted green certificate and the orchestrator retires the registry entry in this same session.
+
 Requires `mono-ship green certificate` before any merge or deploy action.
 
 Read first:
@@ -48,7 +50,8 @@ Workflow:
 10. `post-ship`: run or report `mono-check post-ship` after deploy evidence is known.
 11. `mono-closeout`: update the Linear Issue to `Done` only after verified deploy (or an explicit accepted delivery policy says merge is delivery for this repo) and, for user-facing changes, a green live pass per the Live QA gate (or the gate's explicit recorded not-run skip).
 12. `learn`: record durable operational discoveries with `gstack-learnings-log` when they would save future time.
-13. Return the concise report in `templates/deploy-output.md`.
+13. `retire`: after deploy verification and Linear closeout are complete, synchronously remove the Issue entry from `workers.json` in this orchestrator session before emitting the terminal deploy closeout. This is the retirement event; it requires no worker acknowledgement or intermediate worker status. Keep historical reports and logs, but never leave a deployed worker in the active registry. A blocked, needs-human, failed, or timed-out closeout does not retire the worker.
+14. Return the concise report in `templates/deploy-output.md`.
 
 Deploy workflow config:
 
@@ -127,6 +130,7 @@ Rules:
 - Do not close Linear as `Done` before deploy evidence exists, unless the project policy explicitly says merge is delivery and that acceptance is recorded.
 - Do not close an Issue as `Done` with a failed or skipped live pass on a user-facing change; a skip requires an explicit recorded reason in the deploy closeout.
 - Do not use Project Updates as a required gate; record closeout in Linear comments/resources and status.
+- Do not report deploy closeout complete until the retired Issue entry has been removed from `workers.json`; the orchestrator owns this mutation.
 - Keep Linear-facing comments in the project config language; use Russian when no project config is present.
 - Include checked/not-checked boundaries. Deploy success does not imply manual browser QA, mobile QA, or production smoke unless those actually ran.
 

@@ -26,6 +26,14 @@ Read first:
 
 Workflow:
 
+Pack identity gate: before any work in this stage, both on its first start and
+after every resume, read `packVersion`, `sourceCommit`, and `surfaceRevision`
+from the dispatch snapshot and run the installed
+`../.mono-agent-workflow/scripts/verify-pack-state.mjs identity` helper against
+the installed lockfile. Any mismatch exits `blocked` before PR or Linear work;
+record the mismatch and the same three dispatch identity fields in the worker
+report. Never continue on a different installed pack.
+
 1. `prepare`: fetch the Linear Issue plus the trusted context-resolver inputs: current marker comment, verified labels, authenticated owner-approval fingerprint, and project config. Resolve the 5-field context seam before deciding whether to route to `mono-handoff`; also run the installer-published resolver with `--emit-fingerprint` against the live Issue body so freshness is checked from the authoritative whole-body SHA-256.
 2. `prepare`: branch on the resolved seam through the Parentless ship gate below. Project-first ship behavior remains unchanged: a genuine Project-first package still requires an approved Linear Issue linked to the Project with current PRD/Tech Spec context, otherwise stop and route to `mono-handoff`.
 3. `prepare`: read the latest `mono-preflight certificate` from Linear comments or resources. If no certificate exists, route to `mono-preflight` before continuing.

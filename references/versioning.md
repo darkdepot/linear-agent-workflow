@@ -33,6 +33,11 @@ The install writes local runtime files into each installed skills root:
 - `mono-*/references/*` and `mono-*/templates/*` beside each generated local skill;
 - `.mono-agent-workflow.lock.json` with upstream identity, version, commit, dirty flag, installed skill paths/hashes, and copied asset hashes.
 
+The lockfile also exposes the canonical dispatch identity: `packVersion`,
+`sourceCommit`, and positive integer `surfaceRevision`. Surface revision `1`
+identifies the current 14-skill surface; later breaking surface migrations must
+advance it explicitly rather than deriving it from directory count.
+
 Opening `<skills-root>/<name>/SKILL.md` must be enough for the agent runtime
 to follow the skill. Project repos must not carry workflow execution logic.
 
@@ -55,8 +60,11 @@ Example shape:
 ```json
 {
   "schemaVersion": 3,
+  "packVersion": "0.20.1",
+  "sourceCommit": "0123456789abcdef0123456789abcdef01234567",
+  "surfaceRevision": 1,
   "upstreamRepo": "darkdepot/mono",
-  "upstreamVersion": "0.11.0",
+  "upstreamVersion": "0.20.1",
   "upstreamCommit": "0123456789abcdef0123456789abcdef01234567",
   "upstreamDirty": false,
   "installedAt": "2026-06-10T00:00:00.000Z",
@@ -67,7 +75,8 @@ Example shape:
     "templates": [{ "path": "prd.md", "sha256": "..." }]
   },
   "runtimeScripts": [
-    { "path": ".mono-agent-workflow/scripts/resolve-issue-context.mjs", "sha256": "..." }
+    { "path": ".mono-agent-workflow/scripts/resolve-issue-context.mjs", "sha256": "..." },
+    { "path": ".mono-agent-workflow/scripts/verify-pack-state.mjs", "sha256": "..." }
   ],
   "installedSkills": [
     {
@@ -82,6 +91,13 @@ Example shape:
 `installedAt` changes on every install. Treat `upstreamCommit`,
 `upstreamVersion`, generated body hashes, and copied asset hashes as the
 meaningful release metadata.
+
+Before starting or resuming a worker stage, compare its dispatch triplet to the
+installed lock with `verify-pack-state.mjs identity`. Any `packVersion`,
+`sourceCommit`, or `surfaceRevision` mismatch blocks the stage. The helper's
+`quiescence` mode accepts only `control.json` in `idle` state plus an empty
+`workers.json`; A5 publishes this probe without adding the breaking installer
+mode owned by A6.
 
 ## Project Config Contract
 
