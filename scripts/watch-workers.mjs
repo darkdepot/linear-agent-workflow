@@ -4,7 +4,7 @@
 // "## Heartbeat"). Watches one orchestrator mailbox root and prints one
 // stable line per worker liveness event to stdout:
 //
-//   <ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>
+//   <ISO time> EVENT:<stall|dead|spawn-fail|report|idle> <ISSUE-KEY|-> <detail>
 //
 // Checks per scan (log checks apply only to Issues present in workers.json,
 // the active registry; logs of retired Issues are history and are skipped
@@ -24,9 +24,14 @@
 // the report), and never older than the log file's creation time (a prior
 // attempt's report proves nothing about a retry's writer).
 //
+// Report events apply only to codex-cli workers with a correlated A5 identity
+// and use report mtime+size as the in-process version key. Idle follows the A5
+// retirement contract: registry entries remain active until deploy closeout
+// removes them; control active/draining never retires a remaining entry.
+//
 // Read-only by contract: no LLM calls, no writes anywhere — it reads
-// logs/*.jsonl, reports/*.json, and workers.json, and emits to stdout only
-// (diagnostics go to stderr). Zero dependencies: node:fs/path/process.
+// logs/*.jsonl, reports/*.json, workers.json, and control.json, and emits to
+// stdout only (diagnostics go to stderr). Zero dependencies: node:fs/path/process.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -36,6 +41,7 @@ const DEFAULT_STALL_SEC = 120;
 const MIN_STALL_SEC = 90;
 const DEFAULT_REPEAT_SEC = 300;
 const DEFAULT_INTERVAL_SEC = 15;
+const DEFAULT_IDLE_SEC = 300;
 const LOG_READ_BYTES = 4096;
 const DETAIL_SNIPPET_LENGTH = 80;
 
@@ -48,13 +54,14 @@ function usage(exitCode = 2) {
   console.error("");
   console.error("Watch an orchestrator mailbox root (logs/, reports/, workers.json) and");
   console.error("print one line per worker liveness event to stdout:");
-  console.error("  <ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>");
+  console.error("  <ISO time> EVENT:<stall|dead|spawn-fail|report|idle> <ISSUE-KEY|-> <detail>");
   console.error("");
   console.error("Options:");
   console.error("  --root <dir>        Orchestrator root, e.g. ~/.mono-agent-workflow/orchestrator/<product> (required)");
   console.error(`  --stall-sec <n>     Stall threshold in seconds (default ${DEFAULT_STALL_SEC}, minimum ${MIN_STALL_SEC})`);
   console.error(`  --repeat-sec <n>    Do not repeat the same event more often than this (default ${DEFAULT_REPEAT_SEC})`);
   console.error(`  --interval-sec <n>  Scan interval in seconds (default ${DEFAULT_INTERVAL_SEC})`);
+  console.error(`  --idle-sec <n>      Emit idle after no active workers for this long (default ${DEFAULT_IDLE_SEC})`);
   console.error("  --once              Run a single scan and exit");
   console.error("  --help, -h          Show this help and exit");
   process.exit(exitCode);
@@ -84,6 +91,7 @@ function parseArgs(argv) {
     stallSec: DEFAULT_STALL_SEC,
     repeatSec: DEFAULT_REPEAT_SEC,
     intervalSec: DEFAULT_INTERVAL_SEC,
+    idleSec: DEFAULT_IDLE_SEC,
     once: false,
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -96,6 +104,8 @@ function parseArgs(argv) {
       args.repeatSec = parsePositiveInt(arg, argv[(index += 1)]);
     } else if (arg === "--interval-sec") {
       args.intervalSec = parsePositiveInt(arg, argv[(index += 1)]);
+    } else if (arg === "--idle-sec") {
+      args.idleSec = parsePositiveInt(arg, argv[(index += 1)]);
     } else if (arg === "--once") {
       args.once = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -125,7 +135,9 @@ if (!fs.existsSync(args.root) || !fs.statSync(args.root).isDirectory()) {
 }
 
 const emittedAt = new Map();
+const emittedReportVersions = new Map();
 const warnedOnce = new Set();
+let lastEventAtMs = null;
 
 function warnOnce(message) {
   if (warnedOnce.has(message)) return;
@@ -137,6 +149,7 @@ function emitEvent(event, issueKey, detail, dedupKey, nowMs) {
   const last = emittedAt.get(dedupKey);
   if (last !== undefined && nowMs - last < args.repeatSec * 1000) return;
   emittedAt.set(dedupKey, nowMs);
+  lastEventAtMs = nowMs;
   console.log(`${new Date(nowMs).toISOString()} EVENT:${event} ${issueKey} ${detail}`);
 }
 
@@ -191,15 +204,31 @@ function inspectLog(filePath) {
 }
 
 function loadRegistry(registryPath) {
-  if (!fs.existsSync(registryPath)) return {};
+  if (!fs.existsSync(registryPath)) {
+    return { entries: {}, mtimeMs: null, valid: false };
+  }
   try {
+    const stat = fs.statSync(registryPath);
     const parsed = JSON.parse(fs.readFileSync(registryPath, "utf8"));
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return { entries: parsed, mtimeMs: stat.mtimeMs, valid: true };
+    }
     warnOnce(`workers.json is not an object map: ${registryPath}`);
   } catch {
     warnOnce(`workers.json could not be parsed: ${registryPath}`);
   }
-  return {};
+  return { entries: {}, mtimeMs: null, valid: false };
+}
+
+function loadControlState(controlPath) {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(controlPath, "utf8"));
+    if (["active", "draining", "idle"].includes(parsed?.state)) return parsed.state;
+    warnOnce(`control.json state is not active, draining, or idle: ${controlPath}`);
+  } catch {
+    warnOnce(`control.json could not be parsed: ${controlPath}`);
+  }
+  return null;
 }
 
 // "alive" / "dead" when the registry records a writer pid, "unknown" otherwise.
@@ -249,6 +278,64 @@ function reportMtimeMs(reportsDir, log) {
   } catch {
     return null;
   }
+}
+
+function hasPackIdentity(value) {
+  return (
+    typeof value?.packVersion === "string" &&
+    value.packVersion.length > 0 &&
+    typeof value.sourceCommit === "string" &&
+    /^[0-9a-f]{40}$/.test(value.sourceCommit) &&
+    Number.isInteger(value.surfaceRevision) &&
+    value.surfaceRevision > 0
+  );
+}
+
+function checkReport(log, reportsDir, registryEntry, nowMs) {
+  // Desktop and fallback transports deliberately have no JSONL correlation
+  // surface. Their reports remain under the orchestrator's polling contract.
+  if (registryEntry?.transport !== "codex-cli") return;
+  if (registryEntry.stage !== log.stage) return;
+  const registryLogPath =
+    typeof registryEntry.log === "string" ? path.resolve(expandHome(registryEntry.log)) : null;
+  if (registryLogPath !== log.filePath || !hasPackIdentity(registryEntry)) return;
+
+  const reportPath = path.join(reportsDir, `${log.issue}-${log.stage}.json`);
+  let reportStat;
+  let report;
+  try {
+    reportStat = fs.statSync(reportPath);
+    report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  } catch {
+    return;
+  }
+  if (!reportStat.isFile()) return;
+
+  // This is intentionally the exact v2 freshness predicate. Requiring the
+  // report to be as new as the log would create false negatives when Codex
+  // appends shutdown-tail events after the worker writes its report.
+  if (
+    reportStat.mtimeMs < log.stat.birthtimeMs ||
+    reportStat.mtimeMs < log.stat.mtimeMs - args.stallSec * 1000
+  ) {
+    return;
+  }
+
+  if (report?.issue !== log.issue || report?.stage !== log.stage || !hasPackIdentity(report)) return;
+  for (const field of ["packVersion", "sourceCommit", "surfaceRevision"]) {
+    if (report[field] !== registryEntry[field]) return;
+  }
+
+  const version = `${reportStat.mtimeMs}:${reportStat.size}`;
+  if (emittedReportVersions.get(reportPath) === version) return;
+  emittedReportVersions.set(reportPath, version);
+  emitEvent(
+    "report",
+    log.issue,
+    `report ${path.basename(reportPath)} is fresh and identity-matched (version ${version})`,
+    `report:${reportPath}:${version}`,
+    nowMs
+  );
 }
 
 function checkLog(log, reportsDir, registry, nowMs) {
@@ -333,9 +420,24 @@ function checkRegistry(registry, nowMs) {
   }
 }
 
+function checkIdle(registrySnapshot, controlState, nowMs) {
+  if (!registrySnapshot.valid || Object.keys(registrySnapshot.entries).length !== 0) return;
+  const idleSinceMs = Math.max(registrySnapshot.mtimeMs ?? 0, lastEventAtMs ?? 0);
+  if (nowMs - idleSinceMs < args.idleSec * 1000) return;
+  emitEvent(
+    "idle",
+    "-",
+    `registry has no active workers for ${Math.round((nowMs - idleSinceMs) / 1000)}s (idle threshold ${args.idleSec}s; control ${controlState ?? "unknown"})`,
+    "idle:root",
+    nowMs
+  );
+}
+
 function scan() {
   const nowMs = Date.now();
-  const registry = loadRegistry(path.join(args.root, "workers.json"));
+  const registrySnapshot = loadRegistry(path.join(args.root, "workers.json"));
+  const registry = registrySnapshot.entries;
+  const controlState = loadControlState(path.join(args.root, "control.json"));
   const latestLogs = collectLatestLogs(path.join(args.root, "logs"));
   const reportsDir = path.join(args.root, "reports");
   for (const log of latestLogs.values()) {
@@ -344,13 +446,15 @@ function scan() {
     // ISSUE-KEY has no registry entry belong to retired Issues and are
     // skipped silently instead of flooding EVENT:dead on every scan.
     if (!Object.prototype.hasOwnProperty.call(registry, log.issue)) continue;
+    checkReport(log, reportsDir, registry[log.issue], nowMs);
     checkLog(log, reportsDir, registry, nowMs);
   }
   checkRegistry(registry, nowMs);
+  checkIdle(registrySnapshot, controlState, nowMs);
 }
 
 console.error(
-  `watch-workers: root=${args.root} stall-sec=${args.stallSec} repeat-sec=${args.repeatSec} interval-sec=${args.intervalSec}${args.once ? " once" : ""}`
+  `watch-workers: root=${args.root} stall-sec=${args.stallSec} repeat-sec=${args.repeatSec} interval-sec=${args.intervalSec} idle-sec=${args.idleSec}${args.once ? " once" : ""}`
 );
 
 scan();

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -3746,8 +3746,16 @@ function validateHeartbeatContract() {
     "empty `thread_id`",
     "watch-workers.mjs",
     "-a1.jsonl",
-    "EVENT:<stall|dead|spawn-fail>",
+    "EVENT:<stall|dead|spawn-fail|report|idle>",
     "retired Issues' logs are outside its scope",
+    "`report` is emitted only for `codex-cli` workers",
+    "read the correlated report and advance the stage pipeline",
+    "at-least-once across watcher restarts",
+    "deduplicates by reading the report's current state",
+    "Non-Codex transports keep their existing report-polling contract",
+    "On `idle`, the orchestrator records",
+    "the idle period and its cause in `ledger.md`",
+    "`--idle-sec` (default 300)",
     "nudge",
     "session rotation",
     "Forced worker termination is a process-tree operation: starting from the worker PID recorded in the registry, enumerate descendants recursively with `pgrep -P`, terminate the captured tree leaf-to-root and the wrapper last (never kill only the wrapper PID), then prove from the captured PID set plus an exact transport-thread-id process search that no survivor remains before resume, respawn, or session rotation. A survivor can retain the transport thread and hang every later resume.",
@@ -3840,6 +3848,283 @@ function validateWatcherContaminationBehavior() {
     }
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+function waitForWatcherFixture(predicate, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const result = predicate();
+    if (result) return result;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+  }
+  return null;
+}
+
+function startWatcherFixture(fixtureRoot, extraArgs = []) {
+  const stdoutPath = path.join(fixtureRoot, "watcher.stdout");
+  const stderrPath = path.join(fixtureRoot, "watcher.stderr");
+  const stdoutFd = fs.openSync(stdoutPath, "w");
+  const stderrFd = fs.openSync(stderrPath, "w");
+  const child = spawn(
+    process.execPath,
+    [
+      "scripts/watch-workers.mjs",
+      "--root",
+      fixtureRoot,
+      "--stall-sec",
+      "90",
+      "--repeat-sec",
+      "1",
+      "--interval-sec",
+      "1",
+      ...extraArgs,
+    ],
+    { cwd: root, stdio: ["ignore", stdoutFd, stderrFd] }
+  );
+  return {
+    child,
+    stdoutPath,
+    stderrPath,
+    stop() {
+      child.kill("SIGTERM");
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+      fs.closeSync(stdoutFd);
+      fs.closeSync(stderrFd);
+    },
+  };
+}
+
+function watcherOutput(pathname) {
+  try {
+    return fs.readFileSync(pathname, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function validateWatcherV3Behavior() {
+  const identity = {
+    packVersion: "0.20.1",
+    sourceCommit: "a".repeat(40),
+    surfaceRevision: 1,
+  };
+  const reportFor = (issue, stage = "mono-implement", overrides = {}) => ({
+    issue,
+    stage,
+    status: "implemented-needs-preflight",
+    ...identity,
+    ...overrides,
+  });
+  const registryFor = (issue, log, overrides = {}) => ({
+    [issue]: {
+      transport: "codex-cli",
+      stage: "mono-implement",
+      log,
+      pid: process.pid,
+      ...identity,
+      ...overrides,
+    },
+  });
+  const writeJson = (pathname, value) =>
+    fs.writeFileSync(pathname, `${JSON.stringify(value, null, 2)}\n`);
+  const writeLog = (pathname) =>
+    fs.writeFileSync(pathname, `${JSON.stringify({ type: "thread.started", thread_id: "fixture" })}\n`);
+
+  // AC1 create/unchanged/update: one watcher process remembers report
+  // versions by mtime+size across scans, but a fresh process would emit the
+  // current version again (at-least-once across watcher restarts).
+  const reportCycleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-watcher-report-cycle-"));
+  try {
+    const logsDir = path.join(reportCycleRoot, "logs");
+    const reportsDir = path.join(reportCycleRoot, "reports");
+    fs.mkdirSync(logsDir);
+    fs.mkdirSync(reportsDir);
+    const logPath = path.join(logsDir, "MONO-201-mono-implement-a1.jsonl");
+    const reportPath = path.join(reportsDir, "MONO-201-mono-implement.json");
+    writeLog(logPath);
+    writeJson(path.join(reportCycleRoot, "workers.json"), registryFor("MONO-201", logPath));
+    writeJson(path.join(reportCycleRoot, "control.json"), { state: "active" });
+    writeJson(reportPath, reportFor("MONO-201"));
+
+    const watcher = startWatcherFixture(reportCycleRoot, ["--idle-sec", "30"]);
+    const first = waitForWatcherFixture(() => {
+      const output = watcherOutput(watcher.stdoutPath);
+      return (output.match(/EVENT:report MONO-201\b/g) || []).length === 1 && output;
+    });
+    if (!first) fail("watcher report create fixture did not emit exactly once");
+
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_150);
+    const unchanged = watcherOutput(watcher.stdoutPath);
+    if ((unchanged.match(/EVENT:report MONO-201\b/g) || []).length !== 1) {
+      fail("watcher unchanged report fixture must stay silent across scans");
+    }
+
+    writeJson(reportPath, reportFor("MONO-201", "mono-implement", { notes: "updated report version" }));
+    const updated = waitForWatcherFixture(() => {
+      const output = watcherOutput(watcher.stdoutPath);
+      return (output.match(/EVENT:report MONO-201\b/g) || []).length === 2 && output;
+    });
+    if (!updated) fail("watcher updated report fixture did not emit a second report event");
+    watcher.stop();
+
+    const restart = spawnSync(
+      process.execPath,
+      ["scripts/watch-workers.mjs", "--root", reportCycleRoot, "--stall-sec", "90", "--idle-sec", "30", "--once"],
+      { cwd: root, encoding: "utf8" }
+    );
+    if (restart.status !== 0 || !restart.stdout.includes("EVENT:report MONO-201")) {
+      fail("watcher restart must re-emit the current report version once");
+    }
+  } finally {
+    fs.rmSync(reportCycleRoot, { recursive: true, force: true });
+  }
+
+  // AC1 lag/prior-attempt/foreign-identity/non-codex-silence in one scan.
+  const correlationRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-watcher-report-correlation-"));
+  try {
+    const logsDir = path.join(correlationRoot, "logs");
+    const reportsDir = path.join(correlationRoot, "reports");
+    fs.mkdirSync(logsDir);
+    fs.mkdirSync(reportsDir);
+    const workers = {};
+
+    const addFixture = (issue, { reportFirst = false, registry = {}, report = {} } = {}) => {
+      const logPath = path.join(logsDir, `${issue}-mono-implement-a1.jsonl`);
+      const reportPath = path.join(reportsDir, `${issue}-mono-implement.json`);
+      if (reportFirst) writeJson(reportPath, reportFor(issue, "mono-implement", report));
+      writeLog(logPath);
+      workers[issue] = registryFor(issue, logPath, registry)[issue];
+      if (!reportFirst) writeJson(reportPath, reportFor(issue, "mono-implement", report));
+      return { logPath, reportPath };
+    };
+
+    const lag = addFixture("MONO-202");
+    const lagBirthMs = fs.statSync(lag.logPath).birthtimeMs;
+    fs.utimesSync(lag.logPath, new Date(lagBirthMs + 60_000), new Date(lagBirthMs + 60_000));
+    fs.utimesSync(lag.reportPath, new Date(lagBirthMs + 10), new Date(lagBirthMs + 10));
+
+    const prior = addFixture("MONO-203", { reportFirst: true });
+    const priorBirthMs = fs.statSync(prior.logPath).birthtimeMs;
+    fs.utimesSync(prior.reportPath, new Date(priorBirthMs - 1_000), new Date(priorBirthMs - 1_000));
+
+    addFixture("MONO-204", { report: { sourceCommit: "b".repeat(40) } });
+    addFixture("MONO-205", { registry: { transport: "claude-code-desktop", pid: null } });
+    addFixture("MONO-209", {
+      registry: { packVersion: undefined, sourceCommit: undefined, surfaceRevision: undefined },
+      report: { packVersion: undefined, sourceCommit: undefined, surfaceRevision: undefined },
+    });
+    writeJson(path.join(correlationRoot, "workers.json"), workers);
+    writeJson(path.join(correlationRoot, "control.json"), { state: "active" });
+
+    const result = spawnSync(
+      process.execPath,
+      ["scripts/watch-workers.mjs", "--root", correlationRoot, "--stall-sec", "90", "--idle-sec", "30", "--once"],
+      { cwd: root, encoding: "utf8" }
+    );
+    if (result.status !== 0) {
+      fail(`watcher report correlation fixtures failed to run: ${result.stderr || `exit ${result.status}`}`);
+    } else {
+      if (!result.stdout.includes("EVENT:report MONO-202")) {
+        fail("watcher report lag fixture must allow report mtime within the stall threshold");
+      }
+      for (const [issue, label] of [
+        ["MONO-203", "prior-attempt"],
+        ["MONO-204", "foreign-identity"],
+        ["MONO-205", "non-codex-silence"],
+        ["MONO-209", "missing-identity"],
+      ]) {
+        if (result.stdout.includes(`EVENT:report ${issue}`)) {
+          fail(`watcher ${label} report fixture must stay silent`);
+        }
+      }
+    }
+  } finally {
+    fs.rmSync(correlationRoot, { recursive: true, force: true });
+  }
+
+  // AC2 threshold/no-spam plus live codex and pid-less non-codex blockers.
+  for (const [label, workers, expectIdle, idleSec] of [
+    ["empty registry threshold", {}, true, "2"],
+    ["live codex worker", registryFor("MONO-206", "/missing-but-registered.jsonl"), false, "1"],
+    ["pid-less non-codex worker", registryFor("MONO-207", null, { transport: "fallback", pid: null, log: null }), false, "1"],
+  ]) {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-watcher-idle-basic-"));
+    try {
+      fs.mkdirSync(path.join(fixtureRoot, "logs"));
+      fs.mkdirSync(path.join(fixtureRoot, "reports"));
+      const workersPath = path.join(fixtureRoot, "workers.json");
+      writeJson(workersPath, workers);
+      writeJson(path.join(fixtureRoot, "control.json"), { state: Object.keys(workers).length === 0 ? "idle" : "active" });
+      const old = new Date(Date.now() - 10_000);
+      fs.utimesSync(workersPath, old, old);
+      const watcher = startWatcherFixture(fixtureRoot, ["--idle-sec", idleSec]);
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_150);
+      watcher.stop();
+      const idleEvents = watcherOutput(watcher.stdoutPath).match(/EVENT:idle\b/g) || [];
+      if (expectIdle && idleEvents.length !== 1) fail(`watcher ${label} fixture must emit once without spam`);
+      if (!expectIdle && idleEvents.length !== 0) fail(`watcher ${label} fixture must not emit idle`);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  }
+
+  // AC2 positive A5 retirement transition: active/draining entries block;
+  // after the entry is removed and control reaches idle, the latest emitted
+  // report event — not an artificially old registry mtime — starts the clock.
+  const retirementRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-watcher-idle-retirement-"));
+  try {
+    const logsDir = path.join(retirementRoot, "logs");
+    const reportsDir = path.join(retirementRoot, "reports");
+    fs.mkdirSync(logsDir);
+    fs.mkdirSync(reportsDir);
+    const logPath = path.join(logsDir, "MONO-208-mono-implement-a1.jsonl");
+    const reportPath = path.join(reportsDir, "MONO-208-mono-implement.json");
+    const workersPath = path.join(retirementRoot, "workers.json");
+    const controlPath = path.join(retirementRoot, "control.json");
+    writeLog(logPath);
+    writeJson(reportPath, reportFor("MONO-208"));
+    writeJson(workersPath, registryFor("MONO-208", logPath));
+    writeJson(controlPath, { state: "active" });
+
+    const watcher = startWatcherFixture(retirementRoot, ["--idle-sec", "1"]);
+    if (!waitForWatcherFixture(() => watcherOutput(watcher.stdoutPath).includes("EVENT:report MONO-208"))) {
+      fail("watcher retirement fixture did not emit its initial report event");
+    }
+    writeJson(controlPath, { state: "draining" });
+    const old = new Date(Date.now() - 10_000);
+    fs.utimesSync(workersPath, old, old);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_150);
+    if (watcherOutput(watcher.stdoutPath).includes("EVENT:idle")) {
+      fail("watcher active/draining registry entries must block idle");
+    }
+
+    writeJson(reportPath, reportFor("MONO-208", "mono-implement", { notes: "event resets idle_since" }));
+    const secondReportLine = waitForWatcherFixture(() => {
+      const lines = watcherOutput(watcher.stdoutPath).split("\n").filter((line) => line.includes("EVENT:report MONO-208"));
+      return lines.length === 2 ? lines[1] : null;
+    });
+    if (!secondReportLine) fail("watcher retirement fixture did not emit the clock-resetting event");
+
+    writeJson(workersPath, {});
+    writeJson(controlPath, { state: "idle" });
+    fs.utimesSync(workersPath, old, old);
+    const idleLine = waitForWatcherFixture(() =>
+      watcherOutput(watcher.stdoutPath).split("\n").find((line) => line.includes("EVENT:idle")),
+      4_000
+    );
+    watcher.stop();
+    if (!idleLine) {
+      fail("watcher retirement fixture must emit idle after all entries retire and idle-sec elapses");
+    } else if (secondReportLine) {
+      const reportAt = Date.parse(secondReportLine.split(" ")[0]);
+      const idleAt = Date.parse(idleLine.split(" ")[0]);
+      if (idleAt - reportAt < 1_000) {
+        fail("watcher idle_since must move forward when any event is emitted");
+      }
+    }
+  } finally {
+    fs.rmSync(retirementRoot, { recursive: true, force: true });
   }
 }
 
@@ -4359,6 +4644,7 @@ validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
 validateWatcherContaminationBehavior();
+validateWatcherV3Behavior();
 validateHonestLedgerContract();
 validateCompactionContract();
 validateLiveQaGateContract();
