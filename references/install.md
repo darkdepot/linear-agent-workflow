@@ -94,6 +94,80 @@ The check reports the per-root installed version and fails when any
 discovered root is missing files, stale, edited, or pinned to a different
 upstream version or commit than the current checkout.
 
+### Breaking Surface Changes
+
+Use the transactional mode when a release removes or renames installed skills
+or otherwise changes the public skill surface:
+
+```bash
+node scripts/install-local.mjs --breaking
+```
+
+The mode keeps the ordinary installer path unchanged and adds these cut-over
+guards as one transaction across every discovered skills root:
+
+1. Acquire the global `~/.mono-agent-workflow/install.lock`. The pathname is a
+   stable container identified by `protocol.json` as `token-claims-v1`;
+   contenders use token-scoped `choosing-<token>.json` and
+   `claim-<token>.json` entries with a sequence/tie-break election. Tokens are
+   1-128 ASCII alphanumerics/hyphens and equal-sequence claims use ascending
+   bytewise ASCII token order; locale collation is forbidden. Release verifies
+   the originally published token and sequence, then removes only that exact
+   claim, so it can never unlink or rename a newer owner's lock object. Creating
+   a missing container still uses
+   atomic `mkdir`; an existing empty directory or one without the protocol
+   marker is treated as an incomplete/legacy acquisition and fails closed. This
+   is the migration handshake with older atomic-directory clients: they cannot
+   overlap the token protocol, and must restart on the new pack before another
+   mutation. Every mutating installer mode participates, so an ordinary sync
+   cannot race a breaking transaction. A stale, malformed, or unreadable
+   foreign claim fails closed and remains in place for manual inspection and
+   removal. If the owned claim cannot be verified or removed, the transaction
+   fails and retains its lock and recovery data instead of reporting success.
+2. Scan every product root under
+   `~/.mono-agent-workflow/orchestrator/` with the installed A5 quiescence
+   contract: `control.json` must be `idle` and `workers.json` must be an empty
+   object. `active`, `draining`, a nonempty registry, missing state, or corrupt
+   JSON blocks with the exact product-root reason. After the scan, the
+   installer atomically moves the complete `orchestrator/` tree aside and puts
+   a non-writable directory claim at its canonical pathname. This freezes both
+   existing product state and creation of new product roots during staging,
+   commit, post-check, or rollback. Before any skills root is staged or changed,
+   the installer repeats the A5 quiescence scan against the frozen tree; this
+   catches an older, non-cooperating orchestrator that became active between
+   the initial scan and the claim. The original tree is atomically restored
+   before transaction backups are removed and before the global install lock
+   directory is released; a restore failure retains all recovery data and the
+   lock for manual recovery.
+3. Preflight every discovered skills root before any of them is changed, then
+   stage the complete new generated payload beside each root.
+4. Move the old generated payload into per-root backups, install the staged
+   payload, and run the same full post-check on every root. Any staging,
+   mutation, injected failure, or post-check error restores every root already
+   touched by the transaction.
+5. Remove only stale `mono-*` / previous-brand generated directories carrying
+   an installer marker. A user-owned lookalike without that marker is
+   preserved.
+
+`--check` also fails on unexpected generated workflow directories and surplus
+or duplicate `installedSkills` lockfile entries. These checks make a partially
+retired surface visible even when all expected current skills are present.
+
+For isolated fixtures or sandboxed installations only,
+`MONO_WORKFLOW_STATE_ROOT` may point the global lock and orchestrator scan at a
+temporary state root; production uses `~/.mono-agent-workflow`.
+
+Breaking mode currently requires POSIX directory rename and permission
+semantics and therefore rejects Windows before creating the state root or
+changing any install target. Ordinary non-breaking install and `--check`
+behavior on Windows are unchanged.
+
+The quiescence scan cannot discover arbitrary IDE or CLI agent sessions that
+are open outside the orchestrator registry. After a successful breaking
+cut-over, restart all agent sessions before using the new surface. This restart
+is a required operational step, not a property the installer can prove; it also
+retires any process still using the pre-`protocol.json` lock contract.
+
 `mono-preflight` has one external runtime prerequisite: the agent runtime
 must have the `autoreview` skill/helper installed, for example
 `~/.codex/skills/autoreview/scripts/autoreview`. This workflow does not vendor `autoreview`; preflight must exit `blocked` when the helper is unavailable.

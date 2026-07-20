@@ -8,6 +8,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const validationStateRoot = fs.mkdtempSync(
+  path.join(os.tmpdir(), "mono-workflow-validator-state-")
+);
+process.on("exit", () => {
+  fs.rmSync(validationStateRoot, { recursive: true, force: true });
+});
 const failures = [];
 const EXPECTED_SKILLS = [
   "mono-check",
@@ -111,11 +117,17 @@ function validateReadFirstPath(referencedPath) {
 }
 
 function runNode(args, options = {}) {
+  const { env = {}, ...rest } = options;
   return execFileSync(process.execPath, args, {
     cwd: root,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
-    ...options,
+    env: {
+      ...process.env,
+      MONO_WORKFLOW_STATE_ROOT: validationStateRoot,
+      ...env,
+    },
+    ...rest,
   });
 }
 
@@ -1096,6 +1108,13 @@ function validatePackIdentityWorkflowContract() {
   for (const required of [
     "control.json",
     "`active` → `draining` → `idle`",
+    "`~/.mono-agent-workflow/install.lock`",
+    "token-scoped claim",
+    "`protocol.json`",
+    "`claim-<token>.json`",
+    "bytewise ASCII token order",
+    "hold the lock through read-back",
+    "unreadable lock fails closed",
     "verify-pack-state.mjs identity",
     "remove the Issue entry from `workers.json`",
     "surfaceRevision differs",
@@ -1104,7 +1123,16 @@ function validatePackIdentityWorkflowContract() {
     assertIncludes("references/orchestration.md", required, JSON.stringify(required));
   }
 
-  for (const required of ["control.json", "active", "draining", "idle", "surfaceRevision"]) {
+  for (const required of [
+    "control.json",
+    "active",
+    "draining",
+    "idle",
+    "surfaceRevision",
+    "Acquire `~/.mono-agent-workflow/install.lock`",
+    "before creating the product root",
+    "before an `idle` → `active` transition",
+  ]) {
     assertIncludes("skills/mono-orchestrate/SKILL.md", required, JSON.stringify(required));
   }
   assertIncludes(
@@ -1217,6 +1245,555 @@ function validateMultiRootInstallBehavior() {
     runNode(["scripts/install-local.mjs", "--all-roots"], { env });
     runNode(["scripts/install-local.mjs", "--all-roots", "--check"], { env });
   } finally {
+    fs.rmSync(baseDir, { recursive: true, force: true });
+  }
+}
+
+function validateBreakingInstallBehavior() {
+  const installerSource = read("scripts/install-local.mjs");
+  const breakingStart = installerSource.indexOf("function breakingSync(");
+  const breakingEnd = installerSource.indexOf("\nconst args =", breakingStart);
+  const breakingBody = installerSource.slice(breakingStart, breakingEnd);
+  if (
+    breakingStart < 0 ||
+    breakingEnd < 0 ||
+    breakingBody.indexOf("acquireGlobalInstallLock") < 0 ||
+    breakingBody.indexOf("resolveTargetRoots(args)") < breakingBody.indexOf("acquireGlobalInstallLock")
+  ) {
+    fail("install-local --breaking must discover target roots only after acquiring the global lock");
+  }
+
+  const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-breaking-install-"));
+  const stateRoot = path.join(baseDir, "state");
+  const productRoot = path.join(stateRoot, "orchestrator", "fixture-product");
+  const codexRoot = path.join(baseDir, "codex", "skills");
+  const claudeRoot = path.join(baseDir, "claude", "skills");
+  const lockName = ".mono-agent-workflow.lock.json";
+  const installLockPath = path.join(stateRoot, "install.lock");
+  const env = {
+    ...process.env,
+    MONO_WORKFLOW_KNOWN_ROOTS: [codexRoot, claudeRoot].join(path.delimiter),
+    MONO_WORKFLOW_STATE_ROOT: stateRoot,
+  };
+
+  function writeProductState(control, workers) {
+    fs.mkdirSync(productRoot, { recursive: true });
+    fs.writeFileSync(path.join(productRoot, "control.json"), `${JSON.stringify(control, null, 2)}\n`);
+    fs.writeFileSync(path.join(productRoot, "workers.json"), `${JSON.stringify(workers, null, 2)}\n`);
+  }
+
+  function writeInstallLock(owner) {
+    fs.mkdirSync(installLockPath, { recursive: true });
+    fs.writeFileSync(
+      path.join(installLockPath, "protocol.json"),
+      `${JSON.stringify({ protocol: "token-claims-v1" }, null, 2)}\n`
+    );
+    fs.writeFileSync(
+      path.join(installLockPath, `claim-${owner.token}.json`),
+      `${JSON.stringify({ ...owner, sequence: 1 }, null, 2)}\n`
+    );
+  }
+
+  function installLockClaims() {
+    if (!fs.existsSync(installLockPath)) return [];
+    return fs.readdirSync(installLockPath).filter((name) => /^claim-.+\.json$/.test(name));
+  }
+
+  function snapshotTree(treeRoot) {
+    const entries = [];
+    function walk(current) {
+      for (const entry of fs.readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+        const entryPath = path.join(current, entry.name);
+        const relativePath = path.relative(treeRoot, entryPath);
+        if (entry.isDirectory()) {
+          entries.push(`dir:${relativePath}`);
+          walk(entryPath);
+        } else if (entry.isFile()) {
+          entries.push(`file:${relativePath}:${createHash("sha256").update(fs.readFileSync(entryPath)).digest("hex")}`);
+        } else {
+          entries.push(`other:${relativePath}`);
+        }
+      }
+    }
+    walk(treeRoot);
+    return entries.join("\n");
+  }
+
+  function orchestratorTransactionArtifacts() {
+    if (!fs.existsSync(stateRoot)) return [];
+    return fs
+      .readdirSync(stateRoot)
+      .filter(
+        (name) =>
+          name.startsWith(".orchestrator.install-backup-") ||
+          name.startsWith(".orchestrator.install-claim-")
+      )
+      .sort();
+  }
+
+  try {
+    expectCommandFailure(
+      "install-local --breaking --check conflict",
+      () => runNode(["scripts/install-local.mjs", "--breaking", "--check"], { env }),
+      "--breaking cannot be combined with --check"
+    );
+
+    expectCommandFailure(
+      "install-local --breaking unsupported Windows fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FORCE_WINDOWS: "1" },
+      }),
+      "--breaking is not supported on Windows"
+    );
+    if (fs.existsSync(installLockPath)) {
+      fail("install-local --breaking Windows refusal mutated the global lock state");
+    }
+
+    writeProductState({ state: "idle" }, {});
+    runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], { env });
+    runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
+
+    // AC3 + strengthened --check: generated stale directories and surplus
+    // installedSkills entries are failures, while a user-owned mono-* lookalike
+    // is neither removed nor reported as generated drift.
+    const staleDir = path.join(codexRoot, "mono-retired");
+    const lookalikeDir = path.join(codexRoot, "mono-user-owned");
+    fs.mkdirSync(staleDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(staleDir, "SKILL.md"),
+      "<!-- Installed by Mono Agent Workflow @ retired. Do not edit manually. -->\n"
+    );
+    fs.mkdirSync(lookalikeDir, { recursive: true });
+    fs.writeFileSync(path.join(lookalikeDir, "SKILL.md"), "# User-owned lookalike\n");
+    expectCommandFailure(
+      "install-local --check unexpected generated directory fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot, "--check"], { env }),
+      "Unexpected generated workflow skill directory: mono-retired"
+    );
+
+    const codexLockPath = path.join(codexRoot, lockName);
+    const surplusLock = JSON.parse(fs.readFileSync(codexLockPath, "utf8"));
+    surplusLock.installedSkills.push({
+      name: "mono-ghost",
+      path: "mono-ghost/SKILL.md",
+      sha256: "0".repeat(64),
+    });
+    fs.writeFileSync(codexLockPath, `${JSON.stringify(surplusLock, null, 2)}\n`);
+    expectCommandFailure(
+      "install-local --check surplus lock entry fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot, "--check"], { env }),
+      "Lockfile has unexpected skill entry: mono-ghost"
+    );
+
+    // AC1 multi-root success: one breaking transaction repairs both roots,
+    // removes generated stale state, preserves the non-generated lookalike,
+    // and leaves every root post-check clean.
+    const successOutput = runNode(["scripts/install-local.mjs", "--breaking"], {
+      env: { ...env, MONO_WORKFLOW_TEST_PROBE_QUIESCENCE_CLAIM: "1" },
+    });
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (!successOutput.includes(`Breaking install committed for ${skillsRoot}`)) {
+        fail(`install-local --breaking must report a committed transaction for ${skillsRoot}`);
+      }
+    }
+    if (!successOutput.includes("Quiescence claim probe passed")) {
+      fail("install-local --breaking did not prove that control.json writers were excluded during cut-over");
+    }
+    if (fs.existsSync(staleDir)) fail("install-local --breaking kept a generated stale directory");
+    if (!fs.existsSync(path.join(lookalikeDir, "SKILL.md"))) {
+      fail("install-local --breaking removed a non-generated mono-* lookalike");
+    }
+    runNode(["scripts/install-local.mjs", "--check"], { env });
+    if (fs.readFileSync(path.join(productRoot, "control.json"), "utf8") !== '{\n  "state": "idle"\n}\n') {
+      fail("install-local --breaking did not restore the claimed control.json byte-for-byte");
+    }
+
+    // AC1 rollback: inject a failure after committing the second root. Both
+    // roots must return byte-for-byte to their pre-transaction trees.
+    fs.appendFileSync(path.join(codexRoot, "mono-review", "SKILL.md"), "\nROOT-ONE-BEFORE-ROLLBACK\n");
+    fs.appendFileSync(path.join(claudeRoot, "mono-review", "SKILL.md"), "\nROOT-TWO-BEFORE-ROLLBACK\n");
+    const beforeRollback = new Map([
+      [codexRoot, snapshotTree(codexRoot)],
+      [claudeRoot, snapshotTree(claudeRoot)],
+    ]);
+    expectCommandFailure(
+      "install-local --breaking second-root rollback fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_AFTER_ROOT: "2" },
+      }),
+      "Injected breaking install failure after root 2"
+    );
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (snapshotTree(skillsRoot) !== beforeRollback.get(skillsRoot)) {
+        fail(`install-local --breaking did not roll back ${skillsRoot} exactly`);
+      }
+    }
+
+    // A rollback failure must retain the transaction backup for manual
+    // recovery instead of deleting the only remaining copy in finally.
+    expectCommandFailure(
+      "install-local --breaking rollback backup retention fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: {
+          ...env,
+          MONO_WORKFLOW_TEST_FAIL_AFTER_ROOT: "1",
+          MONO_WORKFLOW_TEST_FAIL_ROLLBACK_ROOT: "1",
+        },
+      }),
+      "backup retained at"
+    );
+    const codexTransactionDirs = fs
+      .readdirSync(path.dirname(codexRoot), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-"))
+      .map((entry) => path.join(path.dirname(codexRoot), entry.name));
+    if (codexTransactionDirs.length !== 1) {
+      fail("install-local --breaking rollback failure must retain exactly one transaction directory");
+    } else if (!fs.existsSync(path.join(codexTransactionDirs[0], "backup", "mono-review", "SKILL.md"))) {
+      fail("install-local --breaking rollback failure did not retain the managed-root backup");
+    }
+    for (const transactionDir of codexTransactionDirs) {
+      fs.rmSync(transactionDir, { recursive: true, force: true });
+    }
+    for (const entry of fs.readdirSync(path.dirname(claudeRoot), { withFileTypes: true })) {
+      if (entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-")) {
+        fs.rmSync(path.join(path.dirname(claudeRoot), entry.name), { recursive: true, force: true });
+      }
+    }
+    if (installLockClaims().length !== 1) {
+      fail("install-local --breaking rollback failure must retain the global lock for recovery");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // A lock whose ownership cannot be proven at release is an installation
+    // failure, not success. Already-mutated roots are rolled back and the lock
+    // plus backups remain available for recovery.
+    const beforeReleaseFailure = new Map([
+      [codexRoot, snapshotTree(codexRoot)],
+      [claudeRoot, snapshotTree(claudeRoot)],
+    ]);
+    expectCommandFailure(
+      "install-local --breaking lock release failure fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_INSTALL_LOCK_RELEASE: "1" },
+      }),
+      "Install lock release failed"
+    );
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (snapshotTree(skillsRoot) !== beforeReleaseFailure.get(skillsRoot)) {
+        fail(`install-local --breaking did not roll back ${skillsRoot} after lock release failure`);
+      }
+      for (const entry of fs.readdirSync(path.dirname(skillsRoot), { withFileTypes: true })) {
+        if (entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-")) {
+          fs.rmSync(path.join(path.dirname(skillsRoot), entry.name), { recursive: true, force: true });
+        }
+      }
+    }
+    if (installLockClaims().length !== 1) {
+      fail("install-local --breaking release failure did not retain the global lock");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // The ordinary writer is not transactional, but a failed release is still
+    // an explicit non-zero install failure. Handle it without an uncaught
+    // exception and retain the claim for safe manual recovery.
+    expectCommandFailure(
+      "install-local ordinary lock release failure fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_INSTALL_LOCK_RELEASE: "1" },
+      }),
+      "Install lock release failed"
+    );
+    if (installLockClaims().length !== 1) {
+      fail("install-local ordinary release failure did not retain the global lock");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // Replacing the whole stable container after ownership read-back cannot
+    // make release delete a newer owner: the old token's unique claim pathname
+    // is absent in the replacement container. Ownership is now uncertain, so
+    // roots stay in their fully post-checked state and recovery data is retained
+    // instead of racing the newer owner with an unsafe rollback.
+    expectCommandFailure(
+      "install-local --breaking replacement-owner release race fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_REPLACE_LOCK_CONTAINER_BEFORE_RELEASE: "1" },
+      }),
+      "lock ownership is uncertain"
+    );
+    runNode(["scripts/install-local.mjs", "--check"], { env });
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      let retainedRecovery = false;
+      for (const entry of fs.readdirSync(path.dirname(skillsRoot), { withFileTypes: true })) {
+        if (entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-")) {
+          retainedRecovery = true;
+          fs.rmSync(path.join(path.dirname(skillsRoot), entry.name), { recursive: true, force: true });
+        }
+      }
+      if (!retainedRecovery) {
+        fail(`install-local --breaking did not retain recovery data after lock replacement at ${skillsRoot}`);
+      }
+    }
+    if (JSON.stringify(installLockClaims()) !== JSON.stringify(["claim-newer-owner.json"])) {
+      fail("install-local --breaking release race removed or changed the newer owner's claim");
+    }
+    const displacedLocks = fs
+      .readdirSync(stateRoot)
+      .filter((name) => name.startsWith("install.lock.displaced-"));
+    if (displacedLocks.length !== 1) {
+      fail("install-local --breaking release race did not retain the displaced owned claim");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+    if (displacedLocks.length === 1) {
+      fs.rmSync(path.join(stateRoot, displacedLocks[0]), { recursive: true, force: true });
+    }
+
+    // A staging failure on root 2 must clean both root 2's locally-created
+    // transaction directory and the already-tracked staged root 1 directory.
+    expectCommandFailure(
+      "install-local --breaking staging cleanup fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_DURING_STAGE_ROOT: "2" },
+      }),
+      "Injected breaking install staging failure at root 2"
+    );
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      const leaked = fs
+        .readdirSync(path.dirname(skillsRoot), { withFileTypes: true })
+        .some((entry) => entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-"));
+      if (leaked) fail(`install-local --breaking leaked staging data beside ${skillsRoot}`);
+    }
+
+    // A root and parent created only by a failed breaking transaction must be
+    // removed after rollback so filesystem absence is restored exactly.
+    const freshRoot = path.join(baseDir, "fresh-runtime", "skills");
+    expectCommandFailure(
+      "install-local --breaking fresh-root rollback fixture",
+      () => runNode(
+        ["scripts/install-local.mjs", "--skills-root", freshRoot, "--breaking"],
+        { env: { ...env, MONO_WORKFLOW_TEST_FAIL_AFTER_ROOT: "1" } }
+      ),
+      "Injected breaking install failure after root 1"
+    );
+    if (fs.existsSync(freshRoot) || fs.existsSync(path.dirname(freshRoot))) {
+      fail("install-local --breaking rollback kept a root or parent created by the failed transaction");
+    }
+
+    // AC2 quiescence: both non-idle control states and a nonempty registry
+    // block before target-root mutation with the A5 helper's precise reason.
+    for (const state of ["active", "draining"]) {
+      writeProductState({ state }, {});
+      const liveTreeBefore = snapshotTree(path.join(stateRoot, "orchestrator"));
+      expectCommandFailure(
+        `install-local --breaking ${state} wave fixture`,
+        () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+        `control.state=${state} (requires idle)`
+      );
+      if (snapshotTree(path.join(stateRoot, "orchestrator")) !== liveTreeBefore) {
+        fail(`install-local --breaking mutated the live ${state} orchestrator tree before refusal`);
+      }
+      if (orchestratorTransactionArtifacts().length > 0) {
+        fail(`install-local --breaking claimed the live ${state} orchestrator tree before refusal`);
+      }
+    }
+    writeProductState({ state: "idle" }, { "MONO-LIVE": { stage: "mono-implement" } });
+    expectCommandFailure(
+      "install-local --breaking nonempty registry fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "workers.json has 1 active worker: MONO-LIVE"
+    );
+
+    // An orchestrator still running the pre-coordination surface can activate
+    // after the initial scan. The frozen-tree revalidation must catch that
+    // race before any skills root changes and restore the now-active state.
+    writeProductState({ state: "idle" }, {});
+    const beforeRacedQuiescence = new Map([
+      [codexRoot, snapshotTree(codexRoot)],
+      [claudeRoot, snapshotTree(claudeRoot)],
+    ]);
+    expectCommandFailure(
+      "install-local --breaking scan-to-claim activation fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_ACTIVATE_AFTER_QUIESCENCE_SCAN: "1" },
+      }),
+      "control.state=active (requires idle)"
+    );
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (snapshotTree(skillsRoot) !== beforeRacedQuiescence.get(skillsRoot)) {
+        fail(`install-local --breaking mutated ${skillsRoot} before frozen quiescence revalidation`);
+      }
+    }
+    if (
+      JSON.parse(fs.readFileSync(path.join(productRoot, "control.json"), "utf8")).state !==
+      "active"
+    ) {
+      fail("install-local --breaking did not restore the state caught by frozen revalidation");
+    }
+    if (orchestratorTransactionArtifacts().length > 0) {
+      fail("install-local --breaking leaked a claim after frozen quiescence refusal");
+    }
+
+    fs.writeFileSync(path.join(productRoot, "control.json"), "{broken\n");
+    fs.writeFileSync(path.join(productRoot, "workers.json"), "{}\n");
+    expectCommandFailure(
+      "install-local --breaking corrupt control fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "cannot read control.json"
+    );
+
+    fs.writeFileSync(path.join(productRoot, "control.json"), '{"state":"idle"}\n');
+    fs.writeFileSync(path.join(productRoot, "workers.json"), "[broken\n");
+    expectCommandFailure(
+      "install-local --breaking corrupt registry fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "cannot read workers.json"
+    );
+
+    // All skills roots are preflighted before any target mutation. A corrupt
+    // second lock therefore leaves the first root untouched.
+    writeProductState({ state: "idle" }, {});
+    runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], { env });
+    runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
+    const firstBeforePreflightFailure = snapshotTree(codexRoot);
+    fs.writeFileSync(path.join(claudeRoot, lockName), "{broken\n");
+    expectCommandFailure(
+      "install-local --breaking all-root preflight fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "Lockfile is corrupted"
+    );
+    if (snapshotTree(codexRoot) !== firstBeforePreflightFailure) {
+      fail("install-local --breaking mutated the first root before the second root passed preflight");
+    }
+    runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
+
+    // Protocol cut-over: an empty directory or an active legacy owner without
+    // protocol.json is never joined as a token-claims container.
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+    fs.mkdirSync(installLockPath, { recursive: true });
+    expectCommandFailure(
+      "install-local --breaking incomplete legacy lock fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "incomplete or legacy lock requires manual inspection and removal"
+    );
+    fs.writeFileSync(
+      path.join(installLockPath, "owner.json"),
+      `${JSON.stringify({ pid: process.pid, token: "test-token-placeholder" }, null, 2)}\n`
+    );
+    expectCommandFailure(
+      "install-local --breaking active legacy lock fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      `breaking install lock is held by active process ${process.pid}`
+    );
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // AC3 global lock: a lock owned by this live parent process represents a
+    // concurrent installer and must be rejected deterministically.
+    fs.mkdirSync(stateRoot, { recursive: true });
+    writeInstallLock({ pid: process.pid, token: "fixture", startedAt: new Date().toISOString() });
+    expectCommandFailure(
+      "install-local --breaking concurrent lock fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      `breaking install lock is held by active process ${process.pid}`
+    );
+    expectCommandFailure(
+      "install-local ordinary writer honors global lock fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], { env }),
+      `breaking install lock is held by active process ${process.pid}`
+    );
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // Stale locks fail closed and remain in place for inspection; automatically
+    // unlinking a pathname after a raced read could delete a new live lock.
+    writeInstallLock({
+      pid: 2147483647,
+      token: "test-token-placeholder",
+      startedAt: new Date(0).toISOString(),
+    });
+    expectCommandFailure(
+      "install-local --breaking stale lock race fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], { env }),
+      "stale breaking install lock requires manual removal"
+    );
+    if (installLockClaims().length !== 1) {
+      fail("install-local --breaking removed a stale lock without an atomic ownership claim");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // If a legacy/non-cooperating writer recreates the canonical root during
+    // the narrow claim handoff, partial-claim metadata must keep both the
+    // original tree and global lock available for manual recovery.
+    writeProductState({ state: "idle" }, {});
+    expectCommandFailure(
+      "install-local --breaking partial quiescence claim retention fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_DURING_QUIESCENCE_CLAIM: "recreate" },
+      }),
+      "original retained at"
+    );
+    const partialClaimBackups = orchestratorTransactionArtifacts().filter((name) =>
+      name.startsWith(".orchestrator.install-backup-")
+    );
+    if (partialClaimBackups.length !== 1 || installLockClaims().length !== 1) {
+      fail("install-local --breaking partial claim failure did not retain its backup and lock");
+    } else {
+      fs.rmdirSync(path.join(stateRoot, "orchestrator"));
+      fs.renameSync(
+        path.join(stateRoot, partialClaimBackups[0]),
+        path.join(stateRoot, "orchestrator")
+      );
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
+    // If the parent-level quiescence claim cannot be restored, the installer
+    // rolls roots back and retains the global lock plus all recovery data.
+    const beforeClaimRestoreFailure = new Map([
+      [codexRoot, snapshotTree(codexRoot)],
+      [claudeRoot, snapshotTree(claudeRoot)],
+    ]);
+    expectCommandFailure(
+      "install-local --breaking quiescence restore retention fixture",
+      () => runNode(["scripts/install-local.mjs", "--breaking"], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_QUIESCENCE_RESTORE: "1" },
+      }),
+      "Quiescence restore failed"
+    );
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (snapshotTree(skillsRoot) !== beforeClaimRestoreFailure.get(skillsRoot)) {
+        fail(`install-local --breaking did not roll back ${skillsRoot} after quiescence restore failure`);
+      }
+      const retainedTransaction = fs
+        .readdirSync(path.dirname(skillsRoot), { withFileTypes: true })
+        .some((entry) => entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-"));
+      if (!retainedTransaction) {
+        fail(`install-local --breaking did not retain transaction recovery data beside ${skillsRoot}`);
+      }
+    }
+    if (installLockClaims().length !== 1) {
+      fail("install-local --breaking released the global lock after quiescence restore failure");
+    }
+    const orchestratorBackups = fs
+      .readdirSync(stateRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name.startsWith(".orchestrator.install-backup-"))
+      .map((entry) => path.join(stateRoot, entry.name));
+    if (orchestratorBackups.length !== 1) {
+      fail("install-local --breaking did not retain exactly one orchestrator backup for recovery");
+    } else {
+      fs.chmodSync(path.join(stateRoot, "orchestrator"), 0o700);
+      fs.rmdirSync(path.join(stateRoot, "orchestrator"));
+      fs.renameSync(orchestratorBackups[0], path.join(stateRoot, "orchestrator"));
+    }
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      for (const entry of fs.readdirSync(path.dirname(skillsRoot), { withFileTypes: true })) {
+        if (entry.isDirectory() && entry.name.startsWith(".mono-agent-workflow-install-")) {
+          fs.rmSync(path.join(path.dirname(skillsRoot), entry.name), { recursive: true, force: true });
+        }
+      }
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+  } finally {
+    const claimedOrchestratorRoot = path.join(stateRoot, "orchestrator");
+    if (fs.existsSync(claimedOrchestratorRoot)) {
+      fs.chmodSync(claimedOrchestratorRoot, 0o700);
+    }
     fs.rmSync(baseDir, { recursive: true, force: true });
   }
 }
@@ -4658,6 +5235,7 @@ validatePackIdentityAndQuiescenceBehavior();
 validatePackIdentityWorkflowContract();
 validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
+validateBreakingInstallBehavior();
 validateProjectConfigBehavior();
 validateIssueOnlyLaneBehavior();
 validateIssueIntakeContract();

@@ -131,6 +131,10 @@ Workflow states:
      decision; record it explicitly (the bundled-approval rule from
      `mono-implement` applies).
 4. `dispatch`
+   - Acquire `~/.mono-agent-workflow/install.lock` using the shared Install
+     Coordination protocol in `references/orchestration.md` before creating the product root
+     or repairing its canonical state files, and before an `idle` → `active` transition.
+     Do not create or mutate orchestrator state when the installer owns the lock.
    - Start the heartbeat watcher before the first spawn of a wave:
      `node scripts/watch-workers.mjs --root ~/.mono-agent-workflow/orchestrator/<product>`
      via the runtime Monitor primitive (Heartbeat in
