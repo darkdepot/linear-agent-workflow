@@ -237,12 +237,15 @@ is a `blocked` report and the stage does not continue.
   same thread with the same attempt-numbered stdout/stderr pair (resume appends
   because each attempt log is cumulative):
 
+  Resume does not accept the global `--cd`, `--sandbox`, or `--add-dir` flags; any of them in a resume command is a contract error — set the working directory with `cd` and grants through `-c` overrides.
+
   ```bash
-  codex exec --json \
-    --cd <worktree> \
-    --sandbox workspace-write \
-    --add-dir ~/.mono-agent-workflow/orchestrator/<product> \
-    resume <thread-id> "<message>" < /dev/null \
+  cd <worktree> && codex exec resume <thread-id> --json \
+    -c 'model="<pinned model>"' \
+    -c 'model_reasoning_effort="<pinned effort>"' \
+    -c 'sandbox_mode="workspace-write"' \
+    -c 'sandbox_workspace_write.writable_roots=["<orchestrator-root>"]' \
+    "$(cat <dispatch-prompt-file>)" < /dev/null \
     >> ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a<N>.jsonl \
     2>> ~/.mono-agent-workflow/orchestrator/<product>/logs/<ISSUE-KEY>-<stage>-a<N>.stderr.log &
   ```
@@ -348,10 +351,11 @@ never report it as applied.
   continue the stage, not restart the Issue.
 - `codex-cli` liveness ladder: process exit with a mailbox report is the
   normal advance signal; process exit without a report — resume the thread
-  once demanding the report; a failed resume or a second reportless exit is a
+  once with `cd <worktree> && codex exec resume <thread-id> --json -c 'model="<pinned model>"' -c 'model_reasoning_effort="<pinned effort>"' -c 'sandbox_mode="workspace-write"' [-c 'sandbox_workspace_write.network_access=true'] [-c 'sandbox_workspace_write.writable_roots=["<path>",...]']`, demanding the report; a failed resume or a second reportless exit is a
   stuck worker (rebuild and respawn per the bullet above). Stage budgets,
   guidance not gates: implement 60m, preflight 30m, ship 90m. A ship worker
-  whose turn ends before green is resumed with «continue stabilization».
+  whose turn ends before green is resumed with «continue stabilization» using
+  that same working resume form.
 - Material scope drift: stop the worker and escalate through
   `scope-drift-needs-handoff`; scope is always the user's decision.
 
@@ -527,7 +531,7 @@ A fresh orchestrator session rebuilds state without loss:
    lockfile before using its thread id. When surfaceRevision differs, do not rebind
    or resume that thread; report it blocked for a fresh compatible dispatch.
    Otherwise rebind to surviving `codex-cli` workers by thread id
-   (`codex exec resume`) instead of respawning them.
+   (`cd <worktree> && codex exec resume <thread-id> --json -c 'model="<pinned model>"' -c 'model_reasoning_effort="<pinned effort>"' -c 'sandbox_mode="workspace-write"' [-c 'sandbox_workspace_write.network_access=true'] [-c 'sandbox_workspace_write.writable_roots=["<path>",...]']`) instead of respawning them.
 6. Output the rebuilt status table before taking any new action.
 
 Forced mid-wave resume drill — a planned one-time operational act,
