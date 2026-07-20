@@ -1,6 +1,6 @@
 ---
 name: mono-review
-description: Use when reviewing Linear Project, PRD, Tech Spec, Issue, or pre-ship readiness quality without mutating Linear artifacts.
+description: Use when reviewing Linear Project, PRD, Tech Spec, Issue, a proposed artifact repair classification, or pre-ship readiness quality without mutating Linear artifacts.
 ---
 
 # Mono Review
@@ -19,6 +19,7 @@ Read first:
 6. `references/review-rubric.md`
 7. `references/human-friendly-output.md`
 8. `templates/review-output.md`
+9. `references/repair-machine.md`
 
 Modes:
 
@@ -39,6 +40,13 @@ Workflow:
 6. Apply the rubric in `references/review-rubric.md`.
 7. Return the report in `templates/review-output.md`.
 8. Recommend the next owner workflow.
+
+In `artifact` mode, inspect the proposed repair class against the exact
+stable-ID diff and evidence in `references/repair-machine.md`. Confirm the
+class 1/2 guard set is unchanged, fail closed to class 3 on ambiguity or risk
+growth, and report every required class effect. This remains report-only:
+`mono-review` neither applies the repair nor mutates approvals, snapshots,
+certificates, workers, Issues, or Project lifecycle.
 
 Rules:
 
@@ -68,7 +76,8 @@ Verdicts:
 
 Owner workflows:
 
-- `mono-handoff`: applies accepted Project, PRD, Tech Spec, and Issue-plan fixes before creating execution Issues.
+- `mono-handoff`: applies accepted Project-first package fixes and executes the
+  reviewed repair transaction before creating or resuming execution Issues.
 - `mono-implement`: owns Delivery Start and implementation-start approval, then executes from approved Issue(s).
 - `mono-preflight`: owns local branch readiness, targeted verification, the mandatory `autoreview` clean gate, commit state, and preflight certificate.
 - `mono-prd`: applies accepted PRD-only fixes when explicitly invoked.

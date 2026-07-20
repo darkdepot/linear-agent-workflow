@@ -1,6 +1,6 @@
 ---
 name: mono-idea
-description: Use when the user brings a raw idea and wants to start a Linear-tracked project.
+description: Use only when the user brings a raw idea; mono-idea owns that route. Accepted pre-ship drift routes to mono-ship, unmistakable one-PR projectless work to mono-issue-intake, and existing-Project handoff or artifact repair to mono-handoff.
 ---
 
 # Mono Idea

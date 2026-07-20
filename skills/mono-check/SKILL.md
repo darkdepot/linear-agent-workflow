@@ -1,6 +1,6 @@
 ---
 name: mono-check
-description: Use when checking Linear Project, PRD, Tech Spec, Issue, or ship readiness before moving a workflow to the next stage.
+description: Use when checking Linear Project, PRD, Tech Spec, Issue, artifact repair, or ship readiness before moving a workflow to the next stage.
 ---
 
 # Mono Check
@@ -16,6 +16,7 @@ Read first:
 5. `references/lifecycle.md`
 6. `references/human-friendly-output.md`
 7. `templates/check-output.md`
+8. `references/repair-machine.md`
 
 Statuses:
 
@@ -33,6 +34,7 @@ Modes:
 - `pre-ship`
 - `post-ship`
 - `project-config`
+- `repair`
 
 Rules:
 
@@ -46,6 +48,9 @@ Rules:
 - Never edit Project, documents, or Issues from `mono-check`. If the user asks to sync or fix artifacts, report the owner workflow to run.
 - Do not use Project Updates as a required gate; use Linear comments for user review acceptance.
 - Checks are report-only. They must not silently repair drift.
+- Repair checks are readiness-only: inspect the stable-ID preview,
+  classification evidence, review disposition, and class-specific effects; do
+  not apply or complete a repair from `mono-check`.
 - Judge artifact shape by semantics before exact heading spelling. Do not fail merely because a heading label differs when the artifact still has the right product/implementation/execution shape.
 - Do fail when a document has the wrong responsibility: PRD invents HOW, Tech Spec invents WHAT, Issue copies whole PRD/Spec bodies, or Project becomes a workflow dashboard.
 - Do not emit review findings, proposed fixes, decisions, or FYI sections. Those belong to `mono-review`.
@@ -72,6 +77,14 @@ Mode checks:
 - `discovery`: Project is in Discovery or an equivalent pre-delivery state, discovery outputs are available, no implementation has started from a raw discovery plan, and the next required durable mutation is `mono-handoff`.
 - `discovery`: PASS when PRD and Tech Spec exist but Project remains pre-delivery; FAIL when Project moved to Delivery merely because PRD or Tech Spec exists.
 - `handoff`: PASS when Project, PRD, Tech Spec, and proposed or created Issue slicing are current; Project body is a concise product brief; package approval is recorded as a Linear comment; required `mono-review handoff` ran or a tiny advisory exception is recorded; and implementation has not started from raw `/office-hours`, `/brainstorming`, or review plan. Return `BLOCKED` when the package is otherwise valid but approval is pending.
+- `repair`: PASS only when the exact stable-ID diff and evidence support the
+  recorded class, `mono-review artifact` has no blocking finding, and every
+  effect required by `references/repair-machine.md` is durably recorded. Class
+  1 must preserve approval and Issues; class 2 must prove snapshot-sync with a
+  re-derived fingerprint, stale-preflight-cert disposition, and stale worker
+  stop; class 3 must prove worker stop, approval supersession, dependent
+  invalidation, Delivery-to-Discovery rollback, and pending or completed owner
+  re-approval. Ambiguity or risk growth under a recorded lower class is `FAIL`.
 - `issue`: Issue belongs to the Project, is a one-PR contract, has required sections, includes `Прочитать сначала` / Read first context, `AFK` or `HITL` readiness, dependencies/blockers, Project/PRD/Tech Spec chips plus context snapshot, adds PRD/Tech Spec as resources/links when available, has coherent review-gate status and disposition, and has no attached PRD/Tech Spec docs.
 - `issue`: bug/perf Issues include current behavior, desired behavior, reproduction or baseline, and fix-proof expectation, or explicitly say why the original symptom cannot be reproduced yet.
 - `issue` (issue-only lane): after the shared branch above resolves issue-only/approved-fresh, judge it against the issue-only contract: a self-contained one-PR Issue with objective/scope/desired behavior, acceptance criteria with stable IDs, verification, non-goals, the exact five-field marker, coherent review disposition, and the owner-approved whole-body fingerprint. The intake readiness check requires a pre-start state whose type is `triage`, `backlog`, or `unstarted`; reject `started`, `completed`, and `canceled` in this mode because this check certifies the package before Delivery activation.

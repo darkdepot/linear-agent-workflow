@@ -543,6 +543,186 @@ function validateReviewCheckBoundary() {
   }
 }
 
+function validateRepairAndRoutingContract() {
+  const repairContractPath = "references/repair-machine.md";
+  if (!exists(repairContractPath)) {
+    fail(`Missing repair-machine contract: ${repairContractPath}`);
+    return;
+  }
+
+  const repairContract = read(repairContractPath);
+  const classificationFixtures = [
+    ["typo-or-format", "1"],
+    ["how-only", "2"],
+    ["requirement", "3"],
+    ["acceptance", "3"],
+    ["non-goal", "3"],
+    ["risk", "3"],
+    ["issue-set", "3"],
+    ["visible-behavior", "3"],
+    ["ambiguous", "3"],
+  ];
+  for (const [fixture, expectedClass] of classificationFixtures) {
+    const rowPattern = new RegExp(
+      "^\\| `" + fixture + "` \\| [^\\n]+ \\| `" + expectedClass + "` \\|",
+      "m"
+    );
+    if (!rowPattern.test(repairContract)) {
+      fail(`Repair classification fixture ${fixture} must resolve to class ${expectedClass}`);
+    }
+  }
+  for (const [fixture, expectedClass] of classificationFixtures.filter(([, value]) => value === "3")) {
+    const rowPattern = new RegExp(
+      "^\\| `" + fixture + "` \\| [^|]+ \\| `" + expectedClass + "` \\| ([^|]+) \\|$",
+      "m"
+    );
+    const requiredResult = repairContract.match(rowPattern)?.[1]?.toLowerCase() ?? "";
+    for (const required of ["supersede approval", "invalidate dependants", "require owner re-approval", "roll back delivery"]) {
+      if (!requiredResult.includes(required)) {
+        fail(`Repair class 3 fixture ${fixture} required result missing ${JSON.stringify(required)}`);
+      }
+    }
+  }
+
+  const classTwoEffectFixtures = [
+    {
+      name: "snapshot-sync",
+      required: [
+        "## Class 2 effect fixture: snapshot-sync",
+        "implementation-critical fields",
+        "re-derive each affected Issue snapshot fingerprint",
+      ],
+    },
+    {
+      name: "stale-preflight-cert",
+      required: [
+        "## Class 2 effect fixture: stale-preflight-cert",
+        "issued before the repair mutation",
+        "must rerun `mono-preflight`",
+      ],
+    },
+    {
+      name: "stale-worker-stop",
+      required: [
+        "## Class 2 effect fixture: stale-worker-stop",
+        "stop or quiesce every affected active worker before the repair mutation",
+        "dispatch snapshot fingerprint differs from the re-derived fingerprint",
+        "stop before any further implementation step",
+      ],
+    },
+  ];
+  for (const fixture of classTwoEffectFixtures) {
+    for (const required of fixture.required) {
+      if (!repairContract.includes(required)) {
+        fail(`Class 2 ${fixture.name} fixture missing ${JSON.stringify(required)}`);
+      }
+    }
+  }
+
+  const classTwoOrderingPins = [
+    { path: "skills/mono-handoff/SKILL.md", mutation: "synchronizes" },
+    { path: "references/lifecycle.md", mutation: "synchronizes" },
+    { path: "references/repair-machine.md", mutation: "apply the previewed artifact repair" },
+  ];
+  for (const { path: relativePath, mutation } of classTwoOrderingPins) {
+    const body = read(relativePath).replace(/\s+/g, " ").toLowerCase();
+    const workerStop = body.indexOf("stops or quiesces every affected active worker before any repair mutation");
+    const snapshotSync = body.indexOf(mutation);
+    if (workerStop < 0) {
+      fail(`${relativePath} must front-load the class 2 affected-worker stop`);
+    } else if (snapshotSync < 0 || workerStop > snapshotSync) {
+      fail(`${relativePath} must stop affected workers before class 2 snapshot mutation`);
+    }
+  }
+
+  for (const required of [
+    "Accepted pre-ship drift is a terminal ownership override evaluated before the general existing-Project route",
+    "exact before/after diff grouped by stable ID",
+    "unchanged R/AE/AC, non-goals, risk class, and Issue set",
+    "Ambiguity is class 3",
+    "Class 1 keeps package and implementation-start approvals valid",
+    "must not update Issue bodies, Issue snapshots, fingerprints, certificates, worker dispatches, Issue slicing, or Project lifecycle state",
+    "Project-first implementation-start approval is bound to the unchanged scope and Issue set, not to an Issue snapshot fingerprint",
+    "fresh dispatch is the required non-owner re-authorization",
+    "stop affected workers before rollback",
+    "supersede the implementation-start approval",
+    "invalidate dependent Tech Spec, Issue snapshots, certificates, and Issue slicing",
+    "move a Delivery Project back to Discovery",
+    "stop workers -> supersede approvals -> invalidate dependants -> Delivery to Discovery -> rebuild -> review/check -> owner re-approval",
+    "owner re-approval",
+  ]) {
+    if (!repairContract.includes(required)) fail(`Repair-machine contract missing ${JSON.stringify(required)}`);
+  }
+
+  const routingOverlapFixtures = [
+    ["existing-project-pre-ship-drift", "mono-ship"],
+    ["issue-only-body-edit", "mono-issue-intake"],
+    ["existing-project-targeted-repair", "mono-handoff repair"],
+  ];
+  for (const [fixture, expectedOwner] of routingOverlapFixtures) {
+    const rowPattern = new RegExp(
+      "^\\| `" + fixture + "` \\| [^\\n]+ \\| `" + expectedOwner + "` \\|",
+      "m"
+    );
+    if (!rowPattern.test(repairContract)) {
+      fail(`Repair routing overlap fixture ${fixture} must resolve to ${expectedOwner}`);
+    }
+  }
+
+  const skillPins = {
+    "skills/mono-handoff/SKILL.md": [
+      "references/repair-machine.md",
+      "repair mode",
+      "`mono-review artifact`",
+      "Do not use repair mode for accepted pre-ship drift",
+    ],
+    "skills/mono-review/SKILL.md": [
+      "references/repair-machine.md",
+      "- `artifact`",
+      "proposed repair class",
+      "report-only",
+    ],
+    "skills/mono-check/SKILL.md": [
+      "references/repair-machine.md",
+      "`repair`",
+      "readiness-only",
+    ],
+    "references/review-rubric.md": [
+      "Repair classification",
+      "stable-ID diff",
+      "Ambiguity or risk growth is class 3",
+    ],
+    "references/lifecycle.md": [
+      "## Artifact Repair",
+      "issue-only body renewal",
+      "accepted pre-ship drift",
+    ],
+    "AGENTS.md": [
+      "`mono-handoff` = project-first package creation and artifact repair",
+      "`mono-issue-intake` = issue-only intake and renewal",
+      "accepted pre-ship drift",
+    ],
+  };
+  for (const [relativePath, pins] of Object.entries(skillPins)) {
+    for (const pin of pins) assertIncludes(relativePath, pin, JSON.stringify(pin));
+  }
+
+  const routingFixtures = [
+    ["skills/mono-idea/SKILL.md", "raw idea", "mono-idea", "pre-ship drift routes to mono-ship"],
+    ["skills/mono-issue-intake/SKILL.md", "unmistakably one-PR projectless", "renewal"],
+    ["skills/mono-handoff/SKILL.md", "existing Project or shaped discovery", "PRD or Tech Spec repair"],
+    ["skills/mono-ship/SKILL.md", "pre-ship drift", "mono-ship"],
+  ];
+  for (const [relativePath, ...signals] of routingFixtures) {
+    const frontmatter = parseFrontmatter(read(relativePath));
+    for (const signal of signals) {
+      if (!frontmatter?.description?.includes(signal)) {
+        fail(`${relativePath} description missing routing signal ${JSON.stringify(signal)}`);
+      }
+    }
+  }
+}
+
 function validateLocalInstallBehavior() {
   const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-skills-"));
   const installedResolver = path.join(skillsRoot, ".mono-agent-workflow", "scripts", "resolve-issue-context.mjs");
@@ -3893,6 +4073,7 @@ validateSkills();
 validateTemplateSections();
 validateArtifactContractParity();
 validateReviewCheckBoundary();
+validateRepairAndRoutingContract();
 validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();
