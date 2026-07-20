@@ -3886,11 +3886,32 @@ function startWatcherFixture(fixtureRoot, extraArgs = []) {
     child,
     stdoutPath,
     stderrPath,
-    stop() {
+    async stop() {
+      const exited = new Promise((resolve, reject) => {
+        if (child.exitCode !== null || child.signalCode !== null) {
+          resolve();
+          return;
+        }
+        const timeout = setTimeout(() => {
+          child.kill("SIGKILL");
+          reject(new Error(`watcher fixture did not exit after SIGTERM: ${fixtureRoot}`));
+        }, 5_000);
+        child.once("exit", () => {
+          clearTimeout(timeout);
+          resolve();
+        });
+        child.once("error", (error) => {
+          clearTimeout(timeout);
+          reject(error);
+        });
+      });
       child.kill("SIGTERM");
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
-      fs.closeSync(stdoutFd);
-      fs.closeSync(stderrFd);
+      try {
+        await exited;
+      } finally {
+        fs.closeSync(stdoutFd);
+        fs.closeSync(stderrFd);
+      }
     },
   };
 }
@@ -3903,7 +3924,7 @@ function watcherOutput(pathname) {
   }
 }
 
-function validateWatcherV3Behavior() {
+async function validateWatcherV3Behavior() {
   const identity = {
     packVersion: "0.20.1",
     sourceCommit: "a".repeat(40),
@@ -3966,7 +3987,7 @@ function validateWatcherV3Behavior() {
       return (output.match(/EVENT:report MONO-201\b/g) || []).length === 2 && output;
     });
     if (!updated) fail("watcher updated report fixture did not emit a second report event");
-    watcher.stop();
+    await watcher.stop();
 
     const restart = spawnSync(
       process.execPath,
@@ -4060,7 +4081,7 @@ function validateWatcherV3Behavior() {
       fs.utimesSync(workersPath, old, old);
       const watcher = startWatcherFixture(fixtureRoot, ["--idle-sec", idleSec]);
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1_150);
-      watcher.stop();
+      await watcher.stop();
       const idleEvents = watcherOutput(watcher.stdoutPath).match(/EVENT:idle\b/g) || [];
       if (expectIdle && idleEvents.length !== 1) fail(`watcher ${label} fixture must emit once without spam`);
       if (!expectIdle && idleEvents.length !== 0) fail(`watcher ${label} fixture must not emit idle`);
@@ -4113,7 +4134,7 @@ function validateWatcherV3Behavior() {
       watcherOutput(watcher.stdoutPath).split("\n").find((line) => line.includes("EVENT:idle")),
       4_000
     );
-    watcher.stop();
+    await watcher.stop();
     if (!idleLine) {
       fail("watcher retirement fixture must emit idle after all entries retire and idle-sec elapses");
     } else if (secondReportLine) {
@@ -4644,7 +4665,7 @@ validateDocsAndExamples();
 validateAntiPatterns();
 validateHeartbeatContract();
 validateWatcherContaminationBehavior();
-validateWatcherV3Behavior();
+await validateWatcherV3Behavior();
 validateHonestLedgerContract();
 validateCompactionContract();
 validateLiveQaGateContract();
