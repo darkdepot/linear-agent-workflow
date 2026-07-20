@@ -3959,6 +3959,8 @@ function validateIssueIntakeContract() {
     "owner principal's stable Linear user ID",
     "issueOnlyLane.ownerPrincipal",
     "explicit owner decision",
+    "record that decision as a Linear approval comment naming the exact fingerprint",
+    "capture the comment author's stable Linear user ID for read-back",
     "Never self-approve",
     "маркер ≠ route-record",
     "route_revision",
@@ -3970,6 +3972,8 @@ function validateIssueIntakeContract() {
     "deep, risky, multi-surface, cross-cutting, or ambiguous",
     "create-then-approve renewal",
     "Apply `IS-001` through `IS-034`",
+    "stop this skill without rendering or mutating an Issue",
+    "the destination lifecycle owner applies the Project-first rules",
   ]) {
     assertIncludes("skills/mono-issue/SKILL.md", required, JSON.stringify(required));
   }

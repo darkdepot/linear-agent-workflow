@@ -23,7 +23,7 @@ Read first:
 Contract application:
 
 - `references/contracts/issue.md` is the normative source for Issue artifact behavior. Apply `IS-001` through `IS-034` in full; `IS-005` supplies the issue-only routing exception and incorporates `references/issue-only-lane.md` without duplicating its protocol.
-- Apply the project-first rules only after issue-only prequalification refuses the request. Do not use the former atomic-adapter route as a user-facing entry.
+- If issue-only prequalification refuses the request, stop this skill without rendering or mutating an Issue. Route shaped Project-first work to `mono-handoff` and unshaped work to `mono-idea`; the destination lifecycle owner applies the Project-first rules.
 - Render the self-contained Issue with `templates/issue.md`, applying every branch-relevant content, readiness, review, durability, and check rule from the bounded contract.
 
 ## Routing and fail-closed proof
@@ -66,7 +66,7 @@ Approval binds to the full whole-body SHA-256 of the Issue contract. Run these s
 1. Create or update a non-startable Issue in the intake-authorized draft mode. Author the self-contained body by applying `references/contracts/issue.md` directly, especially `IS-005` through `IS-018` and `IS-028` through `IS-034`; do not call or read another Issue-writing SKILL.md. Leave the state type in `triage`, `backlog`, or `unstarted`. Do not write the marker or label yet.
 2. Run the mandatory review gate on the drafted body. `standard` requires `mono-review issue-only` to reach `ready`; `tiny` may use an explicitly recorded advisory exception. Record the disposition before fingerprinting.
 3. Compute the fingerprint only with the installer-published `../.mono-agent-workflow/scripts/resolve-issue-context.mjs --emit-fingerprint`. Do not add a second hashing path or concatenate sections.
-4. Present the reviewed body and exact fingerprint and wait for an explicit owner decision. Never self-approve or manufacture approval through the owner's connector.
+4. Present the reviewed body and exact fingerprint and wait for an explicit owner decision. Never self-approve or manufacture approval through the owner's connector. After the owner explicitly approves, record that decision as a Linear approval comment naming the exact fingerprint, made by or on the explicit instruction of the owner principal, and capture the comment author's stable Linear user ID for read-back. A connector comment without the preceding explicit decision carries no authority.
 5. Read back the live body and approval comment. Recompute with `--emit-fingerprint`; require both fingerprint equality and the owner principal's stable Linear user ID as author.
 6. Bind label first, marker last. Set `issue-only`, then write the `mono-issue-only marker` with exactly `Marker version`, `Scope fingerprint`, `Acceptance IDs`, `Risk class`, and `Approval`. On any error, roll back the partial state. The marker must not contain `route_revision`, `assurance_vector`, `required_artifacts`, or a sixth field: маркер ≠ route-record.
 7. Run the readiness check before activation: `mono-check issue` in issue-only mode must return `PASS`. Otherwise remove the marker and label and return `BLOCKED`.
