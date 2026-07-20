@@ -3401,6 +3401,7 @@ function validateDocsAndExamples() {
       "scope-drift-needs-handoff",
       "codex-cli",
       "codex exec resume",
+      "Resume does not accept the global `--cd`, `--sandbox`, or `--add-dir` flags; any of them in a resume command is a contract error — set the working directory with `cd` and grants through `-c` overrides.",
       "--add-dir",
       "workers.json",
       "sandbox_workspace_write.network_access",
