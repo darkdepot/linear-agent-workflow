@@ -1493,6 +1493,21 @@ function validateBreakingInstallBehavior() {
     }
     fs.rmSync(installLockPath, { recursive: true, force: true });
 
+    // The ordinary writer is not transactional, but a failed release is still
+    // an explicit non-zero install failure. Handle it without an uncaught
+    // exception and retain the claim for safe manual recovery.
+    expectCommandFailure(
+      "install-local ordinary lock release failure fixture",
+      () => runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], {
+        env: { ...env, MONO_WORKFLOW_TEST_FAIL_INSTALL_LOCK_RELEASE: "1" },
+      }),
+      "Install lock release failed"
+    );
+    if (installLockClaims().length !== 1) {
+      fail("install-local ordinary release failure did not retain the global lock");
+    }
+    fs.rmSync(installLockPath, { recursive: true, force: true });
+
     // Replacing the whole stable container after ownership read-back cannot
     // make release delete a newer owner: the old token's unique claim pathname
     // is absent in the replacement container. Ownership is now uncertain, so

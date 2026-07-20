@@ -1206,8 +1206,7 @@ function breakingSync(root, args, commit, dirty, version) {
 
     if (!recoveryRequired) {
       try {
-        const releaseWarning = releaseGlobalInstallLock(installLock);
-        if (releaseWarning) console.error(`Warning: ${releaseWarning}`);
+        releaseGlobalInstallLock(installLock);
       } catch (releaseError) {
         const ownershipCertain = releaseError.installLockOwnershipCertain === true;
         const rollbackFailures = ownershipCertain ? rollbackBreakingRoots(transactions) : [];
@@ -1299,7 +1298,11 @@ if (args.check) {
       sync(root, skillsRoot, commit, dirty, version, args.removeStale);
     }
   } finally {
-    const releaseWarning = releaseGlobalInstallLock(installLock);
-    if (releaseWarning) console.error(`Warning: ${releaseWarning}`);
+    try {
+      releaseGlobalInstallLock(installLock);
+    } catch (releaseError) {
+      console.error(`Install lock release failed: ${releaseError.message}`);
+      process.exitCode = 1;
+    }
   }
 }
