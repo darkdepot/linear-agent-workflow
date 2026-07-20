@@ -406,7 +406,7 @@ function validateArtifactContractParity() {
       contractPath: "references/contracts/issue.md",
       ledgerSourcePath: "references/contracts/issue.md",
       templatePath: "templates/issue.md",
-      contractFingerprint: "718773e5a7f2e2f0cc95533613c3f67b95b27ca2e691b08f644a2ac354d39756",
+      contractFingerprint: "685fc2e574a114dca4e76bba3ce0fee2592748d948b7a7db663fa5b53a103ebe",
       contractConsumers: ["skills/mono-issue/SKILL.md"],
     },
   };
@@ -4003,9 +4003,10 @@ function validateIssueIntakeContract() {
   for (const required of [
     "owns the Project-first branch from Project, PRD, and Tech Spec context",
     "`mono-issue` owns only unmistakable projectless issue-only intake and renewal",
-    "`mono-issue` is the issue-only front door and must refuse",
-    "existing issue-only Issue body may",
+    "front door and must refuse Project relations",
+    "issue-only Issue body may change only through `mono-issue` renewal",
     "full create-then-approve",
+    "pre-ship drift is the terminal override and belongs to `mono-ship`",
     "## IS-005 — Issue-only branch",
     "[issue-only lane contract](../issue-only-lane.md) in full",
     "## IS-008 — Project-first sources",

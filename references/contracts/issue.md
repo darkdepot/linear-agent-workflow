@@ -1,8 +1,9 @@
 # Issue artifact contract
 
-This bounded contract is the normative source for both Issue-writing branches:
-Project-first Issues owned by `mono-handoff`, and projectless issue-only intake
-and renewal owned by `mono-issue`. Use the shared
+This bounded contract is the normative source for the Issue lifecycle writers:
+Project-first package creation and repair owned by `mono-handoff`, projectless
+issue-only intake and renewal owned by `mono-issue`, and accepted pre-ship drift
+owned by `mono-ship`. Use the shared
 [artifact rules](../artifact-rules.md), [artifact quality](../artifact-quality.md),
 [readiness gates](../readiness-gates.md), and
 [execution quality](../execution-quality.md) for cross-artifact policy. Render
@@ -13,7 +14,8 @@ duplicate the template here.
 
 Use this contract to create or update a one-PR Linear Issue. `mono-handoff`
 owns the Project-first branch from Project, PRD, and Tech Spec context;
-`mono-issue` owns only unmistakable projectless issue-only intake and renewal.
+`mono-issue` owns only unmistakable projectless issue-only intake and renewal;
+`mono-ship` owns accepted pre-ship drift sync.
 
 ## IS-002 — Execution contract
 
@@ -21,16 +23,19 @@ The Issue is the one-PR execution contract.
 
 ## IS-003 — Internal helper boundary
 
-Issue writing stays behind its lifecycle owner. `mono-handoff` writes the
-Project-first package; `mono-issue` is the issue-only front door and must refuse
-Project relations or Project, PRD, or Tech Spec chips.
+Issue writing stays behind its lifecycle owner. `mono-handoff` writes and
+repairs the Project-first package before pre-ship; `mono-issue` is the issue-only
+front door and must refuse Project relations or Project, PRD, or Tech Spec
+chips; `mono-ship` applies accepted pre-ship drift.
 
 ## IS-004 — Targeted-use eligibility
 
-Route Project-first Issue creation and repair through `mono-handoff`, including
-reviewer-feedback updates or maintenance. An existing issue-only Issue body may
-change only through `mono-issue` renewal using the full create-then-approve
-transaction. No other direct Issue mutation route is eligible.
+Route Project-first Issue creation and repair before pre-ship through
+`mono-handoff`, including reviewer-feedback updates or maintenance. Accepted
+pre-ship drift is the terminal override and belongs to `mono-ship`. An existing
+issue-only Issue body may change only through `mono-issue` renewal using the
+full create-then-approve transaction. No other direct Issue mutation route is
+eligible.
 
 ## IS-005 — Issue-only branch
 
@@ -174,9 +179,11 @@ Verify acceptance criteria are concrete enough to check after the PR.
 
 ## IS-033 — Scope-drift self-review
 
-If a Project-first Issue introduces scope absent from PRD or Tech Spec, return
-to handoff approval. If issue-only scope grows beyond its approved one-PR
-envelope, fail closed to Project-first instead of renewing it in place.
+If a Project-first Issue introduces scope absent from PRD or Tech Spec before
+pre-ship, return to handoff approval. At pre-ship, `mono-ship` applies accepted
+drift and routes unaccepted scope change back through handoff approval. If
+issue-only scope grows beyond its approved one-PR envelope, fail closed to
+Project-first instead of renewing it in place.
 
 ## IS-034 — Issue check
 
