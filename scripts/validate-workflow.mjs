@@ -607,6 +607,21 @@ function validateRepairAndRoutingContract() {
     }
   }
 
+  const classTwoOrderingPins = [
+    "skills/mono-handoff/SKILL.md",
+    "references/lifecycle.md",
+  ];
+  for (const relativePath of classTwoOrderingPins) {
+    const body = read(relativePath).replace(/\s+/g, " ");
+    const workerStop = body.indexOf("stops or quiesces every affected active worker before any repair mutation");
+    const snapshotSync = body.indexOf("synchronizes");
+    if (workerStop < 0) {
+      fail(`${relativePath} must front-load the class 2 affected-worker stop`);
+    } else if (snapshotSync < 0 || workerStop > snapshotSync) {
+      fail(`${relativePath} must stop affected workers before class 2 snapshot mutation`);
+    }
+  }
+
   for (const required of [
     "Accepted pre-ship drift is a terminal ownership override evaluated before the general existing-Project route",
     "exact before/after diff grouped by stable ID",

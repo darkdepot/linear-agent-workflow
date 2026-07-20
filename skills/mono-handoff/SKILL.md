@@ -162,8 +162,9 @@ Repair-mode workflow:
    mutation while a blocking classification finding remains.
 5. Apply the class transaction exactly as defined in
    `references/repair-machine.md`: class 1 preserves approvals and Issues;
-   class 2 synchronizes snapshots and fingerprints, stales earlier preflight
-   certificates, and stops stale-contract workers; class 3 stops workers,
+   class 2 stops or quiesces every affected active worker before any repair
+   mutation, then synchronizes snapshots and fingerprints and stales earlier
+   preflight certificates; class 3 stops workers,
    supersedes approvals, invalidates dependants, and rolls Delivery back to
    Discovery for owner re-approval.
 6. Run or report `mono-check repair` against every required effect and leave a

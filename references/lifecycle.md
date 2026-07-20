@@ -80,9 +80,10 @@ Required:
   evidence.
 - `mono-review artifact` report-only classification review.
 - Class 1 preserves approval and Issues.
-- Class 2 synchronizes affected implementation-critical Issue snapshots,
-  re-derives fingerprints, stales preflight certificates issued before the
-  repair, and stops workers whose dispatch fingerprint is stale.
+- Class 2 stops or quiesces every affected active worker before any repair
+  mutation, then synchronizes affected implementation-critical Issue snapshots,
+  re-derives fingerprints, and stales preflight certificates issued before the
+  repair.
 - Class 3 stops workers, supersedes approvals, invalidates dependent artifacts,
   moves a Delivery Project back to Discovery, and requires owner re-approval.
 - `mono-check repair` reports readiness after all class effects are recorded.
