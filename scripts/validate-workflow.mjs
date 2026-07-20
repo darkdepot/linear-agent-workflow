@@ -3390,6 +3390,7 @@ function validateDocsAndExamples() {
       "## Stage Ownership",
       "## Decision Authority",
       "## Worker Transports",
+      "Sandbox grants follow a stage ladder: `mono-implement` uses `workspace-write` without network; `mono-preflight` adds network and writable main-checkout `.git` while retaining the writable orchestrator root for mailbox delivery; `mono-ship` keeps those grants and permits push.",
       "## Mailbox And Ledger",
       "## Monitoring Protocol",
       "## Decision Briefs",
