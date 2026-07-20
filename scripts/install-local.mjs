@@ -13,6 +13,7 @@ const LOCKFILE_NAME = ".mono-agent-workflow.lock.json";
 const LEGACY_LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
 const GENERATED_MARKER = "Installed by Mono Agent Workflow";
 const LEGACY_GENERATED_MARKER = "Installed from darkdepot/linear-agent-workflow";
+const SURFACE_REVISION = 1;
 
 // Pack-private shared directory at the skills root (a sibling of LOCKFILE_NAME).
 // It holds workflow runtime scripts the installed skills invoke at delivery time
@@ -23,10 +24,10 @@ const RUNTIME_DIR = ".mono-agent-workflow";
 const LEGACY_RUNTIME_DIR = ".linear-agent-workflow";
 const RUNTIME_SCRIPTS_SUBDIR = "scripts";
 // Upstream scripts/ files published into
-// <skills-root>/.mono-agent-workflow/scripts/. The resolver imports only Node
-// built-ins, so it has no sibling-script dependencies; add any future sibling it
-// imports here so the whole runtime dependency set is installed together.
-const RUNTIME_SCRIPTS = ["resolve-issue-context.mjs"];
+// <skills-root>/.mono-agent-workflow/scripts/. They import only Node built-ins,
+// so there are no sibling-script dependencies; add future runtime dependencies
+// here so the whole executable pack contract is installed together.
+const RUNTIME_SCRIPTS = ["resolve-issue-context.mjs", "verify-pack-state.mjs"];
 
 function usage() {
   console.error(
@@ -125,7 +126,7 @@ function installedRootVersion(skillsRoot) {
   const lock =
     readLock(path.join(skillsRoot, LOCKFILE_NAME)) ??
     readLock(path.join(skillsRoot, LEGACY_LOCKFILE_NAME));
-  return lock?.upstreamVersion || "unknown";
+  return lock?.packVersion || lock?.upstreamVersion || "unknown";
 }
 
 function resolveTargetRoots(args) {
@@ -420,6 +421,9 @@ function sync(root, skillsRoot, commit, dirty, version, removeStale) {
 
   const manifest = {
     schemaVersion: 3,
+    packVersion: version,
+    sourceCommit: commit,
+    surfaceRevision: SURFACE_REVISION,
     upstreamRepo: UPSTREAM_REPO,
     upstreamVersion: version,
     upstreamCommit: commit,
@@ -490,6 +494,13 @@ function check(root, skillsRoot, commit, dirty, version) {
     failures.push(`Missing lockfile: ${path.relative(skillsRoot, plan.lockPath)}`);
   } else {
     if (lock.schemaVersion !== 3) failures.push("Lockfile schemaVersion must be 3");
+    if (lock.packVersion !== version) {
+      failures.push(`Lockfile packVersion is ${lock.packVersion || "unknown"} but pack is ${version || "unknown"}`);
+    }
+    if (lock.sourceCommit !== commit) failures.push("Lockfile sourceCommit mismatch");
+    if (lock.surfaceRevision !== SURFACE_REVISION) {
+      failures.push(`Lockfile surfaceRevision is ${lock.surfaceRevision ?? "missing"} but pack is ${SURFACE_REVISION}`);
+    }
     if (lock.upstreamVersion !== version) {
       failures.push(`Lockfile upstreamVersion is ${lock.upstreamVersion || "unknown"} but upstream is ${version || "unknown"}`);
     }

@@ -182,6 +182,13 @@ without config, prefer `codex-cli` when the `codex` CLI is installed and
 authenticated, then `claude-code-desktop` when running in Claude Code
 Desktop, then `fallback`. Per-runtime bindings:
 
+Every transport is pinned to the installed pack identity. Before dispatch,
+read `packVersion`, `sourceCommit`, and `surfaceRevision` from the installed
+`.mono-agent-workflow.lock.json` and copy them verbatim into the dispatch
+snapshot and the new `workers.json` entry. At the first start and every stage
+resume the worker runs `verify-pack-state.mjs identity`; any identity mismatch
+is a `blocked` report and the stage does not continue.
+
 - `codex-cli`: the orchestrator — in any runtime with shell access — creates
   and steers headless Codex worker threads; this subsumes the older `codex`
   binding. Spawn as a background process, one per Issue:
@@ -255,7 +262,11 @@ Desktop, then `fallback`. Per-runtime bindings:
 Worktree provisioning: for `codex-cli` and `fallback` the orchestrator
 creates the worker's worktree before spawn
 (`git worktree add <repo>/.worktrees/<ISSUE-KEY> -b <branch>`), keeps it
-across stages, and removes it only after deploy closeout.
+across stages, and removes it only after deploy closeout. Deploy retirement is
+also the only normal removal point for the active registry: after verified
+deploy and Linear closeout, remove the Issue entry from `workers.json`. Keep
+its reports and logs as history. A blocked or incomplete closeout does not
+retire the entry.
 `claude-code-desktop` uses platform-provided worktrees.
 
 State the chosen binding in the first status update, and never block on a
@@ -292,9 +303,17 @@ transport feature the runtime lacks.
 - Worker registry: `workers.json` beside the ledger — orchestrator-owned
   runtime metadata, one entry per Issue: `transport`, `thread_id`,
   `worktree`, `branch`, `stage`, `spawned_at`, `last_activity_at`, `log`
-  and `pid` (shape in `templates/orchestrator-report.md`). Updated on every verified
-  spawn, resume, session rotation, stage advance, and respawn under the
-  immediate-update rule in Worker Transports; workers never touch it.
+  and `pid`, plus the dispatch `packVersion`, `sourceCommit`, and
+  `surfaceRevision` (shape in `templates/orchestrator-report.md`). Updated on
+  every verified spawn, resume, session rotation, stage advance, and respawn
+  under the immediate-update rule in Worker Transports; workers never touch it.
+- Product control: `control.json` beside `workers.json`, with the exact shape in
+  `templates/orchestrator-report.md`. The orchestrator owns the lifecycle
+  `active` → `draining` → `idle`: use `active` while dispatch is allowed,
+  `draining` when no new work may start but registered workers are closing, and
+  `idle` only when the active registry is empty. Breaking-install quiescence is
+  exactly `idle` plus an empty `workers.json`; verify it with
+  `verify-pack-state.mjs quiescence`. Missing either condition blocks.
 - Report delivery under a write sandbox: the mailbox root is writable for
   `codex-cli` workers via `--add-dir`. If a mailbox write is still denied,
   the worker writes the same JSON to
@@ -504,7 +523,10 @@ A fresh orchestrator session rebuilds state without loss:
    for the resuming session, not a pin-enforceable check: it defines how
    much to trust the ledger, not a mechanical validation.
 5. Read `workers.json` and list live worker sessions when the runtime allows
-   it; rebind to surviving `codex-cli` workers by thread id
+   it. Compare each entry's `surfaceRevision` with the currently installed
+   lockfile before using its thread id. When surfaceRevision differs, do not rebind
+   or resume that thread; report it blocked for a fresh compatible dispatch.
+   Otherwise rebind to surviving `codex-cli` workers by thread id
    (`codex exec resume`) instead of respawning them.
 6. Output the rebuilt status table before taking any new action.
 

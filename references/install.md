@@ -47,6 +47,11 @@ For each installed skills root the command writes:
 - `<skills-root>/.mono-agent-workflow/scripts/*` (pack-private workflow runtime scripts)
 - `<skills-root>/.mono-agent-workflow.lock.json`
 
+The lockfile carries the additive pack identity triplet: `packVersion` from
+`VERSION`, immutable `sourceCommit` from the installing checkout's HEAD, and
+the positive integer `surfaceRevision`. Existing `upstreamVersion` and
+`upstreamCommit` fields remain for compatibility and keep their semantics.
+
 ### Workflow Runtime Scripts
 
 Some skills invoke a workflow script at delivery time rather than only reading
@@ -60,10 +65,12 @@ directory beside the lockfile:
   `<skills-root>/mono-<name>/` reaches it at
   `../.mono-agent-workflow/scripts/<script>.mjs`.
 
-The only runtime script today is the issue-only lane resolver,
-`.mono-agent-workflow/scripts/resolve-issue-context.mjs` (see
-`references/issue-only-lane.md`). The create-then-approve intake transaction runs
-it from this canonical path. Each script's hash is recorded in the lockfile
+The runtime scripts are the issue-only lane resolver
+`.mono-agent-workflow/scripts/resolve-issue-context.mjs` and the pack guard
+`.mono-agent-workflow/scripts/verify-pack-state.mjs`. Workers use the latter to
+compare their dispatch identity with the installed lock at every stage start or
+resume; future breaking installs use its quiescence probe. Each script's hash
+is recorded in the lockfile
 (`runtimeScripts`), so `--check` fails when an installed runtime script is
 missing, edited, or stale.
 

@@ -16,6 +16,9 @@ Path: `~/.mono-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>
   "issue": "<ISSUE-KEY>",
   "stage": "<mono-implement | mono-preflight | mono-ship>",
   "status": "<implemented-needs-preflight | ready | green | blocked | needs-decision | needs-human | drift-candidate | timed-out | scope-drift-needs-handoff>",
+  "packVersion": "<dispatch packVersion>",
+  "sourceCommit": "<dispatch sourceCommit>",
+  "surfaceRevision": 1,
   "branch": "<branch>",
   "changed_files": ["<path>"],
   "tests": { "run": "<commands>", "result": "<outcome>" },
@@ -34,6 +37,10 @@ Path: `~/.mono-agent-workflow/orchestrator/<product>/reports/<ISSUE-KEY>-<stage>
 `notes` is optional free text for runtime facts the fixed fields cannot
 carry — e.g. an engine or workflow substitution because the configured skill
 was not available in the worker runtime. It never replaces a status.
+
+The three pack identity fields are mandatory in every report and repeat the
+dispatch pin the worker verified at stage start or resume. They identify the
+contract that produced the report; `notes` must not substitute for them.
 
 `verification_items` is optional in shape but mandatory in coverage: a
 stage-terminal report for `mono-implement` or `mono-preflight` MUST
@@ -72,6 +79,9 @@ threads (`codex exec resume <thread_id>`) instead of respawning them.
     "worktree": "<absolute path>",
     "branch": "<branch>",
     "stage": "<mono-implement | mono-preflight | mono-ship>",
+    "packVersion": "<installed lockfile packVersion>",
+    "sourceCommit": "<installed lockfile sourceCommit>",
+    "surfaceRevision": 1,
     "spawned_at": "<ISO 8601>",
     "last_activity_at": "<ISO 8601>",
     "log": "<absolute path to the worker's JSONL log, or null>",
@@ -79,6 +89,22 @@ threads (`codex exec resume <thread_id>`) instead of respawning them.
   }
 }
 ```
+
+## Product Control
+
+Path: `~/.mono-agent-workflow/orchestrator/<product>/control.json`
+
+The orchestrator owns this file beside `workers.json`. Its complete schema is:
+
+```json
+{
+  "state": "idle"
+}
+```
+
+`active` permits normal dispatch, `draining` permits only existing work to
+close, and `idle` means no live work remains. Quiescence requires both
+`state: idle` and an empty `workers.json`; neither signal is sufficient alone.
 
 ## Ledger Entry
 

@@ -11,6 +11,9 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
 - Worktree/branch: <path / branch>
 - Worker session name: `<ISSUE-KEY>: <stage>`
 - Chip title (user-visible, Russian): `<ISSUE-KEY>: <стадия по-русски>`
+- packVersion: `<installed lockfile packVersion>`
+- sourceCommit: `<installed lockfile sourceCommit>`
+- surfaceRevision: `<installed lockfile surfaceRevision>`
 
 ## Goal Contract
 
@@ -38,6 +41,11 @@ Linear access: the snapshot below is its whole world until Linear MCP is up.
   beside it. (For claude-code-desktop or fallback workers: invoke the
   installed `<stage-skill>` skill instead.)
 - Project config: `.agents/mono-workflow.config.json` at the repo root.
+- Before starting or resuming the stage, compare the installed lockfile with
+  the three dispatch identity pins above via the installed
+  `../.mono-agent-workflow/scripts/verify-pack-state.mjs identity` helper. Any
+  `packVersion`, `sourceCommit`, or `surfaceRevision` mismatch is a hard
+  `blocked` exit; do not continue on the locally installed pack.
 - Report delivery: write to the mailbox path below. If the sandbox denies
   that write, write the same JSON to
   `<worktree>/.orchestrator/<ISSUE-KEY>-<stage>.json` instead; never commit

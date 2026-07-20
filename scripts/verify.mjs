@@ -58,6 +58,7 @@ const steps = [
   { label: "node --check scripts/project-config.mjs", cmd: "node", cmdArgs: ["--check", "scripts/project-config.mjs"] },
   { label: "node --check scripts/lint-mono-artifacts.mjs", cmd: "node", cmdArgs: ["--check", "scripts/lint-mono-artifacts.mjs"] },
   { label: "node --check scripts/validate-workflow.mjs", cmd: "node", cmdArgs: ["--check", "scripts/validate-workflow.mjs"] },
+  { label: "node --check scripts/verify-pack-state.mjs", cmd: "node", cmdArgs: ["--check", "scripts/verify-pack-state.mjs"] },
   { label: "node --check scripts/watch-workers.mjs", cmd: "node", cmdArgs: ["--check", "scripts/watch-workers.mjs"] },
   { label: "node --check scripts/verify.mjs", cmd: "node", cmdArgs: ["--check", "scripts/verify.mjs"] },
   { label: "node scripts/lint-mono-artifacts.mjs", cmd: "node", cmdArgs: ["scripts/lint-mono-artifacts.mjs"] },

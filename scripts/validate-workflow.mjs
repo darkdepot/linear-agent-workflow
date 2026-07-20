@@ -726,6 +726,7 @@ function validateRepairAndRoutingContract() {
 function validateLocalInstallBehavior() {
   const skillsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-skills-"));
   const installedResolver = path.join(skillsRoot, ".mono-agent-workflow", "scripts", "resolve-issue-context.mjs");
+  const installedPackVerifier = path.join(skillsRoot, ".mono-agent-workflow", "scripts", "verify-pack-state.mjs");
   const legacySkillDir = path.join(skillsRoot, "linear-check");
   const legacyLockPath = path.join(skillsRoot, ".linear-agent-workflow.lock.json");
   const legacyRuntimeDir = path.join(skillsRoot, ".linear-agent-workflow");
@@ -749,6 +750,38 @@ function validateLocalInstallBehavior() {
     );
 
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+
+    const lockPath = path.join(skillsRoot, ".mono-agent-workflow.lock.json");
+    const installedIdentity = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+    const expectedCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim();
+    if (installedIdentity.packVersion !== read("VERSION").trim()) {
+      fail("Local install lockfile packVersion must equal VERSION");
+    }
+    if (installedIdentity.sourceCommit !== expectedCommit) {
+      fail("Local install lockfile sourceCommit must equal the immutable source HEAD");
+    }
+    if (installedIdentity.surfaceRevision !== 1) {
+      fail("Local install lockfile surfaceRevision must equal the current surface revision");
+    }
+    if (!fs.existsSync(installedPackVerifier)) {
+      fail("Local install missing the canonical pack-state verifier");
+    } else {
+      runNode([
+        installedPackVerifier,
+        "identity",
+        "--lock",
+        lockPath,
+        "--pack-version",
+        installedIdentity.packVersion,
+        "--source-commit",
+        installedIdentity.sourceCommit,
+        "--surface-revision",
+        String(installedIdentity.surfaceRevision),
+      ]);
+    }
 
     if (fs.existsSync(legacySkillDir)) fail("Local install kept previous-brand linear-check");
     if (fs.existsSync(legacyLockPath)) fail("Local install kept previous-brand lockfile");
@@ -791,6 +824,22 @@ function validateLocalInstallBehavior() {
     }
 
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
+
+    for (const [field, value, expectedText] of [
+      ["packVersion", "0.0.0", "Lockfile packVersion is 0.0.0"],
+      ["sourceCommit", "b".repeat(40), "Lockfile sourceCommit mismatch"],
+      ["surfaceRevision", 99, "Lockfile surfaceRevision is 99"],
+    ]) {
+      const tamperedLock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+      tamperedLock[field] = value;
+      fs.writeFileSync(lockPath, `${JSON.stringify(tamperedLock, null, 2)}\n`);
+      expectCommandFailure(
+        `install-local --check tampered ${field} fixture`,
+        () => runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]),
+        expectedText
+      );
+      runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
+    }
 
     fs.appendFileSync(path.join(skillsRoot, "mono-review", "SKILL.md"), "\nBROKEN\n");
     expectCommandFailure(
@@ -851,7 +900,6 @@ function validateLocalInstallBehavior() {
     // runtimeScripts) fails --check loudly, and a re-sync upgrades it to a clean
     // v3 install that passes.
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot]);
-    const lockPath = path.join(skillsRoot, ".mono-agent-workflow.lock.json");
     const v2Lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
     v2Lock.schemaVersion = 2;
     delete v2Lock.runtimeScripts;
@@ -865,6 +913,202 @@ function validateLocalInstallBehavior() {
     runNode(["scripts/install-local.mjs", "--skills-root", skillsRoot, "--check"]);
   } finally {
     fs.rmSync(skillsRoot, { recursive: true, force: true });
+  }
+}
+
+function validatePackIdentityAndQuiescenceBehavior() {
+  const script = "scripts/verify-pack-state.mjs";
+  if (!exists(script)) {
+    fail(`Missing ${script}`);
+    return;
+  }
+
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mono-workflow-pack-state-"));
+  const lockPath = path.join(fixtureRoot, ".mono-agent-workflow.lock.json");
+  const controlPath = path.join(fixtureRoot, "control.json");
+  const workersPath = path.join(fixtureRoot, "workers.json");
+  const identity = {
+    packVersion: "0.20.1",
+    sourceCommit: "a".repeat(40),
+    surfaceRevision: 1,
+  };
+
+  try {
+    fs.writeFileSync(lockPath, `${JSON.stringify(identity, null, 2)}\n`);
+
+    // AC1: the four identity-bearing JSON surfaces and control.json accept the
+    // canonical additive shape. Template pins below keep the prose examples in
+    // lockstep with these executable fixtures.
+    const dispatch = { ...identity };
+    const registry = { "MONO-30": { ...identity } };
+    const report = { issue: "MONO-30", stage: "mono-implement", ...identity };
+    const control = { state: "idle" };
+    for (const [label, value] of Object.entries({ dispatch, report })) {
+      if (
+        typeof value.packVersion !== "string" ||
+        !/^[0-9a-f]{40}$/.test(value.sourceCommit) ||
+        !Number.isInteger(value.surfaceRevision) ||
+        value.surfaceRevision < 1
+      ) {
+        fail(`${label} identity schema fixture rejected the canonical shape`);
+      }
+    }
+    if (Object.values(registry).some((entry) => entry.surfaceRevision !== identity.surfaceRevision)) {
+      fail("workers.json identity schema fixture rejected the canonical shape");
+    }
+    if (!["active", "draining", "idle"].includes(control.state)) {
+      fail("control.json schema fixture rejected the canonical shape");
+    }
+
+    runNode([
+      script,
+      "identity",
+      "--lock",
+      lockPath,
+      "--pack-version",
+      identity.packVersion,
+      "--source-commit",
+      identity.sourceCommit,
+      "--surface-revision",
+      String(identity.surfaceRevision),
+    ]);
+
+    // AC2: either immutable source commit or surface revision drift is a hard
+    // stage block. Both fields are changed in one probe so the error must name
+    // both mismatches rather than short-circuiting after the first.
+    expectCommandFailure(
+      "pack identity mismatch fixture",
+      () =>
+        runNode([
+          script,
+          "identity",
+          "--lock",
+          lockPath,
+          "--pack-version",
+          identity.packVersion,
+          "--source-commit",
+          "b".repeat(40),
+          "--surface-revision",
+          "2",
+        ]),
+      "sourceCommit expected"
+    );
+    expectCommandFailure(
+      "pack surface revision mismatch fixture",
+      () =>
+        runNode([
+          script,
+          "identity",
+          "--lock",
+          lockPath,
+          "--pack-version",
+          identity.packVersion,
+          "--source-commit",
+          identity.sourceCommit,
+          "--surface-revision",
+          "2",
+        ]),
+      "surfaceRevision expected 2 but installed 1"
+    );
+
+    // AC3: breaking-install quiescence is exactly idle + empty registry.
+    fs.writeFileSync(controlPath, `${JSON.stringify(control, null, 2)}\n`);
+    fs.writeFileSync(workersPath, "{}\n");
+    runNode([script, "quiescence", "--root", fixtureRoot]);
+
+    fs.writeFileSync(
+      workersPath,
+      `${JSON.stringify({ "MONO-30": registry["MONO-30"] }, null, 2)}\n`
+    );
+    expectCommandFailure(
+      "pack nonempty worker registry quiescence fixture",
+      () => runNode([script, "quiescence", "--root", fixtureRoot]),
+      "workers.json has 1 active worker"
+    );
+
+    fs.writeFileSync(workersPath, "{}\n");
+    fs.writeFileSync(controlPath, `${JSON.stringify({ state: "paused" }, null, 2)}\n`);
+    expectCommandFailure(
+      "pack invalid control schema fixture",
+      () => runNode([script, "quiescence", "--root", fixtureRoot]),
+      "control.state must be one of active, draining, idle"
+    );
+    for (const state of ["active", "draining"]) {
+      fs.writeFileSync(controlPath, `${JSON.stringify({ state }, null, 2)}\n`);
+      expectCommandFailure(
+        `pack ${state} control quiescence fixture`,
+        () => runNode([script, "quiescence", "--root", fixtureRoot]),
+        `control.state=${state}`
+      );
+    }
+
+    for (const [relativePath, required] of [
+      ["templates/orchestrator-dispatch.md", ["packVersion", "sourceCommit", "surfaceRevision"]],
+      ["templates/orchestrator-report.md", ["packVersion", "sourceCommit", "surfaceRevision", "control.json"]],
+    ]) {
+      for (const field of required) assertIncludes(relativePath, field, JSON.stringify(field));
+    }
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+function validatePackIdentityWorkflowContract() {
+  assertIncludes("scripts/verify.mjs", "verify-pack-state.mjs", "pack-state syntax verification");
+
+  for (const relativePath of ["references/install.md", "references/versioning.md"]) {
+    for (const required of ["packVersion", "sourceCommit", "surfaceRevision", "verify-pack-state.mjs"]) {
+      assertIncludes(relativePath, required, `${relativePath}: ${required}`);
+    }
+  }
+
+  for (const relativePath of [
+    "skills/mono-implement/SKILL.md",
+    "skills/mono-preflight/SKILL.md",
+    "skills/mono-ship/SKILL.md",
+  ]) {
+    for (const required of [
+      "verify-pack-state.mjs identity",
+      "packVersion",
+      "sourceCommit",
+      "surfaceRevision",
+      "blocked",
+    ]) {
+      assertIncludes(relativePath, required, `${relativePath}: ${required}`);
+    }
+  }
+
+  for (const required of [
+    "control.json",
+    "`active` → `draining` → `idle`",
+    "verify-pack-state.mjs identity",
+    "remove the Issue entry from `workers.json`",
+    "surfaceRevision differs",
+    "do not rebind",
+  ]) {
+    assertIncludes("references/orchestration.md", required, JSON.stringify(required));
+  }
+
+  for (const required of ["control.json", "active", "draining", "idle", "surfaceRevision"]) {
+    assertIncludes("skills/mono-orchestrate/SKILL.md", required, JSON.stringify(required));
+  }
+  assertIncludes(
+    "skills/mono-deploy/SKILL.md",
+    "remove the Issue entry from `workers.json`",
+    "deploy retirement contract"
+  );
+
+  // Resume rebind is stricter than issue-only discovery: a live thread belongs
+  // to the surface it was dispatched under and cannot be rebound after a
+  // breaking surface change, even when the thread id still exists.
+  const canRebindWorker = (entry, installedIdentity) =>
+    entry.surfaceRevision === installedIdentity.surfaceRevision;
+  const installedIdentity = { surfaceRevision: 1 };
+  if (!canRebindWorker({ surfaceRevision: 1 }, installedIdentity)) {
+    fail("resume identity fixture must rebind a matching surfaceRevision");
+  }
+  if (canRebindWorker({ surfaceRevision: 2 }, installedIdentity)) {
+    fail("resume identity fixture must not rebind a mismatched surfaceRevision");
   }
 }
 
@@ -4074,6 +4318,8 @@ validateTemplateSections();
 validateArtifactContractParity();
 validateReviewCheckBoundary();
 validateRepairAndRoutingContract();
+validatePackIdentityAndQuiescenceBehavior();
+validatePackIdentityWorkflowContract();
 validateLocalInstallBehavior();
 validateMultiRootInstallBehavior();
 validateProjectConfigBehavior();

@@ -45,6 +45,14 @@ Inputs to gather:
 
 Workflow:
 
+Pack identity gate: before any work in this stage, both on its first start and
+after every resume, read `packVersion`, `sourceCommit`, and `surfaceRevision`
+from the dispatch snapshot and run the installed
+`../.mono-agent-workflow/scripts/verify-pack-state.mjs identity` helper against
+the installed lockfile. Any mismatch exits `blocked` before verification,
+autoreview, or commits; record the mismatch and the same three dispatch identity
+fields in the worker report. Never continue on a different installed pack.
+
 1. Confirm there is an approved Linear Issue and implementation is in Delivery or otherwise explicitly approved to proceed.
 2. Inspect git branch and worktree state.
 3. Resolve the same 5-field issue context used at Delivery Start before comparing scope:

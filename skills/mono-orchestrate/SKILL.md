@@ -54,7 +54,7 @@ Inputs to gather:
   certificates.
 - Orchestrator state on disk under
   `~/.mono-agent-workflow/orchestrator/<product>/`: ledger, mailbox
-  reports, and the `workers.json` worker registry.
+  reports, the `workers.json` worker registry, and `control.json`.
 - Runtime transport binding per `references/orchestration.md` Worker
   Transports (config override first, then runtime detection).
 - Live worker sessions via the runtime session list when available.
@@ -102,7 +102,8 @@ Workflow states:
      registry + live session list before any action (Resume procedure in
      `references/orchestration.md`).
    - Rebind to surviving `codex-cli` workers by thread id instead of
-     respawning them.
+     respawning them only when the registry and installed `surfaceRevision`
+     match; never rebind a thread from another surface revision.
    - Apply queued Linear mutations from worker reports that were never
      applied.
    - Output the rebuilt status table before taking new actions.
@@ -145,8 +146,11 @@ Workflow states:
      in the log within 60s (else kill+retry), attempt-numbered logs from
      `-a1`, model and reasoning effort pinned in the command.
    - Record every spawn in `workers.json` (transport, thread id, worktree,
-     branch, stage); update it on stage advance and respawn. Never record a
-     live worker with an empty thread id.
+     branch, stage, `packVersion`, `sourceCommit`, `surfaceRevision`); update it
+     on stage advance and respawn. Never record a live worker with an empty thread id.
+   - Set `control.json` to `active` before dispatch. Use `draining` when new
+     dispatch is stopped while registered workers close, and `idle` only with
+     an empty active registry.
    - Cap concurrent workers at `orchestration.maxParallelWorkers` (default 3);
      queue the rest.
    - Respect Issue dependencies; queue dependents until their blockers
@@ -191,6 +195,9 @@ Workflow states:
      Issue gets its own live verification.
    - Record ledger entries; verify Linear closeout happened per stage skill
      contracts.
+   - After successful deploy closeout, remove the Issue entry from
+     `workers.json`; this retirement is required before the wave can become
+     `idle`.
 
 Rules:
 
