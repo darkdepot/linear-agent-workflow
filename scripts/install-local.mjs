@@ -13,7 +13,7 @@ const LOCKFILE_NAME = ".mono-agent-workflow.lock.json";
 const LEGACY_LOCKFILE_NAME = ".linear-agent-workflow.lock.json";
 const GENERATED_MARKER = "Installed by Mono Agent Workflow";
 const LEGACY_GENERATED_MARKER = "Installed from darkdepot/linear-agent-workflow";
-const SURFACE_REVISION = 2;
+const SURFACE_REVISION = 3;
 
 // Pack-private shared directory at the skills root (a sibling of LOCKFILE_NAME).
 // It holds workflow runtime scripts the installed skills invoke at delivery time

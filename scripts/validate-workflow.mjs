@@ -22,15 +22,12 @@ const EXPECTED_SKILLS = [
   "mono-idea",
   "mono-implement",
   "mono-issue",
-  "mono-issue-intake",
   "mono-orchestrate",
   "mono-preflight",
   "mono-review",
   "mono-ship",
 ];
-const FROZEN_ADAPTER_DESCRIPTION_LINES = {
-  "mono-issue": "description: Use when creating or updating a one-PR Linear Issue from Project, PRD, and Tech Spec context.",
-};
+const FROZEN_ADAPTER_DESCRIPTION_LINES = {};
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -407,18 +404,10 @@ function validateArtifactContractParity() {
     issue: {
       prefix: "IS",
       contractPath: "references/contracts/issue.md",
-      legacySourcePath: "skills/mono-issue/SKILL.md",
+      ledgerSourcePath: "references/contracts/issue.md",
       templatePath: "templates/issue.md",
-      legacyAnchors: [3, 8, 10, 12, 14, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 53, 54, 55, 56, 57, 58],
-      contractFingerprint: "731cf9f21cc615dd8985d6ba4d5640547cea2a2cd56eab10df524c46d3e18f76",
-      contractConsumers: [
-        "skills/mono-issue/SKILL.md",
-        "skills/mono-issue-intake/SKILL.md",
-      ],
-      adapterContractPin: {
-        path: "skills/mono-issue/SKILL.md",
-        snippet: "Apply `IS-001` through `IS-034` in full",
-      },
+      contractFingerprint: "718773e5a7f2e2f0cc95533613c3f67b95b27ca2e691b08f644a2ac354d39756",
+      contractConsumers: ["skills/mono-issue/SKILL.md"],
     },
   };
 
@@ -694,7 +683,7 @@ function validateRepairAndRoutingContract() {
 
   const routingOverlapFixtures = [
     ["existing-project-pre-ship-drift", "mono-ship"],
-    ["issue-only-body-edit", "mono-issue-intake"],
+    ["issue-only-body-edit", "mono-issue"],
     ["existing-project-targeted-repair", "mono-handoff repair"],
   ];
   for (const [fixture, expectedOwner] of routingOverlapFixtures) {
@@ -737,7 +726,7 @@ function validateRepairAndRoutingContract() {
     ],
     "AGENTS.md": [
       "`mono-handoff` = project-first package creation and artifact repair",
-      "`mono-issue-intake` = issue-only intake and renewal",
+      "`mono-issue` = issue-only intake and renewal",
       "accepted pre-ship drift",
     ],
   };
@@ -747,7 +736,7 @@ function validateRepairAndRoutingContract() {
 
   const routingFixtures = [
     ["skills/mono-idea/SKILL.md", "raw idea", "mono-idea", "pre-ship drift routes to mono-ship"],
-    ["skills/mono-issue-intake/SKILL.md", "unmistakably one-PR projectless", "renewal"],
+    ["skills/mono-issue/SKILL.md", "unmistakably one-PR projectless", "renewal"],
     ["skills/mono-handoff/SKILL.md", "existing Project or shaped discovery", "PRD or Tech Spec repair"],
     ["skills/mono-ship/SKILL.md", "pre-ship drift", "mono-ship"],
   ];
@@ -801,7 +790,7 @@ function validateLocalInstallBehavior() {
     if (installedIdentity.sourceCommit !== expectedCommit) {
       fail("Local install lockfile sourceCommit must equal the immutable source HEAD");
     }
-    if (installedIdentity.surfaceRevision !== 2) {
+    if (installedIdentity.surfaceRevision !== 3) {
       fail("Local install lockfile surfaceRevision must equal the current surface revision");
     }
     if (installedIdentity.installedSkills?.length !== EXPECTED_SKILLS.length) {
@@ -809,8 +798,20 @@ function validateLocalInstallBehavior() {
     }
     for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
       if (fs.existsSync(path.join(skillsRoot, retired))) {
-        fail(`Fresh 11-skill install unexpectedly contains retired adapter ${retired}`);
+        fail(`Fresh 10-skill install unexpectedly contains retired adapter ${retired}`);
       }
+    }
+    if (fs.existsSync(path.join(skillsRoot, "mono-issue-intake"))) {
+      fail("Fresh 10-skill install unexpectedly contains retired mono-issue-intake");
+    }
+    const installedIssue = fs.readFileSync(path.join(skillsRoot, "mono-issue", "SKILL.md"), "utf8");
+    if (!installedIssue.includes("create-then-approve renewal") || installedIssue.includes("internal/advanced atomic helper")) {
+      fail("Installed mono-issue must be the issue-only front door, not the retired atomic adapter");
+    }
+    const installedIssueLock = installedIdentity.installedSkills.find((entry) => entry.name === "mono-issue");
+    const installedIssueHash = createHash("sha256").update(installedIssue).digest("hex");
+    if (installedIssueLock?.sha256 !== installedIssueHash) {
+      fail("Installed mono-issue hash must match the installed front-door body");
     }
     if (!fs.existsSync(installedPackVerifier)) {
       fail("Local install missing the canonical pack-state verifier");
@@ -1035,7 +1036,7 @@ function validatePackIdentityAndQuiescenceBehavior() {
           "--source-commit",
           "b".repeat(40),
           "--surface-revision",
-          "2",
+          "3",
         ]),
       "sourceCommit expected"
     );
@@ -1052,9 +1053,9 @@ function validatePackIdentityAndQuiescenceBehavior() {
           "--source-commit",
           identity.sourceCommit,
           "--surface-revision",
-          "2",
+          "3",
         ]),
-      "surfaceRevision expected 2 but installed 1"
+      "surfaceRevision expected 3 but installed 1"
     );
 
     // AC3: breaking-install quiescence is exactly idle + empty registry.
@@ -1184,7 +1185,7 @@ function validatePackIdentityWorkflowContract() {
   if (!canRebindWorker({ surfaceRevision: 1 }, installedIdentity)) {
     fail("resume identity fixture must rebind a matching surfaceRevision");
   }
-  if (canRebindWorker({ surfaceRevision: 2 }, installedIdentity)) {
+  if (canRebindWorker({ surfaceRevision: 3 }, installedIdentity)) {
     fail("resume identity fixture must not rebind a mismatched surfaceRevision");
   }
 }
@@ -1333,11 +1334,24 @@ function validateBreakingInstallBehavior() {
     return fs.readdirSync(installLockPath).filter((name) => /^claim-.+\.json$/.test(name));
   }
 
-  function seedFourteenSkillSurface(skillsRoot) {
+  function seedPreviousSkillSurface(skillsRoot, surfaceRevision, retiredSkills) {
     const lockPath = path.join(skillsRoot, lockName);
     const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-    lock.surfaceRevision = 1;
-    for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
+    lock.surfaceRevision = surfaceRevision;
+
+    const atomicIssueBody = [
+      "<!-- Installed by Mono Agent Workflow @ previous-surface. Do not edit manually. -->",
+      "# Mono Issue",
+      "",
+      "This is the retired internal/advanced atomic helper.",
+      "",
+    ].join("\n");
+    const atomicIssuePath = path.join(skillsRoot, "mono-issue", "SKILL.md");
+    fs.writeFileSync(atomicIssuePath, atomicIssueBody);
+    const issueEntry = lock.installedSkills.find((entry) => entry.name === "mono-issue");
+    issueEntry.sha256 = createHash("sha256").update(atomicIssueBody).digest("hex");
+
+    for (const retired of retiredSkills) {
       const retiredDir = path.join(skillsRoot, retired);
       fs.mkdirSync(retiredDir, { recursive: true });
       const body = "<!-- Installed by Mono Agent Workflow @ previous-surface. Do not edit manually. -->\n";
@@ -1405,19 +1419,24 @@ function validateBreakingInstallBehavior() {
     runNode(["scripts/install-local.mjs", "--skills-root", codexRoot], { env });
     runNode(["scripts/install-local.mjs", "--skills-root", claudeRoot], { env });
 
-    // AC1 fresh 11 + 14→11: first prove a clean current install, then model the
-    // previous surface by restoring only the three generated adapters and their
-    // lock entries. The breaking transaction must retire those entries on both
-    // roots while preserving user-owned lookalikes.
+    // AC1 fresh 10, 11→10, and direct 14→10: first prove a clean current
+    // install, then model both previous surfaces. Both paths also restore the
+    // retired atomic mono-issue body so the transaction must perform the
+    // semantic swap, not merely delete a directory.
     for (const skillsRoot of [codexRoot, claudeRoot]) {
       const freshLock = JSON.parse(
         fs.readFileSync(path.join(skillsRoot, lockName), "utf8")
       );
-      if (freshLock.installedSkills?.length !== 11) {
-        fail(`Fresh breaking-install fixture must start with 11 skills at ${skillsRoot}`);
+      if (freshLock.surfaceRevision !== 3 || freshLock.installedSkills?.length !== 10) {
+        fail(`Fresh breaking-install fixture must start with 10 skills at surfaceRevision 3 in ${skillsRoot}`);
       }
-      seedFourteenSkillSurface(skillsRoot);
     }
+    seedPreviousSkillSurface(
+      codexRoot,
+      1,
+      ["mono-issue-intake", "mono-project", "mono-prd", "mono-spec"]
+    );
+    seedPreviousSkillSurface(claudeRoot, 2, ["mono-issue-intake"]);
 
     // AC3 + strengthened --check: generated stale directories and surplus
     // installedSkills entries are failures, while a user-owned mono-* lookalike
@@ -1506,17 +1525,36 @@ function validateBreakingInstallBehavior() {
       const migratedLock = JSON.parse(
         fs.readFileSync(path.join(skillsRoot, lockName), "utf8")
       );
-      if (migratedLock.surfaceRevision !== 2 || migratedLock.installedSkills?.length !== 11) {
-        fail(`Breaking install did not migrate 14→11 with surfaceRevision 2 at ${skillsRoot}`);
+      if (migratedLock.surfaceRevision !== 3 || migratedLock.installedSkills?.length !== 10) {
+        fail(`Breaking install did not migrate the previous surface to 10 skills at surfaceRevision 3 in ${skillsRoot}`);
       }
-      for (const retired of ["mono-project", "mono-prd", "mono-spec"]) {
+      for (const retired of ["mono-issue-intake", "mono-project", "mono-prd", "mono-spec"]) {
         if (fs.existsSync(path.join(skillsRoot, retired))) {
           fail(`Breaking install kept retired generated adapter ${retired} at ${skillsRoot}`);
         }
       }
+      const installedIssue = fs.readFileSync(path.join(skillsRoot, "mono-issue", "SKILL.md"), "utf8");
+      if (!installedIssue.includes("create-then-approve renewal") || installedIssue.includes("internal/advanced atomic helper")) {
+        fail(`Breaking install did not swap mono-issue to the front-door body at ${skillsRoot}`);
+      }
+      const lockedIssue = migratedLock.installedSkills.find((entry) => entry.name === "mono-issue");
+      if (lockedIssue?.sha256 !== createHash("sha256").update(installedIssue).digest("hex")) {
+        fail(`Breaking install recorded the wrong mono-issue front-door hash at ${skillsRoot}`);
+      }
     }
     if (!fs.existsSync(path.join(lookalikeDir, "SKILL.md"))) {
       fail("install-local --breaking removed a non-generated mono-* lookalike");
+    }
+    runNode(["scripts/install-local.mjs", "--check"], { env });
+    const idempotentOutput = runNode(["scripts/install-local.mjs", "--breaking"], { env });
+    for (const skillsRoot of [codexRoot, claudeRoot]) {
+      if (!idempotentOutput.includes(`Breaking install committed for ${skillsRoot}`)) {
+        fail(`Idempotent 10→10 breaking install did not commit ${skillsRoot}`);
+      }
+      const idempotentLock = JSON.parse(fs.readFileSync(path.join(skillsRoot, lockName), "utf8"));
+      if (idempotentLock.surfaceRevision !== 3 || idempotentLock.installedSkills?.length !== 10) {
+        fail(`Idempotent 10→10 breaking install changed the target surface at ${skillsRoot}`);
+      }
     }
     runNode(["scripts/install-local.mjs", "--check"], { env });
     if (fs.readFileSync(path.join(productRoot, "control.json"), "utf8") !== '{\n  "state": "idle"\n}\n') {
@@ -2250,7 +2288,7 @@ function validateIssueOnlyLaneBehavior() {
   // Intake still leaves a package non-startable; mono-implement alone moves the
   // Issue after the delivery check, and every repository remains config-opt-in.
   for (const [relativePath, required] of [
-    ["skills/mono-issue-intake/SKILL.md", "Intake never moves the Issue to started; `mono-implement` owns activation"],
+    ["skills/mono-issue/SKILL.md", "Intake never moves the Issue to started; `mono-implement` owns activation"],
     ["skills/mono-idea/SKILL.md", "live only when `issueOnlyLane.enabled: true` and `ownerPrincipal` are configured"],
     ["references/artifact-rules.md", "intake remains non-activating; `mono-implement` owns the later Issue lifecycle move"],
     ["references/issue-only-lane.md", "Intake remains non-activating"],
@@ -3895,10 +3933,9 @@ function validateIssueOnlyLaneBehavior() {
 }
 
 function validateIssueIntakeContract() {
-  // MONO-15: the mono-issue-intake front door plus the idea/issue guard edits
-  // and the issue-only fingerprint-approval contract. Pins anchor the load-bearing
-  // prose; the create-then-approve transaction itself is agent work backed by the
-  // existing resolver, exercised by validateIssueOnlyLaneBehavior's fixtures.
+  // MONO-33: mono-issue is the issue-only front door. Pins anchor the
+  // load-bearing intake, renewal, and fail-closed routing prose; the
+  // create-then-approve transaction remains backed by the byte-stable resolver.
   for (const required of [
     "nine eligibility conditions",
     "Prequalification",
@@ -3928,8 +3965,20 @@ function validateIssueIntakeContract() {
     "`issue-only` label",
     "fails closed to Project-first",
     "Do not add a second hashing path",
+    "Project relation or Project/PRD/Tech Spec chips",
+    "request asks for Issue slicing",
+    "deep, risky, multi-surface, cross-cutting, or ambiguous",
+    "create-then-approve renewal",
+    "Apply `IS-001` through `IS-034`",
   ]) {
-    assertIncludes("skills/mono-issue-intake/SKILL.md", required, JSON.stringify(required));
+    assertIncludes("skills/mono-issue/SKILL.md", required, JSON.stringify(required));
+  }
+  if (exists("skills/mono-issue-intake")) {
+    fail("Retired skills/mono-issue-intake directory must be absent");
+  }
+  const issueFrontDoor = read("skills/mono-issue/SKILL.md");
+  if (issueFrontDoor.includes("internal/advanced atomic helper")) {
+    fail("mono-issue still contains the retired atomic-adapter behavior");
   }
 
   // mono-idea guard: names the issue-only front door but keeps Project-first as
@@ -3944,22 +3993,25 @@ function validateIssueIntakeContract() {
     assertIncludes("skills/mono-idea/SKILL.md", required, JSON.stringify(required));
   }
 
-  // Issue-contract guard: issue-only authoring stays delegated to the bounded
-  // lane contract while the project-first source and chip rules remain explicit.
+  // Issue-contract guard: the bounded contract names the post-cut-over writer
+  // split, delegates issue-only behavior to the lane contract, and keeps the
+  // project-first source and chip rules explicit under mono-handoff ownership.
   for (const required of [
+    "owns the Project-first branch from Project, PRD, and Tech Spec context",
+    "`mono-issue` owns only unmistakable projectless issue-only intake and renewal",
+    "`mono-issue` is the issue-only front door and must refuse",
+    "existing issue-only Issue body may",
+    "full create-then-approve",
     "## IS-005 — Issue-only branch",
-    "Apply the [issue-only lane contract](../issue-only-lane.md) in full",
+    "[issue-only lane contract](../issue-only-lane.md) in full",
     "## IS-008 — Project-first sources",
-    "Build a project-first Issue from Project, PRD, and Tech Spec",
+    "`mono-handoff` branch, build a project-first Issue from Project, PRD, and",
     "## IS-019 — Project-first chips",
+    "Their presence makes `mono-issue` refuse the request",
   ]) {
     assertIncludes("references/contracts/issue.md", required, JSON.stringify(required));
   }
-  assertIncludes(
-    "skills/mono-issue/SKILL.md",
-    "require current Project, PRD, and Tech Spec context",
-    "project-first adapter context requirement"
-  );
+  assertIncludes("skills/mono-issue/SKILL.md", "references/contracts/issue.md", "bounded Issue contract source");
 
   // mono-check guard: idea/issue modes are issue-only-aware so the two intake
   // entry paths (projectless idea route, self-contained issue-only Issue) do not

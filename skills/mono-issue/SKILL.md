@@ -1,42 +1,101 @@
 ---
 name: mono-issue
-description: Use when creating or updating a one-PR Linear Issue from Project, PRD, and Tech Spec context.
+description: Use after excluding a raw idea when a request is unmistakably one-PR projectless issue-only work, or for create-then-approve renewal; Project relation or Project/PRD/Tech Spec chips, Issue slicing, deep/risky/multi-surface scope, or ambiguity fail closed to Project-first, while pre-ship drift routes to mono-ship.
 ---
 
 # Mono Issue
 
-Create or update the Linear Issue as the one-PR execution contract.
+Use this skill as the front door for genuinely one-PR, projectless work that qualifies for the issue-only lane. It collapses idea → discovery → handoff → issue into a single gate: a self-contained Linear Issue, an owner-approved scope fingerprint, and the `issue-only` label — no Project, PRD, or Tech Spec.
 
-This is an internal/advanced atomic helper. The normal post-discovery user-facing workflow is `mono-handoff`, which may use this skill as one step.
-
-Use this helper only for explicit targeted Issue repair, reviewer-feedback updates, drift sync, or maintenance of an already-approved package without changing execution scope. If invoked as the normal post-discovery route, stop and route to `mono-handoff`.
+`mono-issue` owns first-time issue-only intake and create-then-approve renewal for an existing issue-only Issue. It is a front door, not a redirect or an internal atomic adapter. It grants the lane only when every eligibility condition holds.
 
 Read first:
 
 1. `AGENTS.md`
 2. `references/contracts/issue.md`
-3. `references/artifact-rules.md`
-4. `references/artifact-quality.md`
+3. `references/issue-only-lane.md`
+4. `references/artifact-rules.md`
 5. `references/readiness-gates.md`
-6. `references/execution-quality.md`
-7. `templates/issue.md`
+6. `references/human-friendly-output.md`
+7. `skills/mono-idea/SKILL.md`
+8. `templates/issue.md`
 
 Contract application:
 
-- `references/contracts/issue.md` is the normative source for Issue artifact behavior. Apply `IS-001` through `IS-034` in full; do not reinterpret or selectively copy those rules into this adapter.
-- `IS-001` through `IS-004` preserve this skill's existing route, internal-helper boundary, and direct-mutation eligibility.
-- `IS-005` preserves the existing issue-only draft and resolved-update branches by applying `references/issue-only-lane.md` in full, including their authorization, renewal, no-redirect, no-Project-artifact, and project-first fallback boundaries.
-- `IS-006` through `IS-028` govern Issue content, project-first context, readiness, dependencies, slicing, mutation prohibitions, and durable instructions.
-- `IS-029` through `IS-033` govern the unchanged self-review before finishing.
-- `IS-034` governs the unchanged Issue readiness check.
+- `references/contracts/issue.md` is the normative source for Issue artifact behavior. Apply `IS-001` through `IS-034` in full; `IS-005` supplies the issue-only routing exception and incorporates `references/issue-only-lane.md` without duplicating its protocol.
+- Apply the project-first rules only after issue-only prequalification refuses the request. Do not use the former atomic-adapter route as a user-facing entry.
+- Render the self-contained Issue with `templates/issue.md`, applying every branch-relevant content, readiness, review, durability, and check rule from the bounded contract.
 
-Workflow:
+## Routing and fail-closed proof
 
-1. Determine whether the operation is intake-authorized issue-only draft authoring, a resolved issue-only update, or the default project-first branch under `IS-005`.
-2. For either issue-only mode, apply `IS-005` and `references/issue-only-lane.md` in full. Preserve the existing intake authorization, non-body update limit, create-then-approve renewal, no-`mono-handoff` redirect, absent Project/PRD/Tech Spec artifacts, and fail-closed fallback behavior.
-3. For the default project-first branch, classify the request with `IS-001` through `IS-004` and require current Project, PRD, and Tech Spec context or the explicit no-spec exception in `IS-008`. Continue directly only for an eligible targeted mutation; otherwise stop and route to `mono-handoff` exactly as before.
-4. Render the Issue with `templates/issue.md`, applying `IS-006` through `IS-028` for the active branch. Create or update only the one-PR Issue and preserve every branch-specific chip, resource, lifecycle, and mutation boundary.
-5. Run the self-review in `IS-029` through `IS-033` and repair any gap before finishing.
-6. Run or report the Issue check required by `IS-034`.
+Prove the right to enter issue-only before creating or renewing anything:
 
-The contract changes where the rules are read from, not this skill's eligibility, approval/check path, Linear mutation boundary, branch behavior, or output behavior.
+- A Project relation or Project/PRD/Tech Spec chips is an immediate refusal. Existing Project or shaped package context routes to `mono-handoff`; accepted pre-ship drift routes to `mono-ship`.
+- If the request asks for Issue slicing, dependent slices, or more than one PR, refuse issue-only and route to `mono-handoff` for Project-first planning.
+- If the work is deep, risky, multi-surface, cross-cutting, or ambiguous, fail closed to Project-first. Route a shaped request to `mono-handoff`; route an unshaped request to `mono-idea`.
+- Only unmistakably one-PR projectless work may continue. Never infer eligibility from the caller naming `mono-issue`.
+- An existing issue-only Issue body edit is not ordinary mutation. It may continue only through the create-then-approve renewal transaction below.
+
+## When issue-only is granted — the nine eligibility conditions
+
+The issue-only lane is granted only when all nine conditions hold for the activated package. Conditions 1–3 and 9 are outputs of the transaction; conditions 4–8 are prequalification inputs.
+
+### Prequalification — judge on the raw request, before creating anything
+
+4. Risk class is `tiny` or `standard`. `deep` and `risky` stay Project-first.
+5. The work is authorable as a complete self-contained Issue with objective, scope, desired behavior, stable acceptance IDs, verification, explicit non-goals, and a non-vacuous behavioral oracle.
+6. Exactly one PR delivers the whole independently acceptable outcome; no slicing or dependent Issue topology is needed.
+7. The Issue is the sole authoritative entity and lifecycle carrier. No Project, PRD, or Tech Spec exists or is created.
+8. The request has no risky domain, new actors, multi-surface or cross-cutting change, unresolved judgment, or critical escalation signal.
+
+If any prequalification condition is unmet or uncertain, fail closed to Project-first and stop before the transaction.
+
+### Established by the transaction, enforced by the resolver
+
+1. A valid, fresh `mono-issue-only marker` carries Marker version 1, exactly the five contract fields, and no forbidden route-record field.
+2. The exact verified `issue-only` label is present.
+3. The live whole-body fingerprint, marker approval, and caller-verified owner approval agree.
+9. The explicit approval decision is authenticated against the stable Linear user ID in `issueOnlyLane.ownerPrincipal`; author identity without an explicit owner decision is insufficient.
+
+Any missing, stale, superseded, unverified, or ambiguous signal fails closed to Project-first. Marker-integrity errors remain hard failures.
+
+## Create-then-approve intake and renewal transaction
+
+Approval binds to the full whole-body SHA-256 of the Issue contract. Run these steps in order for first-time intake and again after any edit to an existing issue-only Issue body:
+
+1. Create or update a non-startable Issue in the intake-authorized draft mode. Author the self-contained body by applying `references/contracts/issue.md` directly, especially `IS-005` through `IS-018` and `IS-028` through `IS-034`; do not call or read another Issue-writing SKILL.md. Leave the state type in `triage`, `backlog`, or `unstarted`. Do not write the marker or label yet.
+2. Run the mandatory review gate on the drafted body. `standard` requires `mono-review issue-only` to reach `ready`; `tiny` may use an explicitly recorded advisory exception. Record the disposition before fingerprinting.
+3. Compute the fingerprint only with the installer-published `../.mono-agent-workflow/scripts/resolve-issue-context.mjs --emit-fingerprint`. Do not add a second hashing path or concatenate sections.
+4. Present the reviewed body and exact fingerprint and wait for an explicit owner decision. Never self-approve or manufacture approval through the owner's connector.
+5. Read back the live body and approval comment. Recompute with `--emit-fingerprint`; require both fingerprint equality and the owner principal's stable Linear user ID as author.
+6. Bind label first, marker last. Set `issue-only`, then write the `mono-issue-only marker` with exactly `Marker version`, `Scope fingerprint`, `Acceptance IDs`, `Risk class`, and `Approval`. On any error, roll back the partial state. The marker must not contain `route_revision`, `assurance_vector`, `required_artifacts`, or a sixth field: маркер ≠ route-record.
+7. Run the readiness check before activation: `mono-check issue` in issue-only mode must return `PASS`. Otherwise remove the marker and label and return `BLOCKED`.
+8. Leave a prepared, approved, non-startable package. Intake never moves the Issue to started; `mono-implement` owns activation after resolver and delivery-check read-back.
+
+The resolver command for downstream verification includes the live Issue, separate marker comment, project config, verified label, and approval fingerprint: `node <resolver> --issue <path> --marker <marker-comment> --config <project-config> --label issue-only --approval-verified <fingerprint>`.
+
+## Renewal recovery
+
+Renewal recovery differs from first-time rollback. After any body edit, the previous authoritative marker is stale. A failed renewal must remove or supersede that previous marker and remove the label; otherwise the resolver hard-fails before it can fall back. Write a new marker only after fresh review, fingerprinting, explicit owner approval, and read-back reconciliation.
+
+The renewal path never promotes the Issue in place or routes its body edit to handoff repair. If scope or risk leaves the envelope before code, park the Issue, annul the marker approval, and restart Project-first. After a ready preflight, freeze the independently shippable slice and put expanded scope in a separate Project.
+
+## Phase-1 go-live boundary
+
+The lane remains config-gated. It is usable only when the consuming repo explicitly sets `issueOnlyLane.enabled: true` and a non-empty `ownerPrincipal`. Intake remains non-activating and Project-first behavior remains available unchanged.
+
+## Rules
+
+- Never create Project, PRD, or Tech Spec artifacts or their chips/resources in issue-only.
+- Never infer issue-only from marker text alone; marker, verified label, authenticated explicit approval, config opt-in, and eligible risk must all agree.
+- Reuse the installer-published resolver for every fingerprint and resolution; protocol strings and its five-field output are byte-stable.
+- Write Linear-facing content in the project config language; default to Russian. Repo instructions remain English.
+- Follow the machine-block convention: a short human lead precedes the unchanged marker block.
+
+## Before finishing
+
+- Confirm the Issue is self-contained, one PR, projectless, and executable by a zero-context agent.
+- Confirm risk is `tiny` or `standard`, review disposition is current, and all fail-closed routing probes were applied.
+- Confirm marker, label, and owner-approved fingerprint were bound only after read-back reconciliation and the Issue remains non-startable.
+- Confirm first-time intake or create-then-approve renewal used the canonical resolver and `mono-check issue` passed.
+- If any check fails, park the Issue and return `BLOCKED` or Project-first; never leave a half-opened lane.

@@ -15,9 +15,8 @@ GitHub remains the branch, PR, review, CI, deploy, and merge-history surface. Li
 ## Skills
 
 - `mono-idea`: raw idea intake, AskQuestion mini-grill, Project in Idea.
-- `mono-issue-intake`: atomic front door for genuinely one-PR, projectless issue-only work; owns the create-then-approve fingerprint transaction and fails closed to Project-first.
+- `mono-issue`: atomic front door for genuinely one-PR, projectless issue-only work; owns the create-then-approve fingerprint transaction and fails closed to Project-first.
 - `mono-handoff`: primary post-discovery bridge into Project, PRD, Tech Spec, package approval, and Issue(s).
-- `mono-issue`: internal/advanced one-PR Issue create/update helper.
 - `mono-review`: report-only artifact quality and risk review.
 - `mono-check`: report-only transition readiness checks.
 - `mono-implement`: Delivery Start and implementation execution from approved Issue(s).

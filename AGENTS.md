@@ -21,7 +21,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - `mono-review` = report-only quality/risk review; no Linear mutations.
 - GitHub = branch, PR, review, CI, deploy, and merge history only.
 - `mono-handoff` = project-first package creation and artifact repair; it persists Project, PRD, Tech Spec, and Issue slicing before implementation starts and owns reviewed class 1-3 repair transactions.
-- `mono-issue-intake` = issue-only intake and renewal through the create-then-approve transaction; issue-only body edits never route to handoff repair.
+- `mono-issue` = issue-only intake and renewal through the create-then-approve transaction; issue-only body edits never route to handoff repair.
 - `mono-implement` = Delivery Start and implementation execution from approved Linear Issue(s).
 - `mono-preflight` = local branch readiness, targeted verification, mandatory `autoreview` clean gate with risk-routed GPT-5.6 model/effort, commit state, and preflight certificate.
 - `mono-ship` = accepted pre-ship drift sync, formal pre-ship review/check, PR lifecycle, repo documentation before final green, review feedback loop, and green certificate.
@@ -38,7 +38,7 @@ The workflow helps agents move from raw idea to shipped PR while keeping Linear 
 - Keep `mono-review` report-only and `mono-check` readiness-only.
 - Repair ownership stays split: `mono-handoff` mutates Project-first artifacts,
   `mono-review artifact` checks classification report-only, `mono-check repair`
-  reports readiness, `mono-issue-intake` renews issue-only bodies, and
+  reports readiness, `mono-issue` renews issue-only bodies, and
   `mono-ship` owns accepted pre-ship drift.
 - Apply accepted review fixes through `mono-handoff`, explicit atomic skills, or `mono-ship`.
 - Keep `mono-handoff`, `mono-implement`, `mono-preflight`, `mono-ship`, and `mono-deploy` ownership separate; do not collapse them into a monolithic delivery skill.
