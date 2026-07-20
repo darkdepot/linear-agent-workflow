@@ -608,13 +608,14 @@ function validateRepairAndRoutingContract() {
   }
 
   const classTwoOrderingPins = [
-    "skills/mono-handoff/SKILL.md",
-    "references/lifecycle.md",
+    { path: "skills/mono-handoff/SKILL.md", mutation: "synchronizes" },
+    { path: "references/lifecycle.md", mutation: "synchronizes" },
+    { path: "references/repair-machine.md", mutation: "apply the previewed artifact repair" },
   ];
-  for (const relativePath of classTwoOrderingPins) {
-    const body = read(relativePath).replace(/\s+/g, " ");
+  for (const { path: relativePath, mutation } of classTwoOrderingPins) {
+    const body = read(relativePath).replace(/\s+/g, " ").toLowerCase();
     const workerStop = body.indexOf("stops or quiesces every affected active worker before any repair mutation");
-    const snapshotSync = body.indexOf("synchronizes");
+    const snapshotSync = body.indexOf(mutation);
     if (workerStop < 0) {
       fail(`${relativePath} must front-load the class 2 affected-worker stop`);
     } else if (snapshotSync < 0 || workerStop > snapshotSync) {

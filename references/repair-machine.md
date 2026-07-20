@@ -67,9 +67,12 @@ previewed non-semantic edit. Class 1 keeps package and implementation-start appr
 Class 2 needs no owner touch, but it is never silent. Require a ready
 `mono-review artifact` report that confirms the stable-ID diff and guarded
 surfaces. Before mutation, identify affected Issues, preflight certificates, and
-active workers. Apply the previewed artifact repair, then execute every effect
-below as one repair transaction. If any effect cannot complete, stop and report
-the partial state; do not claim the repair ready.
+active workers. Class 2 stops or quiesces every affected active worker before
+any repair mutation, as defined by the stale-worker-stop fixture. Only after all
+affected workers are quiescent, apply the previewed artifact repair, then execute
+the remaining snapshot-sync and stale-preflight-cert effects as one repair
+transaction. If any effect cannot complete, stop and report the partial state;
+do not claim the repair ready.
 
 Project-first implementation-start approval is bound to the unchanged scope and Issue set, not to an Issue snapshot fingerprint. Because class 2 proves those approval surfaces unchanged, owner renewal is neither required nor allowed; fresh dispatch is the required non-owner re-authorization for implementation against the synchronized snapshot.
 
