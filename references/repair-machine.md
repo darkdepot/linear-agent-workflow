@@ -8,18 +8,18 @@ existing lifecycle route keep their current behavior.
 
 ## Routing boundary
 
-Evaluate stage-specific ownership before the general front-door order. Accepted pre-ship drift is a terminal ownership override evaluated before the general existing-Project route. An edit to an existing issue-only Issue body is also a terminal override and routes to the create-then-approve renewal transaction in `mono-issue-intake`, never to handoff repair.
+Evaluate stage-specific ownership before the general front-door order. Accepted pre-ship drift is a terminal ownership override evaluated before the general existing-Project route. An edit to an existing issue-only Issue body is also a terminal override and routes to the create-then-approve renewal transaction in `mono-issue`, never to handoff repair.
 
 | Fixture | Evidence | Owner | Result |
 | --- | --- | --- | --- |
 | `existing-project-pre-ship-drift` | An existing Project has drift accepted during pre-ship. | `mono-ship` | Run accepted drift sync in ship; do not enter handoff repair. |
-| `issue-only-body-edit` | An existing issue-only Issue body needs any edit. | `mono-issue-intake` | Run create-then-approve renewal; do not enter handoff repair. |
+| `issue-only-body-edit` | An existing issue-only Issue body needs any edit. | `mono-issue` | Run create-then-approve renewal; do not enter handoff repair. |
 | `existing-project-targeted-repair` | An existing Project has a targeted PRD or Tech Spec repair request before pre-ship. | `mono-handoff repair` | Enter the stable-ID classification and class transaction; do not run ordinary package creation. |
 
 Only when neither override matches, apply the front-door order:
 
 1. A raw idea routes to `mono-idea`.
-2. An unmistakably one-PR projectless request routes to `mono-issue-intake`.
+2. An unmistakably one-PR projectless request routes to `mono-issue`.
 3. A targeted PRD or Tech Spec repair in a Project-first package routes to
    `mono-handoff` repair mode.
 4. Existing Project or shaped discovery context that is not a targeted repair
@@ -83,7 +83,7 @@ copied from the repaired artifact while leaving unrelated Issue scope untouched.
 Then re-derive each affected Issue snapshot fingerprint from the complete updated
 snapshot using the package's canonical fingerprint procedure. Record the old and
 new fingerprints as repair evidence. A body edit to an issue-only Issue is not
-this effect; it requires `mono-issue-intake` renewal.
+this effect; it requires `mono-issue` renewal.
 
 ## Class 2 effect fixture: stale-preflight-cert
 

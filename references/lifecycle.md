@@ -92,7 +92,7 @@ Forbidden:
 
 - Downgrading ambiguity or risk growth below class 3.
 - Using handoff repair for issue-only body renewal; that belongs to
-  `mono-issue-intake` and its create-then-approve transaction.
+  `mono-issue` and its create-then-approve transaction.
 - Using handoff repair for accepted pre-ship drift; that remains owned by
   `mono-ship`.
 - Letting a stale-contract worker continue or shipping on a pre-repair

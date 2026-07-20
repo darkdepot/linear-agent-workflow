@@ -17,11 +17,9 @@ one contract rule. `Read first` lists are dependency metadata, not artifact
 rules, and are intentionally outside the ledger.
 
 The consumers column names the stage skills and guards that own adoption.
-Project, PRD, and Tech Spec now use their bounded contracts as the active rule
-source after their compatibility adapters were retired. The Issue adapter stays
-installed until its separate surface slice, so its legacy anchors remain the
-active migration evidence. Validator pins cover every bounded contract and its
-direct lifecycle consumers.
+Project, PRD, Tech Spec, and Issue now use their bounded contracts as the active
+rule source after the compatibility adapters were retired. Validator pins cover
+every bounded contract and its direct lifecycle consumers.
 
 ## Project parity
 
@@ -125,39 +123,39 @@ direct lifecycle consumers.
 
 ## Issue parity
 
-| Old rule | Rule ID | Named consumers |
+| Contract source | Rule ID | Named consumers |
 | --- | --- | --- |
-| `skills/mono-issue/SKILL.md:3` | `IS-001` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:8` | `IS-002` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:10` | `IS-003` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:12` | `IS-004` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:14` | `IS-005` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:27` | `IS-006` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:28` | `IS-007` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:29` | `IS-008` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:30` | `IS-009` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:31` | `IS-010` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:32` | `IS-011` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:33` | `IS-012` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:34` | `IS-013` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:35` | `IS-014` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:36` | `IS-015` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:37` | `IS-016` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:38` | `IS-017` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:39` | `IS-018` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:40` | `IS-019` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:41` | `IS-020` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:42` | `IS-021` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:43` | `IS-022` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:44` | `IS-023` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:45` | `IS-024` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:46` | `IS-025` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:47` | `IS-026` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:48` | `IS-027` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:49` | `IS-028` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:53` | `IS-029` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:54` | `IS-030` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:55` | `IS-031` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:56` | `IS-032` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:57` | `IS-033` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
-| `skills/mono-issue/SKILL.md:58` | `IS-034` | `mono-handoff`, `mono-issue-intake`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-001` | `IS-001` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-002` | `IS-002` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-003` | `IS-003` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-004` | `IS-004` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-005` | `IS-005` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-006` | `IS-006` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-007` | `IS-007` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-008` | `IS-008` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-009` | `IS-009` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-010` | `IS-010` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-011` | `IS-011` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-012` | `IS-012` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-013` | `IS-013` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-014` | `IS-014` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-015` | `IS-015` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-016` | `IS-016` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-017` | `IS-017` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-018` | `IS-018` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-019` | `IS-019` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-020` | `IS-020` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-021` | `IS-021` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-022` | `IS-022` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-023` | `IS-023` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-024` | `IS-024` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-025` | `IS-025` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-026` | `IS-026` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-027` | `IS-027` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-028` | `IS-028` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-029` | `IS-029` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-030` | `IS-030` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-031` | `IS-031` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-032` | `IS-032` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-033` | `IS-033` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
+| `references/contracts/issue.md#IS-034` | `IS-034` | `mono-handoff`, `mono-issue`, `mono-implement`, `mono-preflight`, `mono-ship`, `mono-check`, `mono-review`, `scripts/lint-mono-artifacts.mjs` |
