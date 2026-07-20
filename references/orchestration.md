@@ -378,9 +378,9 @@ The Monitoring Protocol defines when to intervene; the heartbeat is the
 external pulse that notices dying workers without spending orchestrator
 turns. `scripts/watch-workers.mjs` (this repo) is a zero-dependency,
 read-only watcher over the orchestrator root: it reads `logs/`, `reports/`,
-and `workers.json`, writes nothing, and emits one stable line per liveness
-event to stdout —
-`<ISO time> EVENT:<stall|dead|spawn-fail> <ISSUE-KEY> <detail>`.
+`workers.json`, and `control.json`, writes nothing, and emits one stable line
+per watcher event to stdout —
+`<ISO time> EVENT:<stall|dead|spawn-fail|report|idle> <ISSUE-KEY|-> <detail>`.
 The watcher observes the active registry (`workers.json`), not the
 directory's history; retired Issues' logs are outside its scope.
 
@@ -391,12 +391,33 @@ directory's history; retired Issues' logs are outside its scope.
   tool with `persistent: true`); a runtime without one falls back to a
   background process plus a periodic wakeup that reads its stdout. Record
   the degraded binding in the ledger.
-- Watcher events are Monitoring Protocol triggers: treat `stall`, `dead`,
-  and `spawn-fail` lines exactly like a worker-reported blocker — read the
-  worker's latest state first, then act. `spawn-fail` feeds the spawn
+- Watcher liveness events are Monitoring Protocol triggers: treat `stall`,
+  `dead`, and `spawn-fail` lines exactly like a worker-reported blocker — read
+  the worker's latest state first, then act. `spawn-fail` feeds the spawn
   verification kill+retry rule in Worker Transports. Non-JSON contamination
   before later valid JSON events produces one diagnostic warning on stderr,
   not a repeated watcher event, and does not suppress stall/dead checks.
+- `report` is emitted only for `codex-cli` workers, whose JSONL log provides
+  the correlation surface. The report must match the worker registry's A5
+  identity and issue/stage, and must satisfy the exact v2 freshness predicate:
+  report mtime is at least the log birthtime and at least log mtime minus the
+  stall threshold. On `report`, read the correlated report and advance the stage pipeline.
+  Report delivery is at-least-once across watcher restarts:
+  one process suppresses an unchanged mtime+size version and emits an updated
+  version, while a restarted watcher emits the current version once again.
+  The consumer deduplicates by reading the report's current state.
+  Non-Codex transports keep their existing report-polling contract; the watcher never
+  emits `report` for `claude-code-desktop` or `fallback` entries.
+- `idle` is product-wide (its issue-key slot is `-`) and fires after the active
+  registry has been empty longer than `--idle-sec` (default 300). A5 retirement
+  means deploy closeout removed the Issue entry; `control.json` state `idle`
+  does not retire a remaining entry, and entries present while control is
+  `active` or `draining` always block `idle`. `idle_since` is the later of the
+  registry mtime and the last emitted watcher event, so any emitted event moves
+  the clock forward; repeat emission is no more frequent than that idle window
+  (and remains subject to `--repeat-sec`). On `idle`, the orchestrator records
+  the idle period and its cause in `ledger.md`, satisfying the mandatory
+  longer-than-five-minutes idle rule rather than treating it as routine polling.
 - The stall threshold is at least 90 seconds (default 120); lower values
   misread normal turn gaps as stalls, and the watcher refuses them.
 - Healing ladder, in order: nudge (resume the thread demanding a report) →
